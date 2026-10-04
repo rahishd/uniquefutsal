@@ -4,7 +4,7 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { CalendarPlus, Check, ChevronLeft, Loader2, Tag, X } from "lucide-react";
 import {
-  BOOKING_WINDOW_DAYS,
+  MAX_ADVANCE_DAYS,
   COURTS,
   PAYMENT_METHODS,
   createBooking,
@@ -93,7 +93,7 @@ export default function BookingFlow() {
 
   const today = dateKey(now);
   const activeDate = selDate ?? today;
-  const days = Array.from({ length: BOOKING_WINDOW_DAYS }, (_, i) => {
+  const days = Array.from({ length: MAX_ADVANCE_DAYS + 1 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
     return { key: dateKey(d), d };
   });
@@ -302,7 +302,7 @@ export default function BookingFlow() {
       <Steps step={0} />
       <header>
         <h1 className="text-2xl font-semibold">Book a court</h1>
-        <p className="text-sm text-slate-500">Pick a date and a one-hour slot.</p>
+        <p className="text-sm text-slate-500">Pick a date and a one-hour slot. Bookings open up to {MAX_ADVANCE_DAYS} days in advance.</p>
       </header>
 
       <section aria-label="Select date">

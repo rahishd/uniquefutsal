@@ -12,7 +12,8 @@ export const COURTS = [
 
 export const OPEN_HOUR = 6;
 export const CLOSE_HOUR = 22; // last slot starts at 21:00
-export const BOOKING_WINDOW_DAYS = 14;
+// Customers can book from today up to this many days ahead (today + 10 = 11 dates).
+export const MAX_ADVANCE_DAYS = 10;
 
 export type Period = "Morning" | "Day" | "Evening";
 export type SlotStatus = "available" | "almost" | "booked" | "past";
@@ -142,6 +143,9 @@ export interface BookingConfirmation {
 // DEMO: pretends to create a booking. The real API must re-check availability inside a
 // database transaction (prevent double booking) and recompute price and promo itself.
 export async function createBooking(req: BookingRequest, quote: { base: number; discount: number; total: number }): Promise<BookingConfirmation> {
+  const limit = new Date();
+  limit.setDate(limit.getDate() + MAX_ADVANCE_DAYS);
+  if (req.dateKey > dateKey(limit)) throw new Error(`Bookings open only ${MAX_ADVANCE_DAYS} days in advance.`);
   await new Promise((r) => setTimeout(r, 900));
   const digits = String(Math.floor(Math.random() * 99999)).padStart(5, "0");
   return {
