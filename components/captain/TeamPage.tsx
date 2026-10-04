@@ -89,7 +89,7 @@ function Roster({ team }: { team: Team }) {
                     {m.name}
                     {isCaptain && <span className="rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-[#0c0b5d]" title="Captain">C</span>}
                   </p>
-                  <p className="text-xs text-slate-400">{m.position} · {m.stats.goals} goals · {m.stats.assists} assists · {m.stats.games} games</p>
+                  <p className="text-xs text-slate-400">{m.position}</p>
                 </div>
                 {!isCaptain && (
                   <button type="button" onClick={() => removeMember(m.id)} aria-label={`Remove ${m.name}`} className="shrink-0 text-slate-400 hover:text-rose-500"><Trash2 size={17} /></button>

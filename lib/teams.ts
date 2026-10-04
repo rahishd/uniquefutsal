@@ -16,18 +16,12 @@ export const MIN_GAMES_FOR_RATING = 3;
 export type Position = "GK" | "DEF" | "MID" | "FWD";
 export type FormResult = "W" | "D" | "L";
 
-export interface PlayerStats {
-  games: number;
-  goals: number;
-  assists: number;
-}
-
+// Players have no individual stats: the team's record and rating come from the captain's results.
 export interface Member {
   id: string;
   name: string;
   phone: string;
   position: Position;
-  stats: PlayerStats; // only goals confirmed by the opposing captain are ever counted here
 }
 
 export interface TeamStats {
@@ -104,11 +98,6 @@ function build(
 ): Team {
   const [wins, draws, losses] = record;
   const played = wins + draws + losses;
-  // Goals and assists follow the position: forwards score most, midfielders create, keepers rarely do either.
-  const goalW = players.map(([, pos], i) => ({ FWD: 1, MID: 0.55, DEF: 0.18, GK: 0.02 })[pos] * (1 - i * 0.04));
-  const assistW = players.map(([, pos], i) => ({ MID: 1, FWD: 0.7, DEF: 0.3, GK: 0.06 })[pos] * (1 - i * 0.04));
-  const gsum = goalW.reduce((a, b) => a + b, 0);
-  const asum = assistW.reduce((a, b) => a + b, 0);
   return {
     id,
     name,
@@ -120,11 +109,6 @@ function build(
       name: pname,
       phone: String(phoneBase + i),
       position,
-      stats: {
-        games: Math.max(0, played - (i % 3)),
-        goals: Math.round((gf * goalW[i]) / gsum),
-        assists: Math.round((gf * 0.65 * assistW[i]) / asum),
-      },
     })),
   };
 }
@@ -140,17 +124,17 @@ export const SAMPLE_TEAMS: Team[] = [
 
 // Registered players with no team yet. The captain can add them by mobile number.
 export const FREE_AGENTS: Member[] = [
-  { id: "fa1", name: "Aayush Ghimire", phone: "9811000001", position: "MID", stats: { games: 6, goals: 3, assists: 4 } },
-  { id: "fa2", name: "Bibek Sapkota", phone: "9811000002", position: "FWD", stats: { games: 9, goals: 11, assists: 2 } },
-  { id: "fa3", name: "Chirag Neupane", phone: "9811000003", position: "DEF", stats: { games: 4, goals: 0, assists: 1 } },
-  { id: "fa4", name: "Dinesh Subedi", phone: "9811000004", position: "GK", stats: { games: 7, goals: 0, assists: 0 } },
-  { id: "fa5", name: "Elish Maharjan", phone: "9811000005", position: "MID", stats: { games: 5, goals: 2, assists: 5 } },
-  { id: "fa6", name: "Fanindra Baral", phone: "9811000006", position: "FWD", stats: { games: 3, goals: 4, assists: 0 } },
-  { id: "fa7", name: "Gaurav Thakuri", phone: "9811000007", position: "DEF", stats: { games: 8, goals: 1, assists: 1 } },
-  { id: "fa8", name: "Hemant Pathak", phone: "9811000008", position: "MID", stats: { games: 2, goals: 1, assists: 1 } },
-  { id: "fa9", name: "Ishan Regmi", phone: "9811000009", position: "FWD", stats: { games: 6, goals: 5, assists: 3 } },
-  { id: "fa10", name: "Jeevan Koirala", phone: "9811000010", position: "DEF", stats: { games: 5, goals: 0, assists: 2 } },
-  { id: "fa11", name: "Kushal Bhusal", phone: "9811000011", position: "MID", stats: { games: 4, goals: 2, assists: 3 } },
+  { id: "fa1", name: "Aayush Ghimire", phone: "9811000001", position: "MID" },
+  { id: "fa2", name: "Bibek Sapkota", phone: "9811000002", position: "FWD" },
+  { id: "fa3", name: "Chirag Neupane", phone: "9811000003", position: "DEF" },
+  { id: "fa4", name: "Dinesh Subedi", phone: "9811000004", position: "GK" },
+  { id: "fa5", name: "Elish Maharjan", phone: "9811000005", position: "MID" },
+  { id: "fa6", name: "Fanindra Baral", phone: "9811000006", position: "FWD" },
+  { id: "fa7", name: "Gaurav Thakuri", phone: "9811000007", position: "DEF" },
+  { id: "fa8", name: "Hemant Pathak", phone: "9811000008", position: "MID" },
+  { id: "fa9", name: "Ishan Regmi", phone: "9811000009", position: "FWD" },
+  { id: "fa10", name: "Jeevan Koirala", phone: "9811000010", position: "DEF" },
+  { id: "fa11", name: "Kushal Bhusal", phone: "9811000011", position: "MID" },
 ];
 
 /* ---------- challenges and results ---------- */
@@ -217,14 +201,11 @@ export interface Result {
   submittedBy: "me" | "them";
   myScore: number;
   theirScore: number;
-  // goals/assists of the SUBMITTING side's players, by member id
-  scorers: Record<string, { goals: number; assists: number }>;
   status: ResultStatus;
 }
 
 interface Overlay {
   stats: TeamStats;
-  scorers: Record<string, { goals: number; assists: number; games: number }>;
 }
 
 interface State {
@@ -291,14 +272,7 @@ export function getOtherTeam(state: State, id: string): Team | undefined {
   if (!base) return undefined;
   const o = state.overlay[id];
   if (!o) return base;
-  return {
-    ...base,
-    stats: o.stats,
-    members: base.members.map((m) => {
-      const s = o.scorers[m.id];
-      return s ? { ...m, stats: { games: m.stats.games + s.games, goals: m.stats.goals + s.goals, assists: m.stats.assists + s.assists } } : m;
-    }),
-  };
+  return { ...base, stats: o.stats };
 }
 
 export function allTeams(state: State): Team[] {
@@ -345,7 +319,7 @@ export function createTeam(name: string, captain: { id: string; name: string; ph
     name: clean,
     captainId: captain.id,
     area: "Tilottama",
-    members: [{ id: captain.id, name: captain.name, phone: captain.phone, position: "MID", stats: { games: 0, goals: 0, assists: 0 } }],
+    members: [{ id: captain.id, name: captain.name, phone: captain.phone, position: "MID" }],
     stats: { played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, form: [] },
   };
   const challenges: Challenge[] = [
@@ -353,22 +327,8 @@ export function createTeam(name: string, captain: { id: string; name: string; ph
     { id: "ch-red", direction: "out", teamId: "red", type: "match", date: addDays(now, -1), hour: 18, loserPct: 60, status: "accepted" },
     { id: "ch-storm", direction: "in", teamId: "storm", type: "match", date: addDays(now, -2), hour: 20, loserPct: 70, status: "accepted" },
   ];
-  const storm = SAMPLE_TEAMS.find((t) => t.id === "storm")!;
   const results: Result[] = [
-    {
-      id: "res-storm",
-      challengeId: "ch-storm",
-      teamId: "storm",
-      submittedBy: "them",
-      myScore: 4,
-      theirScore: 6,
-      scorers: {
-        [storm.members[0].id]: { goals: 3, assists: 1 },
-        [storm.members[3].id]: { goals: 2, assists: 2 },
-        [storm.members[1].id]: { goals: 1, assists: 2 },
-      },
-      status: "awaiting_approval",
-    },
+    { id: "res-storm", challengeId: "ch-storm", teamId: "storm", submittedBy: "them", myScore: 4, theirScore: 6, status: "awaiting_approval" },
   ];
   commit({ ...s, team, mode: "captain", challenges, results });
   addNotice({ id: "ch-alpha-notice", type: "challenge", title: "New challenge", body: "Team Alpha challenged your team to a competition match. Loser pays 70%, paid at the venue.", href: "/opponent" });
@@ -483,9 +443,9 @@ export interface ResultInput {
   challengeId: string;
   myScore: number;
   theirScore: number;
-  scorers: Record<string, { goals: number; assists: number }>;
 }
 
+// The winning captain uploads just the overall score (no per-player goals).
 export function submitResult(input: ResultInput): ActionResult {
   const s = load();
   const c = s.challenges.find((x) => x.id === input.challengeId);
@@ -496,14 +456,12 @@ export function submitResult(input: ResultInput): ActionResult {
     return { ok: false, error: "Enter whole-number scores." };
   }
   if (myScore < theirScore) return { ok: false, error: "Only the winning captain uploads the score. Ask the other captain to upload it." };
-  const goals = Object.values(input.scorers).reduce((a, x) => a + x.goals, 0);
-  if (goals !== myScore) return { ok: false, error: `Player goals add up to ${goals}, but your team scored ${myScore}. They must match.` };
-  const r: Result = { id: `res-${Date.now()}`, challengeId: c.id, teamId: c.teamId, submittedBy: "me", myScore, theirScore, scorers: input.scorers, status: "awaiting_approval" };
+  const r: Result = { id: `res-${Date.now()}`, challengeId: c.id, teamId: c.teamId, submittedBy: "me", myScore, theirScore, status: "awaiting_approval" };
   commit({ ...s, results: [r, ...s.results.filter((x) => x.challengeId !== c.id)] });
   return { ok: true };
 }
 
-// Applies an APPROVED result: team records, rating inputs and player stats become public.
+// Applies an APPROVED result: both teams' records and rating inputs become public.
 function apply(s: State, r: Result): State {
   if (!s.team) return s;
   const mine = s.team.stats;
@@ -517,21 +475,11 @@ function apply(s: State, r: Result): State {
     ga: mine.ga + r.theirScore,
     form: [...mine.form, outcome].slice(-10),
   };
-  let members = s.team.members;
   const overlay = { ...s.overlay };
   const theirOutcome: FormResult = outcome === "W" ? "L" : outcome === "L" ? "W" : "D";
   const base = overlay[r.teamId]?.stats ?? SAMPLE_TEAMS.find((t) => t.id === r.teamId)?.stats;
   if (base) {
-    const prevScorers = overlay[r.teamId]?.scorers ?? {};
-    const scorers = { ...prevScorers };
-    if (r.submittedBy === "them") {
-      for (const [id, v] of Object.entries(r.scorers)) {
-        const p = scorers[id] ?? { goals: 0, assists: 0, games: 0 };
-        scorers[id] = { goals: p.goals + v.goals, assists: p.assists + v.assists, games: p.games + 1 };
-      }
-    }
     overlay[r.teamId] = {
-      scorers,
       stats: {
         played: base.played + 1,
         wins: base.wins + (theirOutcome === "W" ? 1 : 0),
@@ -543,13 +491,7 @@ function apply(s: State, r: Result): State {
       },
     };
   }
-  if (r.submittedBy === "me") {
-    members = members.map((m) => {
-      const v = r.scorers[m.id];
-      return { ...m, stats: { games: m.stats.games + 1, goals: m.stats.goals + (v?.goals ?? 0), assists: m.stats.assists + (v?.assists ?? 0) } };
-    });
-  }
-  return { ...s, team: { ...s.team, stats: myStats, members }, overlay };
+  return { ...s, team: { ...s.team, stats: myStats }, overlay };
 }
 
 function setResultStatus(id: string, status: ResultStatus) {
@@ -569,13 +511,13 @@ export function approveResult(id: string) {
 // I dispute it. An admin would review disputed results (admin panel not built yet).
 export function disputeResult(id: string) {
   setResultStatus(id, "disputed");
-  addNotice({ id: `disputed-${id}`, type: "match", title: "Result disputed", body: "You disputed this result. It will be reviewed and no stats were changed.", href: "/opponent" });
+  addNotice({ id: `disputed-${id}`, type: "match", title: "Result disputed", body: "You disputed this result. It will be reviewed and nothing was changed.", href: "/opponent" });
 }
 
 // DEMO ONLY: stands in for the other captain approving the result I uploaded.
 export function demoOpponentApproves(id: string) {
   setResultStatus(id, "approved");
-  addNotice({ id: `approved-${id}`, type: "match", title: "Your result was approved", body: "The other captain confirmed it. Your team and player stats are updated.", href: "/opponent" });
+  addNotice({ id: `approved-${id}`, type: "match", title: "Your result was approved", body: "The other captain confirmed it. Your team record and rating are updated.", href: "/opponent" });
 }
 
 export function resetDemo() {

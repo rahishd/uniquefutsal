@@ -195,7 +195,7 @@ function Hub({ team, reportId }: { team: Team; reportId?: string }) {
           <Group title="Needs your approval" empty="Nothing to approve." items={awaitingMyApproval}>
             {(r) => (
               <ResultCard key={r.id} r={r} team={team} state={state} nameOf={nameOf}>
-                <p className="mt-3 text-xs text-slate-500">Check the score and the goals each player is credited with. Approving confirms them as your opponent&apos;s public stats.</p>
+                <p className="mt-3 text-xs text-slate-500">Check the final score. Approving confirms the result and updates both teams&apos; records and ratings.</p>
                 <div className="mt-3 flex gap-2">
                   <button type="button" onClick={() => disputeResult(r.id)} className="flex flex-1 items-center justify-center gap-1 rounded-full bg-white/70 py-2.5 text-sm font-medium text-rose-500"><X size={15} /> Dispute</button>
                   <button type="button" onClick={() => approveResult(r.id)} className="glass-btn flex flex-1 items-center justify-center gap-1 rounded-full py-2.5 text-sm font-semibold text-white"><Check size={15} /> Approve</button>
@@ -207,7 +207,7 @@ function Hub({ team, reportId }: { team: Team; reportId?: string }) {
           <Group title="Waiting for the other captain" empty="No results waiting." items={awaitingTheirs}>
             {(r) => (
               <ResultCard key={r.id} r={r} team={team} state={state} nameOf={nameOf}>
-                <p className="mt-3 text-xs text-slate-500">Your stats become visible to others once {nameOf(r.teamId)} approves.</p>
+                <p className="mt-3 text-xs text-slate-500">Your team&apos;s record and rating update, and become visible to others, once {nameOf(r.teamId)} approves.</p>
                 <div className="mt-3 rounded-2xl bg-amber-400/15 p-3 text-xs text-amber-700">
                   Demo: the other captain approves on their own phone.
                   <button type="button" onClick={() => demoOpponentApproves(r.id)} className="mt-2 block rounded-full bg-amber-500 px-3 py-1.5 font-semibold text-white">They approve</button>
@@ -218,7 +218,7 @@ function Hub({ team, reportId }: { team: Team; reportId?: string }) {
 
           <div>
             <h2 className="mb-1 text-base font-medium">Report a result</h2>
-            <p className="mb-3 text-xs text-slate-400">The winning captain uploads the score and who scored. The other captain then approves it. If your game was a draw, either captain can upload.</p>
+            <p className="mb-3 text-xs text-slate-400">The winning captain uploads the final score. The other captain then approves it. If your game was a draw, either captain can upload.</p>
             {reportable.length === 0 ? (
               <p className="glass rounded-2xl px-4 py-5 text-center text-sm text-slate-400">No played games waiting for a result.</p>
             ) : (
@@ -289,10 +289,8 @@ function ChallengeCard({ c, name, status, children }: { c: Challenge; name: stri
 function ResultCard({ r, team, state, nameOf, children }: { r: Result; team: Team; state: NonNullable<ReturnType<typeof useTeams>>; nameOf: (id: string) => string; children?: React.ReactNode }) {
   const opp = nameOf(r.teamId);
   const outcome = r.myScore > r.theirScore ? "Win" : r.myScore < r.theirScore ? "Loss" : "Draw";
-  const scorerTeam = r.submittedBy === "me" ? team : getOtherTeam(state, r.teamId);
   const game = state.challenges.find((c) => c.id === r.challengeId);
   const pay = game ? settlement(priceFor(game.hour), game.loserPct, r.myScore, r.theirScore) : null;
-  const scorers = Object.entries(r.scorers).filter(([, v]) => v.goals > 0 || v.assists > 0);
   return (
     <div className="glass rounded-3xl p-4">
       <div className="flex items-center justify-between gap-3">
@@ -303,13 +301,8 @@ function ResultCard({ r, team, state, nameOf, children }: { r: Result; team: Tea
         {r.status !== "awaiting_approval" && <span className={chip(r.status === "approved" ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-500")}>{r.status === "approved" ? "Confirmed" : "Disputed"}</span>}
         {r.status === "awaiting_approval" && <span className={chip("bg-amber-400/20 text-amber-700")}>Awaiting approval</span>}
       </div>
-      {scorers.length > 0 && (
-        <p className="mt-2 text-xs text-slate-500">
-          <span className="font-medium">{r.submittedBy === "me" ? team.name : opp} scorers:</span>{" "}
-          {scorers.map(([id, v]) => `${scorerTeam?.members.find((m) => m.id === id)?.name ?? "Player"} ${v.goals}G${v.assists ? ` ${v.assists}A` : ""}`).join(" · ")}
-        </p>
-      )}
-      {r.status === "disputed" && <p className="mt-2 text-xs text-slate-400">No stats were changed. An admin will review this result.</p>}
+      <p className="mt-1 text-xs text-slate-400">Uploaded by {r.submittedBy === "me" ? "you" : `${opp}'s captain`}</p>
+      {r.status === "disputed" && <p className="mt-2 text-xs text-slate-400">Nothing was changed. An admin will review this result.</p>}
       {pay && r.status !== "disputed" && (
         <div className="mt-3 rounded-2xl bg-emerald-500/10 px-3 py-2.5 text-xs text-emerald-800">
           <p className="font-semibold">Pay at the venue after the game</p>
@@ -328,17 +321,13 @@ function ResultCard({ r, team, state, nameOf, children }: { r: Result; team: Tea
 function ResultForm({ challenge, team, opponent, onDone }: { challenge: Challenge; team: Team; opponent: string; onDone: () => void }) {
   const [mine, setMine] = useState("");
   const [theirs, setTheirs] = useState("");
-  const [rows, setRows] = useState<Record<string, { goals: string; assists: string }>>({});
   const [error, setError] = useState<string | null>(null);
 
   const num = (v: string | undefined) => (v === undefined || v === "" ? 0 : Number(v));
-  const sum = team.members.reduce((a, m) => a + num(rows[m.id]?.goals), 0);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const scorers: Record<string, { goals: number; assists: number }> = {};
-    for (const m of team.members) scorers[m.id] = { goals: num(rows[m.id]?.goals), assists: num(rows[m.id]?.assists) };
-    const res = submitResult({ challengeId: challenge.id, myScore: num(mine), theirScore: num(theirs), scorers });
+    const res = submitResult({ challengeId: challenge.id, myScore: num(mine), theirScore: num(theirs) });
     if (res.ok) onDone();
     else setError(res.error);
   }
@@ -358,21 +347,7 @@ function ResultForm({ challenge, team, opponent, onDone }: { challenge: Challeng
         </div>
       </div>
 
-      <div>
-        <div className="mb-2 grid grid-cols-[1fr_3.5rem_3.5rem] items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-          <span>Your scorers</span><span className="text-center">Goals</span><span className="text-center">Assists</span>
-        </div>
-        <ul className="space-y-2">
-          {team.members.map((m) => (
-            <li key={m.id} className="grid grid-cols-[1fr_3.5rem_3.5rem] items-center gap-2 text-sm">
-              <span className="truncate">{m.name}</span>
-              <input aria-label={`${m.name} goals`} inputMode="numeric" value={rows[m.id]?.goals ?? ""} placeholder="0" onChange={(e) => setRows({ ...rows, [m.id]: { goals: e.target.value.replace(/\D/g, "").slice(0, 2), assists: rows[m.id]?.assists ?? "" } })} className={small} />
-              <input aria-label={`${m.name} assists`} inputMode="numeric" value={rows[m.id]?.assists ?? ""} placeholder="0" onChange={(e) => setRows({ ...rows, [m.id]: { goals: rows[m.id]?.goals ?? "", assists: e.target.value.replace(/\D/g, "").slice(0, 2) } })} className={small} />
-            </li>
-          ))}
-        </ul>
-        <p className={`mt-2 text-xs ${mine !== "" && sum !== num(mine) ? "text-rose-500" : "text-slate-400"}`}>Player goals: {sum}{mine !== "" ? ` of ${num(mine)}` : ""}. They must add up to your team&apos;s score.</p>
-      </div>
+      <p className="text-xs text-slate-400">Enter the final score only. The other captain then approves it.</p>
 
       {error && <p role="alert" className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-600">{error}</p>}
       <div className="flex gap-2">
