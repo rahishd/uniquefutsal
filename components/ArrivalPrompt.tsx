@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ChevronsRight, Loader2, MapPin } from "lucide-react";
 import { ARRIVAL_GRACE_MS, ARRIVAL_LEAD_MS, confirmComing, loadArrival, snoozeArrival } from "@/lib/arrival";
 import { loadReminders, type ReminderEntry } from "@/lib/notifications";
+import { usePrefs } from "@/lib/prefs";
 
 const HANDLE = 64; // px, slider thumb size
 const THRESHOLD = 0.88; // fraction of the track that counts as "slid all the way"
@@ -29,7 +30,9 @@ function countdown(startsAt: number, now: number) {
 }
 
 export default function ArrivalPrompt() {
+  const { popup } = usePrefs(); // Profile > Settings > Pop-up reminder
   const [entry, setEntry] = useState<ReminderEntry | null>(null);
+  const visible = Boolean(entry) && popup;
   const [now, setNow] = useState(0);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -64,7 +67,7 @@ export default function ArrivalPrompt() {
 
   // Modal behaviour: lock page scroll, move focus in, keep Tab inside.
   useEffect(() => {
-    if (!entry) return;
+    if (!visible) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     dialogRef.current?.focus();
@@ -82,7 +85,7 @@ export default function ArrivalPrompt() {
       document.body.style.overflow = prev;
       document.removeEventListener("keydown", onKey);
     };
-  }, [entry]);
+  }, [visible]);
 
   // Track width drives how far the thumb can travel.
   useEffect(() => {
@@ -159,7 +162,8 @@ export default function ArrivalPrompt() {
     setEntry(null);
   }
 
-  if (!entry) return null;
+  // Off in Settings: the slider never covers the screen (the 1-hour bell reminder still arrives).
+  if (!entry || !popup) return null;
 
   const when = new Date(entry.startsAt).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
   const progress = maxDrag() > 0 ? drag / maxDrag() : 0;

@@ -68,3 +68,7 @@ Demo-only buttons to remove once real: "They accept / They decline", "They appro
 # Home "Popular" tile badges
 
 `components/PopularGrid.tsx` shows a red count on a tile when there are messages for that service (9+ for ten or more). A tile counts unread notifications of its own types: Book (booking, reminder, payment), Membership (membership), Points (points), Promos (promo), Tournaments (tournament). Opening a tile marks its messages read (`markReadByTypes`). To make a tile show messages, create notifications with the matching `type` (the server or `addNotice`). Opponent is action based, not read based: it counts challenges waiting for your answer plus results waiting for your approval (`pendingActions`), so it only clears when the captain acts. Only registered captains in Captain mode see it.
+
+# Settings: Pop-up reminder
+
+Profile > Settings has a "Pop-up reminder" switch (default on) next to "Booking reminders (SMS)" and "Promotional notifications". It controls the full-screen "I'm coming" slider shown 1 hour before a game (`components/ArrivalPrompt.tsx`). When off, the slider never covers the screen, but the 1-hour bell notification still arrives. All three switches are saved by `lib/prefs.ts` (browser storage for now). Move them to the customer's account on the server so they follow the customer across devices, and have the server skip the "I'm coming" push when `popup` is off. The SMS and promo switches are saved but nothing sends SMS or promos yet.

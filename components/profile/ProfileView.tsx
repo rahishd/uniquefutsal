@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Bell, Check, ChevronRight, Crown, LogOut, Pencil, Star, Trophy, UserRound, X } from "lucide-react";
 import { signInDemo, signOut, useSession } from "@/lib/session";
 import { useTeams } from "@/lib/teams";
+import { setPref, usePrefs } from "@/lib/prefs";
 import ProfileAvatar from "@/components/captain/ProfileAvatar";
 import { CaptainSummary, ModeToggle } from "@/components/captain/CaptainProfile";
 import {
@@ -76,7 +77,7 @@ function RegisteredProfile() {
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
   const [bookings, setBookings] = useState<BookingItem[]>(sampleBookings);
   const [cancelId, setCancelId] = useState<string | null>(null);
-  const [prefs, setPrefs] = useState({ reminders: true, promos: true });
+  const prefs = usePrefs();
   const [lang, setLang] = useState("en");
 
   const shown = bookings.filter((b) => (tab === "upcoming" ? b.upcoming : !b.upcoming));
@@ -272,8 +273,9 @@ function RegisteredProfile() {
       {/* Settings */}
       <Card title="Settings" action={<Bell size={18} className="text-slate-400" />}>
         <ul className="space-y-4 text-sm">
-          <li className="flex items-center justify-between gap-4"><span>Booking reminders (SMS)<span className="block text-xs text-slate-400">1 hour before your game</span></span><Switch checked={prefs.reminders} onChange={(v) => setPrefs({ ...prefs, reminders: v })} label="Booking reminders" /></li>
-          <li className="flex items-center justify-between gap-4"><span>Promotional notifications<span className="block text-xs text-slate-400">Offers and tournaments</span></span><Switch checked={prefs.promos} onChange={(v) => setPrefs({ ...prefs, promos: v })} label="Promotional notifications" /></li>
+          <li className="flex items-center justify-between gap-4"><span>Pop-up reminder<span className="block text-xs text-slate-400">Full-screen slider 1 hour before your game, to tell the venue &ldquo;I&apos;m coming&rdquo;</span></span><Switch checked={prefs.popup} onChange={(v) => setPref("popup", v)} label="Pop-up reminder, 1 hour before your game" /></li>
+          <li className="flex items-center justify-between gap-4"><span>Booking reminders (SMS)<span className="block text-xs text-slate-400">1 hour before your game</span></span><Switch checked={prefs.reminders} onChange={(v) => setPref("reminders", v)} label="Booking reminders" /></li>
+          <li className="flex items-center justify-between gap-4"><span>Promotional notifications<span className="block text-xs text-slate-400">Offers and tournaments</span></span><Switch checked={prefs.promos} onChange={(v) => setPref("promos", v)} label="Promotional notifications" /></li>
           <li className="flex items-center justify-between gap-4"><label htmlFor="lang">Language</label>
             <select id="lang" value={lang} onChange={(e) => setLang(e.target.value)} className="rounded-xl bg-white/70 px-3 py-2 text-sm outline-none ring-1 ring-white/80">
               <option value="en">English</option><option value="ne">नेपाली</option>
