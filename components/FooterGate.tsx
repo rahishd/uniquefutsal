@@ -3,9 +3,10 @@
 import { usePathname } from "next/navigation";
 import Footer from "@/components/Footer";
 
-// The booking flow stays focused: no company details, just room above the nav bar.
+// Company details appear on the home screen only. Every other page just keeps
+// clear space above the floating nav bar.
 export default function FooterGate() {
   const pathname = usePathname();
-  if (pathname.startsWith("/book")) return <div className="h-36" aria-hidden />;
-  return <Footer />;
+  if (pathname === "/") return <Footer />;
+  return <div className="h-36" aria-hidden />;
 }
