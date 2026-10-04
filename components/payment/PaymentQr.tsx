@@ -2,8 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Check, ChevronLeft, Clock, Copy, Download } from "lucide-react";
-import { METHOD_LABEL, QR_HOLD_MS, demoQrPayload, type OnlineMethod } from "@/lib/payment";
+import { Check, ChevronLeft, Clock, Copy, Download, Loader2 } from "lucide-react";
+import {
+  DEMO_PAYMENTS,
+  METHOD_LABEL,
+  PAYMENT_POLL_MS,
+  QR_HOLD_MS,
+  demoQrPayload,
+  demoSimulatePayment,
+  fetchPaymentStatus,
+  type OnlineMethod,
+} from "@/lib/payment";
 
 const rs = (n: number) => `Rs. ${n.toLocaleString("en-IN")}`;
 
@@ -14,20 +23,27 @@ function mmss(ms: number) {
 
 interface Props {
   method: OnlineMethod;
+  orderId: string; // booking or membership ID the server is waiting to see paid
   amount: number; // final amount after every promo code
   remarks: string; // e.g. "Regular game - UF-20261006-31166"
   heldAt: number; // when the QR was created (epoch ms)
-  onPaid: (transactionRef?: string) => void;
+  onPaid: () => void; // called automatically once the server reports the order as paid
   onBack: () => void;
 }
 
-// Shows the QR for the exact amount and tells the customer how to pay with it.
-export default function PaymentQr({ method, amount, remarks, heldAt, onPaid, onBack }: Props) {
+// Shows the QR for the exact amount, then watches for the payment. The customer never has to
+// confirm anything: the screen moves on by itself when the server reports "paid".
+export default function PaymentQr({ method, orderId, amount, remarks, heldAt, onPaid, onBack }: Props) {
   const label = METHOD_LABEL[method];
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const reported = useRef(false);
+  const onPaidRef = useRef(onPaid); // always call the latest callback without restarting the polling
   const [left, setLeft] = useState(QR_HOLD_MS);
   const [copied, setCopied] = useState(false);
-  const [txn, setTxn] = useState("");
+
+  useEffect(() => {
+    onPaidRef.current = onPaid;
+  });
 
   useEffect(() => {
     const tick = () => setLeft(heldAt + QR_HOLD_MS - Date.now());
@@ -40,6 +56,30 @@ export default function PaymentQr({ method, amount, remarks, heldAt, onPaid, onB
   }, [heldAt]);
 
   const expired = left <= 0;
+
+  // Ask the server whether the order is paid, every few seconds and whenever the customer
+  // comes back to this tab (it may have been paused while they were in their payment app).
+  useEffect(() => {
+    if (expired) return;
+    let cancelled = false;
+    const check = async () => {
+      if (reported.current) return;
+      const status = await fetchPaymentStatus(orderId);
+      if (!cancelled && status === "paid" && !reported.current) {
+        reported.current = true;
+        onPaidRef.current();
+      }
+    };
+    const t = setInterval(check, PAYMENT_POLL_MS);
+    const onVisible = () => document.visibilityState === "visible" && void check();
+    document.addEventListener("visibilitychange", onVisible);
+    void check();
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [expired, orderId]);
 
   function save() {
     const url = canvasRef.current?.toDataURL("image/png");
@@ -98,6 +138,13 @@ export default function PaymentQr({ method, amount, remarks, heldAt, onPaid, onB
         )}
       </section>
 
+      {/* Live status: the customer just waits; no confirmation button */}
+      {!expired && (
+        <p role="status" aria-live="polite" className="flex items-center justify-center gap-2 rounded-2xl bg-brand/5 px-4 py-3 text-sm font-medium text-brand">
+          <Loader2 size={16} className="animate-spin" /> Waiting for your payment… we&apos;ll confirm it automatically
+        </p>
+      )}
+
       <section className="glass rounded-3xl p-5">
         <h2 className="text-sm font-medium">Payment remarks (filled in for you)</h2>
         <div className="mt-2 flex items-center justify-between gap-3 rounded-2xl bg-white/70 px-4 py-3">
@@ -116,7 +163,7 @@ export default function PaymentQr({ method, amount, remarks, heldAt, onPaid, onB
             "Take a screenshot of this QR, or tap Save QR image.",
             `Open your payment app (${label} or any app that scans QR) and choose Scan QR, then upload the screenshot from your gallery.`,
             "Check the amount and remarks match, then complete the payment.",
-            "Come back here and tap “I've paid”.",
+            "That's it. This page detects your payment and confirms automatically.",
           ].map((t, i) => (
             <li key={t} className="flex gap-3">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs text-white">{i + 1}</span>
@@ -126,30 +173,27 @@ export default function PaymentQr({ method, amount, remarks, heldAt, onPaid, onB
         </ol>
       </section>
 
-      <p className="rounded-2xl bg-amber-400/15 px-4 py-3 text-xs text-amber-700">
-        Demo mode: this QR is a placeholder and can&apos;t take a real payment. The real {label} QR is created by your server with your merchant account.
-      </p>
+      {DEMO_PAYMENTS && (
+        <div className="rounded-2xl bg-amber-400/15 px-4 py-3 text-xs text-amber-700">
+          <p>
+            Demo mode: this QR is a placeholder and can&apos;t take a real payment. In production your server learns about the payment from {label} and this screen updates by itself.
+          </p>
+          {!expired && (
+            <button type="button" onClick={() => demoSimulatePayment(orderId)} className="mt-2 rounded-full bg-amber-500 px-4 py-2 text-xs font-semibold text-white">
+              Demo: simulate payment received
+            </button>
+          )}
+        </div>
+      )}
 
-      {expired ? (
-        <button type="button" onClick={onBack} className="glass-btn block w-full rounded-full py-4 text-center text-base font-semibold text-white">
-          Start again
-        </button>
-      ) : (
+      {expired && (
         <>
-          <div>
-            <label htmlFor="txn" className="text-xs text-slate-500">Transaction ID from your payment app (optional, speeds up confirmation)</label>
-            <input
-              id="txn"
-              value={txn}
-              onChange={(e) => setTxn(e.target.value.slice(0, 40))}
-              placeholder="e.g. 0AB12CD"
-              className="mt-1 w-full rounded-2xl bg-white/70 px-4 py-3 text-sm outline-none ring-1 ring-white/80 focus:ring-brand"
-            />
-          </div>
-          <button type="button" onClick={() => onPaid(txn.trim() || undefined)} className="glass-btn flex w-full items-center justify-center rounded-full py-4 text-base font-semibold text-white">
-            I&apos;ve paid
+          <p className="rounded-2xl bg-slate-100 px-4 py-3 text-xs text-slate-500">
+            Already paid? You don&apos;t need to do anything. Once the payment reaches us, your order updates automatically.
+          </p>
+          <button type="button" onClick={onBack} className="glass-btn block w-full rounded-full py-4 text-center text-base font-semibold text-white">
+            Start again
           </button>
-          <p className="text-center text-xs text-slate-400">We confirm the payment on our side. Tapping this doesn&apos;t mark it as paid.</p>
         </>
       )}
     </div>

@@ -62,18 +62,20 @@ function downloadIcs(c: BookingConfirmation) {
 }
 
 // Notices for a new booking, plus the 1-hour reminder before kick-off.
-// "Payment received" is never raised here: only the server can confirm a payment.
+// "Payment received" is raised only when the server has reported the order as paid.
 function notifyBooking(c: BookingConfirmation) {
   const when = `${longDate(c.request.dateKey)} · ${formatHour(c.request.hour)} – ${formatHour(c.request.hour + 1)}`;
   addNotice({ id: `booking-${c.id}`, type: "booking", title: "Booking confirmed", body: `${when}. ID ${c.id}.`, href: "/profile" });
   addNotice({
     id: `payment-${c.id}`,
     type: "payment",
-    title: c.paymentStatus === "pay_at_venue" ? "Pay at the venue" : "Payment pending",
+    title: c.paymentStatus === "paid" ? "Payment received" : c.paymentStatus === "pay_at_venue" ? "Pay at the venue" : "Payment pending",
     body:
-      c.paymentStatus === "pay_at_venue"
-        ? `Please pay ${formatRs(c.total)} when you arrive.`
-        : `${formatRs(c.total)} is awaiting payment confirmation for ${c.id}.`,
+      c.paymentStatus === "paid"
+        ? `${formatRs(c.total)} received for booking ${c.id}.`
+        : c.paymentStatus === "pay_at_venue"
+          ? `Please pay ${formatRs(c.total)} when you arrive.`
+          : `${formatRs(c.total)} is awaiting payment confirmation for ${c.id}.`,
     href: "/profile",
   });
   const start = parseKey(c.request.dateKey);
@@ -112,7 +114,6 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<BookingConfirmation | null>(null);
   const [qr, setQr] = useState<{ booking: BookingConfirmation; heldAt: number } | null>(null);
-  const [txnRef, setTxnRef] = useState<string | null>(null);
 
   if (!now) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
 
@@ -184,14 +185,16 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
         <Steps step={1} />
         <PaymentQr
           method={qr.booking.request.method}
+          orderId={qr.booking.id}
           amount={qr.booking.total}
           remarks={remarksFor("game", qr.booking.id)}
           heldAt={qr.heldAt}
           onBack={() => setQr(null)}
-          onPaid={(ref) => {
-            setTxnRef(ref ?? null); // DEMO: the real API receives this to match the payment faster
-            notifyBooking(qr.booking);
-            setDone(qr.booking);
+          onPaid={() => {
+            // Called automatically when the server reports this booking as paid.
+            const paid = { ...qr.booking, paymentStatus: "paid" as const };
+            notifyBooking(paid);
+            setDone(paid);
             setQr(null);
             setStep(2);
           }}
@@ -204,6 +207,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   if (step === 2 && done) {
     const court = COURTS.find((c) => c.id === done.request.courtId)?.name;
     const venue = done.paymentStatus === "pay_at_venue";
+    const paid = done.paymentStatus === "paid";
     return (
       <div className="space-y-5">
         <Steps step={2} />
@@ -211,9 +215,9 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
             <Check size={34} />
           </span>
-          <h1 className="mt-4 text-2xl font-semibold">{venue ? "Booking reserved!" : "Booking created!"}</h1>
+          <h1 className="mt-4 text-2xl font-semibold">{paid ? "Booking confirmed!" : venue ? "Booking reserved!" : "Booking created!"}</h1>
           <p className="mt-1 text-sm text-slate-500">
-            {venue ? "Please pay at the venue when you arrive." : "Your slot is held until payment is verified."}
+            {paid ? "Payment received. See you on the pitch!" : venue ? "Please pay at the venue when you arrive." : "Your slot is held until payment is verified."}
           </p>
           <p className="mt-4 text-xs text-slate-400">Booking ID</p>
           <p className="font-mono text-lg font-semibold tracking-wide">{done.id}</p>
@@ -224,8 +228,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
             ["Date", longDate(done.request.dateKey)],
             ["Time", `${formatHour(done.request.hour)} – ${formatHour(done.request.hour + 1)}`],
             ["Court", court ?? ""],
-            ["Payment", venue ? "Pay at venue" : "Awaiting payment confirmation"],
-            ...(txnRef ? [["Transaction ID", txnRef]] : []),
+            ["Payment", paid ? `Paid via ${METHOD_LABEL[done.request.method]}` : venue ? "Pay at venue" : "Awaiting payment confirmation"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4">
               <dt className="text-slate-400">{k}</dt>

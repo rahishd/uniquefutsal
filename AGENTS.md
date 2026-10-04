@@ -32,4 +32,10 @@ The service worker (`public/sw.js`) already handles `push` and `notificationclic
 
 Bookings and membership share `lib/payment.ts`, `components/payment/PaymentMethodPicker.tsx` and `components/payment/PaymentQr.tsx`. Methods: eSewa, Fonepay, Pay at venue. For eSewa/Fonepay the app shows a QR for the final amount (after promo codes) with remarks "Regular game / Membership renew / Membership purchase - <order id>", valid for 10 minutes (`QR_HOLD_MS`).
 
-The QR is a DEMO placeholder (`demoQrPayload`). In production the server must create the real merchant QR with the gateway for the exact amount and remarks, return it to the app, and confirm payment only from the gateway callback or verification API. "I've paid" must never mark an order paid; it only tells the server to expect the payment (optionally with the customer's transaction ID).
+**Payments are detected automatically; the customer never confirms.** While the QR is open, `PaymentQr` calls `fetchPaymentStatus(orderId)` every 3 seconds (and when the tab becomes visible again). When it returns `"paid"` the booking is confirmed (or the membership activated or extended) and "Payment received" is shown. There is no "I've paid" button.
+
+What your server must provide (replace the demo code in `lib/payment.ts`, `lib/booking.ts`, `lib/membership.ts`):
+1. Create the order and return the REAL merchant QR from eSewa/Fonepay for the exact amount and remarks. The current QR is a placeholder (`demoQrPayload`).
+2. `GET /api/payments/:orderId/status` returning `pending` or `paid`. Set `paid` only after the gateway confirms it (callback/webhook, or the gateway's payment status API). Never trust the browser. Make callbacks idempotent.
+3. Re-check availability inside a transaction, recompute price and promo server-side, and expire unpaid orders after the QR hold.
+4. Remove the demo-only pieces: `DEMO_PAYMENTS`, `demoSimulatePayment` and the "Demo: simulate payment received" button.

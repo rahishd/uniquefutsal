@@ -52,7 +52,7 @@ function planOf(id: string) {
 export default function MembershipPage() {
   const today = useSyncExternalStore(noop, nowKey, () => "");
 
-  const [active] = useState<Membership | null>(sampleCurrent);
+  const [active, setActive] = useState<Membership | null>(sampleCurrent);
   // A purchase stays pending until the server verifies the payment; it never replaces an active plan.
   const [pending, setPending] = useState<Membership | null>(null);
   const [billing, setBilling] = useState<Billing>("monthly");
@@ -66,7 +66,7 @@ export default function MembershipPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<PurchaseResult | null>(null); // the created order (held while the QR is shown)
-  const [txnRef, setTxnRef] = useState<string | null>(null);
+  const [paid, setPaid] = useState(false); // true once the server has reported the order as paid
 
   if (!today) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
 
@@ -103,6 +103,27 @@ export default function MembershipPage() {
     window.scrollTo({ top: 0 });
   }
 
+  // Called automatically when the server reports the order as paid: the plan goes live (or is extended).
+  function activate(res: PurchaseResult, plan: Plan) {
+    setPaid(true);
+    setOrder(res);
+    setPending(null);
+    setActive((prev) =>
+      res.renewing && prev
+        ? { ...prev, billing: res.membership.billing, endKey: res.membership.endKey, paid: prev.paid + res.total }
+        : { ...res.membership, pendingVerification: false },
+    );
+    addNotice({
+      id: `membership-${res.membership.id}`,
+      type: "membership",
+      title: res.renewing ? "Membership renewed" : "Membership activated",
+      body: `${plan.name} (${BILLING_LABEL[res.membership.billing]}) · ${formatRs(res.total)} received. Valid until ${fmtDate(res.membership.endKey)}.`,
+      href: "/member",
+    });
+    setStep("done");
+    window.scrollTo({ top: 0 });
+  }
+
   function applyPromo(base: number, renewing: boolean) {
     setPromo(validateMemberPromo(promoInput, { renewing, base, today }));
   }
@@ -119,7 +140,7 @@ export default function MembershipPage() {
       );
       setOrder(res);
       if (isOnline(method)) {
-        setStep("qr"); // show the QR for the final amount; the customer pays, then taps "I've paid"
+        setStep("qr"); // show the QR for the final amount; the screen detects the payment by itself
         window.scrollTo({ top: 0 });
       } else {
         finish(res, chosen);
@@ -136,30 +157,29 @@ export default function MembershipPage() {
     return (
       <PaymentQr
         method={method}
+        orderId={order.membership.id}
         amount={order.total}
         remarks={remarksFor(order.renewing ? "renew" : "purchase", order.membership.id)}
         heldAt={order.createdAt}
         onBack={() => { setOrder(null); setStep("review"); }}
-        onPaid={(ref) => {
-          setTxnRef(ref ?? null); // DEMO: the real API receives this to match the payment faster
-          finish(order, chosen);
-        }}
+        onPaid={() => activate(order, chosen)}
       />
     );
   }
 
   /* ---------- confirmation ---------- */
   if (step === "done" && order && chosen) {
-    const venue = method === "venue";
     return (
       <div className="space-y-5">
         <div className="glass rounded-3xl p-6 text-center">
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-sky-500/15 text-sky-600">
             <Check size={34} />
           </span>
-          <h1 className="mt-4 text-2xl font-semibold">{venue ? "Membership reserved" : "Payment submitted"}</h1>
+          <h1 className="mt-4 text-2xl font-semibold">
+            {paid ? (order.renewing ? "Membership renewed!" : "Membership activated!") : "Membership reserved"}
+          </h1>
           <p className="mt-1 text-sm text-slate-500">
-            {venue ? "Pay at the venue to activate your membership." : "Your membership activates as soon as the payment is verified."}
+            {paid ? "Payment received. Your member benefits are live." : "Pay at the venue to activate your membership."}
           </p>
           <p className="mt-4 text-xs text-slate-400">Membership ID</p>
           <p className="font-mono text-lg font-semibold tracking-wide">{order.membership.id}</p>
@@ -169,9 +189,8 @@ export default function MembershipPage() {
           {[
             ["Plan", `${chosen.name} · ${BILLING_LABEL[order.membership.billing]}`],
             ["Valid", `${fmtDate(order.membership.startKey)} – ${fmtDate(order.membership.endKey)}`],
-            ["Payment", METHOD_LABEL[method]],
-            ["Status", venue ? "Awaiting payment at venue" : "Pending verification"],
-            ...(txnRef ? [["Transaction ID", txnRef]] : []),
+            ["Payment", paid ? `Paid via ${METHOD_LABEL[method]}` : METHOD_LABEL[method]],
+            ["Status", paid ? "Active" : "Awaiting payment at venue"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4"><dt className="text-slate-400">{k}</dt><dd className="text-right font-medium">{v}</dd></div>
           ))}
@@ -183,7 +202,7 @@ export default function MembershipPage() {
           Demo mode: no payment was taken and nothing was saved. Real memberships need the backend and payment gateway.
         </p>
 
-        <button type="button" onClick={() => { setStep("browse"); setChosen(null); setOrder(null); setTxnRef(null); }} className="glass-btn block w-full rounded-full py-3.5 text-center text-sm font-medium text-white">
+        <button type="button" onClick={() => { setStep("browse"); setChosen(null); setOrder(null); setPaid(false); }} className="glass-btn block w-full rounded-full py-3.5 text-center text-sm font-medium text-white">
           View my membership
         </button>
       </div>

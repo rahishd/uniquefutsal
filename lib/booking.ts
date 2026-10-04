@@ -132,7 +132,7 @@ export interface BookingConfirmation {
   discount: number;
   total: number;
   // Online payments are confirmed by the gateway callback on the server, never by the browser.
-  paymentStatus: "pending_payment" | "pay_at_venue";
+  paymentStatus: "pending_payment" | "pay_at_venue" | "paid"; // "paid" is set only after the server reports it
   createdAt: number; // epoch ms; the QR hold counts from here (the server owns this in production)
 }
 
