@@ -6,6 +6,7 @@ import { Check, ChevronLeft, Crown, Loader2, Sparkles } from "lucide-react";
 import { addNotice } from "@/lib/notifications";
 import { dateKey } from "@/lib/booking";
 import {
+  BILLINGS,
   BILLING_LABEL,
   EXPIRING_SOON_DAYS,
   PLANS,
@@ -13,6 +14,7 @@ import {
   fmtDate,
   formatRs,
   priceOf,
+  savings,
   purchaseMembership,
   sampleCurrent,
   statusOf,
@@ -259,17 +261,15 @@ export default function MembershipPage() {
       )}
 
       <section aria-label="Membership plans">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium">{active ? "Plans" : "Choose a plan"}</h2>
-          <div role="radiogroup" aria-label="Billing period" className="flex rounded-full bg-white/60 p-1 text-xs font-medium">
-            {(["monthly", "yearly"] as const).map((b) => (
-              <button key={b} type="button" role="radio" aria-checked={billing === b} onClick={() => setBilling(b)} className={`rounded-full px-4 py-1.5 ${billing === b ? "glass-active text-white" : "text-slate-500"}`}>
-                {BILLING_LABEL[b]}
-              </button>
-            ))}
-          </div>
+        <h2 className="text-lg font-medium">{active ? "Plans" : "Choose a plan"}</h2>
+        <div role="radiogroup" aria-label="Plan length" className="mt-3 grid grid-cols-3 rounded-full bg-white/60 p-1 text-sm font-medium">
+          {BILLINGS.map((b) => (
+            <button key={b} type="button" role="radio" aria-checked={billing === b} onClick={() => setBilling(b)} className={`rounded-full py-2 ${billing === b ? "glass-active text-white" : "text-slate-500"}`}>
+              {BILLING_LABEL[b]}
+            </button>
+          ))}
         </div>
-        {billing === "yearly" && <p className="mt-2 text-xs text-emerald-600">Yearly saves you 2 months.</p>}
+        {billing !== "monthly" && <p className="mt-2 text-xs text-emerald-600">Longer plans cost less per month.</p>}
 
         <ul className="mt-4 space-y-4">
           {PLANS.map((p) => {
@@ -282,7 +282,7 @@ export default function MembershipPage() {
                     <p className="text-lg font-semibold">{p.name}</p>
                     <p className="text-xs text-slate-400">{p.tagline}</p>
                   </div>
-                  <p className="text-right"><span className="text-2xl font-semibold">{formatRs(priceOf(p, billing))}</span><span className="block text-[11px] text-slate-400">/ {billing === "monthly" ? "month" : "year"}</span></p>
+                  <p className="text-right"><span className="text-2xl font-semibold">{formatRs(priceOf(p, billing))}</span><span className="block text-[11px] text-slate-400">{billing === "monthly" ? "per month" : `for ${BILLING_LABEL[billing].toLowerCase()}`}</span>{savings(p, billing) > 0 && <span className="block text-[11px] font-medium text-emerald-600">Save {formatRs(savings(p, billing))}</span>}</p>
                 </div>
                 <ul className="mt-4 space-y-2 text-sm text-slate-600">
                   {p.benefits.map((b) => <li key={b} className="flex items-start gap-2"><Check size={16} className="mt-0.5 shrink-0 text-emerald-500" /> {b}</li>)}

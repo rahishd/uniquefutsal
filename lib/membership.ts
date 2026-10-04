@@ -6,14 +6,18 @@
 
 import { dateKey, formatRs, parseKey } from "@/lib/booking";
 
-export type Billing = "monthly" | "yearly";
+export type Billing = "monthly" | "quarterly" | "half";
+
+export const BILLING_MONTHS: Record<Billing, number> = { monthly: 1, quarterly: 3, half: 6 };
+export const BILLINGS: Billing[] = ["monthly", "quarterly", "half"];
 
 export interface Plan {
   id: string;
   name: string;
   tagline: string;
-  monthly: number; // Rs. per month
-  yearly: number; // Rs. per year
+  monthly: number; // Rs. for 1 month
+  quarterly: number; // Rs. for 3 months
+  half: number; // Rs. for 6 months
   benefits: string[];
   popular?: boolean;
   monthlyAllowance: number; // member-priced games per month
@@ -25,7 +29,8 @@ export const PLANS: Plan[] = [
     name: "Basic",
     tagline: "For regular players",
     monthly: 1500,
-    yearly: 15000,
+    quarterly: 4200,
+    half: 8000,
     monthlyAllowance: 4,
     benefits: ["Member pricing on bookings", "Loyalty points on every game", "Member-only offers"],
   },
@@ -34,17 +39,23 @@ export const PLANS: Plan[] = [
     name: "Premium",
     tagline: "For the serious squad",
     monthly: 3000,
-    yearly: 30000,
+    quarterly: 8400,
+    half: 16000,
     monthlyAllowance: 8,
     popular: true,
     benefits: ["Member pricing on bookings", "Priority booking window", "Double loyalty points", "Exclusive offers and early tournament sign-up"],
   },
 ];
 
-export const BILLING_LABEL: Record<Billing, string> = { monthly: "Monthly", yearly: "Yearly" };
+export const BILLING_LABEL: Record<Billing, string> = { monthly: "Monthly", quarterly: "3 Months", half: "6 Months" };
 
 export function priceOf(plan: Plan, billing: Billing) {
-  return billing === "monthly" ? plan.monthly : plan.yearly;
+  return plan[billing];
+}
+
+// How much a longer plan saves compared with paying month by month.
+export function savings(plan: Plan, billing: Billing) {
+  return Math.max(0, plan.monthly * BILLING_MONTHS[billing] - plan[billing]);
 }
 
 export function addMonths(d: Date, months: number) {
@@ -72,7 +83,9 @@ export interface Membership {
   usedThisMonth: number;
 }
 
-export const EXPIRING_SOON_DAYS = 14;
+// Customers on 3 and 6 month plans get a renewal pop-up this many days before their plan ends.
+export const EXPIRY_NOTICE_DAYS = 15;
+export const EXPIRING_SOON_DAYS = EXPIRY_NOTICE_DAYS;
 
 export function daysLeft(endKey: string, today: string) {
   const ms = parseKey(endKey).getTime() - parseKey(today).getTime();
@@ -88,14 +101,20 @@ export function statusOf(m: Membership, today: string): MemberStatus {
   return "Active";
 }
 
+export function needsExpiryNotice(m: Membership, today: string) {
+  if (m.billing === "monthly" || m.pendingVerification || m.suspended) return false;
+  const left = daysLeft(m.endKey, today);
+  return left >= 0 && left <= EXPIRY_NOTICE_DAYS;
+}
+
 // Sample: the signed-in customer's current membership (replace with the API).
 export const sampleCurrent: Membership = {
   id: "MEM-10291",
   planId: "premium",
-  billing: "yearly",
+  billing: "half",
   startKey: "2026-10-01",
-  endKey: "2027-09-30",
-  paid: 30000,
+  endKey: "2027-03-31",
+  paid: 16000,
   usedThisMonth: 3,
 };
 
@@ -123,7 +142,7 @@ export async function purchaseMembership(req: PurchaseRequest, current: Membersh
   // Renewing the same plan continues from the current end date; anything else starts today.
   const renewing = current && current.planId === plan.id && daysLeft(current.endKey, today) >= 0;
   const start = renewing ? new Date(parseKey(current!.endKey).getTime() + 86400000) : parseKey(today);
-  const end = new Date(addMonths(start, req.billing === "monthly" ? 1 : 12).getTime() - 86400000);
+  const end = new Date(addMonths(start, BILLING_MONTHS[req.billing]).getTime() - 86400000);
   const digits = String(Math.floor(Math.random() * 99999)).padStart(5, "0");
   return {
     total,

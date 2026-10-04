@@ -27,7 +27,7 @@ export const sampleMembership = {
   plan: "Premium Membership",
   id: "MEM-10291",
   validFrom: "1 Oct 2026",
-  validUntil: "30 Sep 2027",
+  validUntil: "31 Mar 2027",
   status: "Active" as "Active" | "Expiring soon" | "Expired",
   benefits: ["Member pricing", "Priority booking", "Loyalty bonus"],
 };
