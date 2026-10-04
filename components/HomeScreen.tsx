@@ -14,6 +14,7 @@ import {
   Trophy,
   BarChart3,
 } from "lucide-react";
+import HeaderInfo from "@/components/HeaderInfo";
 import { sampleLive, sampleUpNext } from "@/lib/sample-data";
 
 const TILES = [
@@ -60,8 +61,10 @@ export default function HomeScreen() {
         </button>
       </header>
 
+      <HeaderInfo />
+
       {/* Search */}
-      <div className="mt-6 flex gap-3">
+      <div className="mt-4 flex gap-3">
         <label className="glass flex flex-1 items-center gap-2 rounded-2xl px-4 py-3.5">
           <input
             type="search"
