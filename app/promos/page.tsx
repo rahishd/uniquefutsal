@@ -1,6 +1,5 @@
-import { Tag } from "lucide-react";
-import PlaceholderPage from "@/components/PlaceholderPage";
+import PromosPage from "@/components/promos/PromosPage";
 
-export default function PromosPage() {
-  return <PlaceholderPage icon={Tag} title="Offers" note="Active, upcoming and expired promos. Coming soon (FRD section 14)." />;
+export default function Page() {
+  return <PromosPage />;
 }

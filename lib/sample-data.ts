@@ -1,20 +1,6 @@
 // Placeholder content. Replace with real API data once the backend endpoints exist
 // (promo codes, tournaments and tie-sheets; see AGENTS.md).
 
-export interface Promo {
-  id: string;
-  title: string;
-  code: string;
-  discount: string;
-  description: string;
-  validUntil: string;
-}
-
-export const samplePromos: Promo[] = [
-  { id: "p1", title: "Dashain Special", code: "DASHAIN83", discount: "15% OFF", description: "On any evening slot", validUntil: "16 Oct 2026" },
-  { id: "p2", title: "Weekend Warriors", code: "WEEKEND10", discount: "10% OFF", description: "Sat & Sun bookings", validUntil: "31 Oct 2026" },
-  { id: "p3", title: "Morning Kickoff", code: "EARLY200", discount: "Rs. 200 OFF", description: "Slots before 8 AM", validUntil: "30 Nov 2026" },
-];
 
 export type MatchStatus = "finished" | "live" | "upcoming";
 

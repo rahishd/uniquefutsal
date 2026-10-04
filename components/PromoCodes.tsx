@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, ChevronRight, Copy } from "lucide-react";
-import { samplePromos } from "@/lib/sample-data";
+import { fmtDay, promos, statusOf, useToday } from "@/lib/promos";
 
 export default function PromoCodes() {
   const [copied, setCopied] = useState<string | null>(null);
+  const today = useToday();
+  const live = promos.filter((p) => today && statusOf(p, today) === "active");
 
   async function copy(code: string) {
     try {
@@ -18,7 +20,7 @@ export default function PromoCodes() {
     }
   }
 
-  if (samplePromos.length === 0) return null;
+  if (live.length === 0) return null;
 
   return (
     <section className="mt-8" aria-label="Live promo codes">
@@ -32,7 +34,7 @@ export default function PromoCodes() {
       </div>
 
       <ul className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-2">
-        {samplePromos.map((p) => (
+        {live.map((p) => (
           <li key={p.id} className="glass w-64 shrink-0 snap-start rounded-3xl p-4">
             <div className="flex items-start justify-between">
               <div>
@@ -52,7 +54,7 @@ export default function PromoCodes() {
                 {copied === p.code ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}
               </button>
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">Valid until {p.validUntil}</p>
+            <p className="mt-2 text-[11px] text-slate-400">Valid until {fmtDay(p.until)}</p>
           </li>
         ))}
       </ul>
