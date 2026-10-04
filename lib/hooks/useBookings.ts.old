@@ -1,0 +1,89 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getBookings,
+  getAvailableSlots,
+  createBooking,
+  updateBooking,
+  cancelBooking,
+  Booking,
+  BookingFilters,
+  CreateBookingData,
+} from "@/lib/api/bookings";
+
+// Query keys for cache invalidation
+export const bookingKeys = {
+  all: ["bookings"] as const,
+  lists: () => [...bookingKeys.all, "list"] as const,
+  list: (filters?: BookingFilters) => [...bookingKeys.lists(), filters] as const,
+  availableSlots: (date: string, duration: number) =>
+    [...bookingKeys.all, "slots", date, duration] as const,
+};
+
+// Hook: Fetch all bookings with optional filters
+export function useBookings(filters?: BookingFilters) {
+  return useQuery({
+    queryKey: bookingKeys.list(filters),
+    queryFn: () => getBookings(filters),
+    staleTime: 30 * 1000, // 30 seconds
+    refetchInterval: 15000, // Poll every 15 seconds (same as original)
+  });
+}
+
+// Hook: Fetch available slots for a specific date and duration
+export function useAvailableSlots(date: string, duration: number = 1, enabled: boolean = true) {
+  return useQuery({
+    queryKey: bookingKeys.availableSlots(date, duration),
+    queryFn: () => getAvailableSlots(date, duration),
+    enabled: enabled && !!date,
+    staleTime: 10 * 1000, // 10 seconds - slots change frequently
+    gcTime: 60 * 1000, // Keep in cache for 1 minute (cacheTime renamed to gcTime in v5)
+    retry: 2,
+  });
+}
+
+// Hook: Create a new booking
+export function useCreateBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateBookingData) => createBooking(data),
+    onSuccess: () => {
+      // Invalidate bookings list and available slots
+      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+    },
+  });
+}
+
+// Hook: Update a booking
+export function useUpdateBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: {
+        status?: "pending" | "confirmed" | "cancelled" | "completed";
+        paymentStatus?: "pending" | "completed" | "partially_paid";
+        notes?: string;
+      };
+    }) => updateBooking(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+    },
+  });
+}
+
+// Hook: Cancel a booking
+export function useCancelBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => cancelBooking(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+    },
+  });
+}
