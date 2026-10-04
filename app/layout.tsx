@@ -4,6 +4,7 @@ import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import FooterGate from "@/components/FooterGate";
 import SwRegister from "@/components/SwRegister";
+import InstallPrompt from "@/components/InstallPrompt";
 
 const poppins = Poppins({ variable: "--font-poppins", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <FooterGate />
         <BottomNav />
         <SwRegister />
+        <InstallPrompt />
       </body>
     </html>
   );
