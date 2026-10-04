@@ -1,146 +1,151 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { Bell, CalendarDays, ChevronDown, ChevronRight, Info, Radio, Tag, Trophy } from "lucide-react";
-import { sampleFinished, sampleLive, sampleUpNext, sampleUpdates, type UpdateKind } from "@/lib/sample-data";
+import {
+  Bell,
+  CalendarDays,
+  ChevronRight,
+  Crown,
+  LayoutGrid,
+  Radio,
+  Search,
+  SlidersHorizontal,
+  Star,
+  Swords,
+  Tag,
+  Trophy,
+  BarChart3,
+} from "lucide-react";
+import { sampleLive, sampleUpNext } from "@/lib/sample-data";
 
-const KIND: Record<UpdateKind, { icon: typeof Bell; box: string }> = {
-  alert: { icon: Bell, box: "bg-red-500/10 text-red-400" },
-  promo: { icon: Tag, box: "bg-lime-300/10 text-lime-300" },
-  tournament: { icon: Trophy, box: "bg-amber-400/10 text-amber-400" },
-  info: { icon: Info, box: "bg-sky-400/10 text-sky-400" },
-};
-
-function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? "Good morning," : h < 18 ? "Good afternoon," : "Good evening,";
-}
+const TILES = [
+  { label: "Book", href: "/book", icon: CalendarDays, tone: "text-brand" },
+  { label: "Membership", href: "/member", icon: Crown, tone: "text-amber-500" },
+  { label: "Opponent", href: "/opponent", icon: Swords, tone: "text-rose-500" },
+  { label: "Points", href: "/points", icon: Star, tone: "text-yellow-500" },
+  { label: "Promos", href: "/promos", icon: Tag, tone: "text-emerald-500" },
+  { label: "My stats", href: "/profile", icon: BarChart3, tone: "text-indigo-500" },
+  { label: "Tournaments", href: "/tournaments", icon: Trophy, tone: "text-orange-500" },
+  { label: "More", href: "/profile", icon: LayoutGrid, tone: "text-brand" },
+];
 
 export default function HomeScreen() {
-  const [open, setOpen] = useState<string | null>(null);
   const userName = "Player"; // TODO: from auth once login exists
+  const unread = 2; // TODO: from notifications API
 
   return (
     <div>
-      <header className="flex items-start justify-between">
-        <div>
-          <p suppressHydrationWarning className="font-heading text-sm font-semibold uppercase tracking-widest text-slate-400">
-            {greeting()}
-          </p>
-          <h1 className="font-heading mt-1 text-3xl font-bold leading-tight">
-            {userName} <span aria-hidden>👋</span>
-          </h1>
-        </div>
-        <Link
-          href="/profile"
-          aria-label="Profile"
-          className="font-heading relative flex h-12 w-12 items-center justify-center rounded-full bg-brand text-base font-bold text-black"
-        >
-          {userName.slice(0, 2).toUpperCase()}
-          <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-[#0b0b10] bg-red-500" />
+      {/* Header: user info left, notifications right */}
+      <header className="flex items-center justify-between">
+        <Link href="/profile" className="flex items-center gap-3">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-brand text-lg font-semibold text-white ring-2 ring-white shadow-md">
+            {userName.slice(0, 1).toUpperCase()}
+          </span>
+          <span>
+            <span className="block text-sm text-slate-400">
+              Hello <span aria-hidden>👋</span>
+            </span>
+            <span className="block text-2xl font-medium leading-tight">{userName}</span>
+          </span>
         </Link>
+        <button
+          type="button"
+          aria-label={`Notifications, ${unread} unread`}
+          className="glass relative flex h-12 w-12 items-center justify-center rounded-2xl text-slate-600"
+        >
+          <Bell size={22} />
+          {unread > 0 && (
+            <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-semibold text-white">
+              {unread}
+            </span>
+          )}
+        </button>
       </header>
 
-      <Link
-        href="/book"
-        className="mt-6 flex items-center justify-between rounded-3xl bg-brand px-6 py-7 text-black shadow-[0_0_40px_-10px_rgba(200,241,53,0.5)] transition-transform active:scale-[0.99]"
-      >
-        <div>
-          <p className="font-heading text-sm font-semibold uppercase tracking-widest text-black/60">Reserve now</p>
-          <p className="font-heading mt-1 text-2xl font-bold">BOOK A COURT</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <CalendarDays size={28} />
-          <ChevronRight size={22} />
-        </div>
-      </Link>
+      {/* Search */}
+      <div className="mt-6 flex gap-3">
+        <label className="glass flex flex-1 items-center gap-2 rounded-2xl px-4 py-3.5">
+          <input
+            type="search"
+            placeholder="Search a slot, offer or team…"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+          />
+          <Search size={20} className="text-slate-500" />
+        </label>
+        <button type="button" aria-label="Filters" className="glass flex h-[52px] w-[52px] items-center justify-center rounded-2xl text-slate-600">
+          <SlidersHorizontal size={20} />
+        </button>
+      </div>
 
-      <hr className="my-6 border-white/10" />
+      {/* Promo banner */}
+      <section className="relative mt-6 overflow-hidden rounded-3xl bg-gradient-to-br from-sky-200 via-sky-100 to-blue-200 p-5 shadow-[0_10px_30px_rgba(60,120,200,0.18)]">
+        <div className="relative z-10 max-w-[62%]">
+          <p className="text-xs font-medium text-orange-500">Up to 25% off today</p>
+          <h2 className="mt-1 text-xl font-medium leading-snug">Exclusive deals on your next game</h2>
+          <Link href="/book" className="glass-btn mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium text-white">
+            <CalendarDays size={16} /> Book now
+          </Link>
+        </div>
+        <span aria-hidden className="absolute -right-2 top-1/2 -translate-y-1/2 text-[120px] leading-none drop-shadow-lg">
+          ⚽
+        </span>
+      </section>
 
-      <section aria-label="Live matches">
+      {/* Popular */}
+      <section className="mt-8">
         <div className="flex items-center justify-between">
-          <p className="font-heading flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
-            <span className="h-2 w-2 rounded-full bg-red-500" />
-            <span className="text-red-500">Live</span>
-            <span className="font-medium normal-case tracking-normal text-slate-400">· Tournament Day 3</span>
-          </p>
-          <Trophy size={18} className="text-amber-400" />
+          <h2 className="text-lg font-medium">Popular</h2>
+          <Link href="/profile" className="flex items-center text-sm text-brand">
+            See all <ChevronRight size={16} />
+          </Link>
         </div>
+        <ul className="mt-4 grid grid-cols-4 gap-x-3 gap-y-5">
+          {TILES.map(({ label, href, icon: Icon, tone }) => (
+            <li key={label}>
+              <Link href={href} className="flex flex-col items-center gap-2">
+                <span className="glass flex h-[70px] w-[70px] items-center justify-center rounded-3xl">
+                  <Icon size={30} className={tone} />
+                </span>
+                <span className="text-center text-xs text-slate-600">{label}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
-        <div className="mt-4 space-y-3">
+      {/* Live matches */}
+      <section className="mt-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Live matches</h2>
+          <Link href="/tournaments" className="flex items-center text-sm text-brand">
+            See all <ChevronRight size={16} />
+          </Link>
+        </div>
+        <ul className="mt-4 space-y-3">
           {sampleLive.map((m) => (
-            <div key={m.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-card px-4 py-4">
-              <div className="font-heading text-lg font-bold leading-snug">
+            <li key={m.id} className="glass flex items-center justify-between rounded-3xl px-5 py-4">
+              <div className="text-sm font-medium leading-snug">
                 <p>{m.home}</p>
                 <p>{m.away}</p>
               </div>
               <div className="text-center">
-                <p className="font-heading text-3xl font-bold">
+                <p className="text-2xl font-semibold">
                   {m.homeScore} - {m.awayScore}
                 </p>
-                <p className="text-xs font-semibold text-red-500">{m.minute}&apos;</p>
+                <p className="text-xs font-medium text-rose-500">{m.minute}&apos;</p>
               </div>
               <div className="flex flex-col items-end gap-2">
                 <span className="text-xs text-slate-400">{m.venue}</span>
-                <span className="flex items-center gap-1 rounded-md bg-red-500/15 px-2 py-1 text-[11px] font-bold uppercase text-red-500">
+                <span className="flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-1 text-[11px] font-medium text-rose-500">
                   <Radio size={12} /> Live
                 </span>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-white/10 bg-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">FT · {sampleFinished.venue}</p>
-            <p className="mt-2 text-slate-400">{sampleFinished.home}</p>
-            <p className="font-heading text-lg font-bold text-slate-400">
-              {sampleFinished.homeScore} - {sampleFinished.awayScore}
-            </p>
-            <p className="text-slate-400">{sampleFinished.away}</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-400">Up next · {sampleUpNext.time}</p>
-            <p className="mt-2 font-semibold">{sampleUpNext.home}</p>
-            <p className="font-heading font-bold text-sky-400">VS</p>
-            <p className="font-semibold">{sampleUpNext.away}</p>
-          </div>
-        </div>
-      </section>
-
-      <section aria-label="Updates" className="mt-8">
-        <div className="flex items-center justify-between">
-          <p className="font-heading text-sm font-bold uppercase tracking-widest text-slate-400">Updates</p>
-          <span className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-bold text-red-400">
-            {sampleUpdates.length} new
-          </span>
-        </div>
-        <ul className="mt-4 space-y-3">
-          {sampleUpdates.map((u) => {
-            const { icon: Icon, box } = KIND[u.kind];
-            const isOpen = open === u.id;
-            return (
-              <li key={u.id} className="rounded-2xl border border-white/10 bg-card">
-                <button
-                  type="button"
-                  onClick={() => setOpen(isOpen ? null : u.id)}
-                  aria-expanded={isOpen}
-                  className="flex w-full items-center gap-4 px-4 py-4 text-left"
-                >
-                  <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${box}`}>
-                    <Icon size={20} />
-                  </span>
-                  <span className="font-heading flex-1 text-lg font-bold leading-snug">{u.title}</span>
-                  <span className="flex shrink-0 items-center gap-1 text-xs text-slate-500">
-                    {u.ago}
-                    <ChevronDown size={14} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                  </span>
-                </button>
-                {isOpen && <p className="px-4 pb-4 pl-[76px] text-sm text-slate-400">{u.body}</p>}
-              </li>
-            );
-          })}
+          <li className="glass flex items-center justify-between rounded-3xl px-5 py-4 text-sm">
+            <span className="text-xs font-medium text-brand">UP NEXT · {sampleUpNext.time}</span>
+            <span className="font-medium">
+              {sampleUpNext.home} <span className="text-brand">vs</span> {sampleUpNext.away}
+            </span>
+          </li>
         </ul>
       </section>
     </div>

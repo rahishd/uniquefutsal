@@ -6,8 +6,6 @@ export const sampleLive = [
   { id: "l2", home: "Storm FC", away: "Galaxy United", homeScore: 1, awayScore: 1, minute: 15, venue: "Pitch Pro" },
 ];
 
-export const sampleFinished = { venue: "THE BOX", home: "Iron Wolves", away: "Neon Kings", homeScore: 5, awayScore: 3 };
-
 export const sampleUpNext = { time: "20:00", home: "Viper FC", away: "Titan Squad" };
 
 export type UpdateKind = "alert" | "promo" | "tournament" | "info";

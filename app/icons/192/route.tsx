@@ -10,8 +10,8 @@ export function GET() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0b0b10",
-          color: "#c8f135",
+          background: "#2f8cf0",
+          color: "#ffffff",
           fontSize: 110,
           fontWeight: 800,
         }}

@@ -11,11 +11,11 @@ export default function PlaceholderPage({
 }) {
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center text-center">
-      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand/15 text-brand">
-        <Icon size={30} />
+      <span className="glass flex h-20 w-20 items-center justify-center rounded-3xl text-brand">
+        <Icon size={34} />
       </span>
-      <h1 className="font-heading mt-5 text-3xl font-bold">{title}</h1>
-      <p className="mt-2 max-w-xs text-sm text-slate-400">{note}</p>
+      <h1 className="mt-6 text-2xl font-semibold">{title}</h1>
+      <p className="mt-2 max-w-xs text-sm text-slate-500">{note}</p>
     </div>
   );
 }
