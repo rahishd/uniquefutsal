@@ -21,10 +21,11 @@ export const isOnline = (m: PayMethod): m is OnlineMethod => m !== "venue";
 // How long a QR (and the slot or order behind it) stays valid.
 export const QR_HOLD_MS = 10 * 60 * 1000;
 
-export type PaymentPurpose = "game" | "renew" | "purchase";
+export type PaymentPurpose = "game" | "gamezone" | "renew" | "purchase";
 
 const PURPOSE_LABEL: Record<PaymentPurpose, string> = {
   game: "Regular game",
+  gamezone: "Gamezone PS5",
   renew: "Membership renew",
   purchase: "Membership purchase",
 };

@@ -4,7 +4,7 @@
 // deployment also needs the server to create challenge/payment/booking notices and to send
 // Web Push for when the app is closed (the service worker already handles `push` events).
 
-export type NoticeType = "challenge" | "payment" | "booking" | "reminder" | "membership" | "match" | "promo" | "points" | "tournament";
+export type NoticeType = "challenge" | "payment" | "booking" | "reminder" | "membership" | "match" | "promo" | "points" | "tournament" | "gamezone";
 
 export interface Notice {
   id: string;

@@ -104,3 +104,9 @@ Everything is sample data in browser storage. The server must own the ledger, ex
 # Urgent help (WhatsApp)
 
 `components/WhatsAppChat.tsx`: a floating green WhatsApp button on Home only (bottom right, above the bottom bar). It opens a sheet with topics (booking, payment, change or cancel, membership, other) and a Call button. Each topic opens `wa.me/<number>` with a pre-written message; the number comes from `site.whatsapp` / `site.phone` in `lib/site.ts`. No personal data goes in the link. This opens WhatsApp itself, it is not a chat inside the app: a real in-app chat with admin needs the backend (messages, admin inbox) or the WhatsApp Business Cloud API with a chatbot.
+
+# Gamezone (PS5)
+
+`/gamezone` (`components/gamezone/GamezoneFlow.tsx`, data layer `lib/gamezone.ts`), opened from the "Gamezone" tile in Popular. Price per hour per person: Solo Rs. 300, 2 players Rs. 200 each, 4 players Rs. 150 each; more hours multiply the same rate (total = rate x players x hours, 1 to 4 hours). Same rules as court bookings: up to 10 days ahead, only free start times are listed, registered customers can pay at the venue, guests pay in full online (eSewa/Fonepay QR with remarks "Gamezone PS5 - <id>", paid status detected automatically), 1-hour reminder. Gamezone notices use `type: "gamezone"` (own badge on the tile and bell icon).
+
+ASSUMPTIONS to confirm with the owner and set in `lib/gamezone.ts`: two consoles (`CONSOLES`), sessions between 10 AM and 10 PM (`OPEN_HOUR`, `CLOSE_HOUR`), 4 hours maximum (`MAX_HOURS`), only 1, 2 or 4 players, no promo codes and no loyalty points for Gamezone, and the bookings do not appear in Profile > My bookings yet. Availability is pseudo-random demo data; the server must own availability, price and payment status.

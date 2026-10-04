@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { BarChart3, CalendarDays, ChevronRight, CircleHelp, Crown, Star, Swords, Tag, Trophy } from "lucide-react";
+import { BarChart3, CalendarDays, ChevronRight, CircleHelp, Crown, Gamepad2, Star, Swords, Tag, Trophy } from "lucide-react";
 import { getServerSnapshot, getSnapshot, markReadByTypes, subscribe, type NoticeType } from "@/lib/notifications";
 import { useSession } from "@/lib/session";
 import { pendingActions, useTeams } from "@/lib/teams";
@@ -26,6 +26,7 @@ const TILES: Tile[] = [
   { label: "Promos", href: "/promos", icon: Tag, tone: "text-emerald-500", types: ["promo"] },
   { label: "My stats", href: "/profile", icon: BarChart3, tone: "text-indigo-500" },
   { label: "Tournaments", href: "/tournaments", icon: Trophy, tone: "text-orange-500", types: ["tournament"] },
+  { label: "Gamezone", href: "/gamezone", icon: Gamepad2, tone: "text-violet-500", types: ["gamezone"] },
   { label: "Help", href: "/help", icon: CircleHelp, tone: "text-sky-500" },
 ];
 

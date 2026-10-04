@@ -33,6 +33,19 @@ export const helpTopics: HelpTopic[] = [
     href: { label: "Book now", to: "/book" },
   },
   {
+    id: "gamezone",
+    icon: "book",
+    title: "Gamezone (PS5)",
+    summary: "Book a PS5 console by the hour.",
+    points: [
+      "Open Gamezone in Popular. Choose how many are playing: Solo Rs. 300 an hour, 2 players Rs. 200 each, 4 players Rs. 150 each.",
+      "Pick how many hours (up to 4). The price grows with the hours: rate × players × hours.",
+      "Choose a day and a start time, then pay the same way as a game booking (eSewa, Fonepay or at the venue).",
+      "Guests pay online in full. Signed-in customers can also pay at the venue.",
+    ],
+    href: { label: "Book Gamezone", to: "/gamezone" },
+  },
+  {
     id: "payment",
     icon: "pay",
     title: "Paying with eSewa, Fonepay or at the venue",
