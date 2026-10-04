@@ -60,3 +60,14 @@ export const sampleMatches = [
   { id: "m2", date: "26 Sep", you: "Team A", opp: "Team C", yourScore: 3, oppScore: 5 },
   { id: "m3", date: "19 Sep", you: "Team A", opp: "Team D", yourScore: 2, oppScore: 2 },
 ];
+
+// Past bookings used by Quick Rebook to detect the customer's usual slot.
+// Replace with the real booking history from the API.
+export const sampleBookingHistory = [
+  { dateKey: "2026-10-02", hour: 19 }, // Fri
+  { dateKey: "2026-09-25", hour: 19 }, // Fri
+  { dateKey: "2026-09-18", hour: 19 }, // Fri
+  { dateKey: "2026-09-12", hour: 16 }, // Sat
+  { dateKey: "2026-09-11", hour: 19 }, // Fri
+  { dateKey: "2026-09-05", hour: 17 }, // Sat
+];

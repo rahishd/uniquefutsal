@@ -14,6 +14,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import HeaderInfo from "@/components/HeaderInfo";
+import QuickRebook from "@/components/QuickRebook";
 import PromoCodes from "@/components/PromoCodes";
 import TournamentSection from "@/components/TournamentSection";
 
@@ -78,8 +79,10 @@ export default function HomeScreen() {
         </button>
       </div>
 
+      <QuickRebook />
+
       {/* Promo banner */}
-      <section className="relative mt-6 overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c0b5d] via-[#16167f] to-[#2a2aa8] p-5 text-white shadow-[0_10px_30px_rgba(12,11,93,0.35)]">
+      <section className="relative mt-5 overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c0b5d] via-[#16167f] to-[#2a2aa8] p-5 text-white shadow-[0_10px_30px_rgba(12,11,93,0.35)]">
         <div className="relative z-10 max-w-[62%]">
           <p className="text-xs font-medium text-orange-300">Up to 25% off today</p>
           <h2 className="mt-1 text-xl font-medium leading-snug">Exclusive deals on your next game</h2>

@@ -72,13 +72,13 @@ function Steps({ step }: { step: number }) {
   );
 }
 
-export default function BookingFlow() {
+export default function BookingFlow({ initialDate, initialHour }: { initialDate?: string; initialHour?: number }) {
   const tick = useSyncExternalStore(noop, nowKey, () => "");
   const now = useMemo(() => (tick ? new Date() : null), [tick]);
 
   const [step, setStep] = useState<0 | 1 | 2>(0);
-  const [selDate, setSelDate] = useState<string | null>(null);
-  const [selHour, setSelHour] = useState<number | null>(null);
+  const [selDate, setSelDate] = useState<string | null>(initialDate ?? null);
+  const [selHour, setSelHour] = useState<number | null>(initialHour ?? null);
   const [selCourt, setSelCourt] = useState<string | null>(null);
   const [promoInput, setPromoInput] = useState("");
   const [promo, setPromo] = useState<PromoResult | null>(null);
@@ -92,18 +92,21 @@ export default function BookingFlow() {
   if (!now) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
 
   const today = dateKey(now);
-  const activeDate = selDate ?? today;
   const days = Array.from({ length: MAX_ADVANCE_DAYS + 1 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
     return { key: dateKey(d), d };
   });
+  // A pre-selected date (e.g. from Quick Rebook) is only honoured inside the booking window.
+  const wanted = selDate ?? today;
+  const activeDate = days.some((d) => d.key === wanted) ? wanted : today;
   const slots = getSlots(activeDate, now);
-  const slot: Slot | undefined = slots.find((s) => s.hour === selHour);
+  const slot: Slot | undefined = slots.find((s) => s.hour === selHour && s.status !== "booked" && s.status !== "past");
+  const court = selCourt ?? slot?.freeCourts[0] ?? null;
   const base = slot?.price ?? 0;
   const discount = promo?.ok ? promo.discount : 0;
   const total = Math.max(0, base - discount);
   const phoneOk = /^9\d{9}$/.test(phone);
-  const canPay = Boolean(slot && selCourt && name.trim().length >= 2 && phoneOk);
+  const canPay = Boolean(slot && court && name.trim().length >= 2 && phoneOk);
 
   function pickDate(k: string) {
     setSelDate(k);
@@ -125,12 +128,12 @@ export default function BookingFlow() {
   }
 
   async function confirm() {
-    if (!canPay || selHour === null || !selCourt) return;
+    if (!canPay || selHour === null || !court) return;
     setSubmitting(true);
     setError(null);
     try {
       const res = await createBooking(
-        { dateKey: activeDate, hour: selHour, courtId: selCourt, promoCode: promo?.ok ? promo.code : undefined, method, name: name.trim(), phone },
+        { dateKey: activeDate, hour: selHour, courtId: court, promoCode: promo?.ok ? promo.code : undefined, method, name: name.trim(), phone },
         { base, discount, total },
       );
       setDone(res);
@@ -194,8 +197,8 @@ export default function BookingFlow() {
   }
 
   /* ---------- Step 2: review & pay ---------- */
-  if (step === 1 && slot && selCourt) {
-    const court = COURTS.find((c) => c.id === selCourt)?.name;
+  if (step === 1 && slot && court) {
+    const courtName = COURTS.find((c) => c.id === court)?.name;
     return (
       <div className="space-y-5">
         <Steps step={1} />
@@ -216,8 +219,8 @@ export default function BookingFlow() {
                     key={c.id}
                     type="button"
                     onClick={() => setSelCourt(c.id)}
-                    aria-pressed={selCourt === c.id}
-                    className={`rounded-full px-3 py-1 text-xs font-medium ${selCourt === c.id ? "glass-active text-white" : "bg-white/60 text-slate-600"}`}
+                    aria-pressed={court === c.id}
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${court === c.id ? "glass-active text-white" : "bg-white/60 text-slate-600"}`}
                   >
                     {c.name}
                   </button>
@@ -230,7 +233,7 @@ export default function BookingFlow() {
             )}
             <div className="flex justify-between border-t border-white/60 pt-3 text-base"><dt className="font-medium">Total</dt><dd className="font-semibold">{formatRs(total)}</dd></div>
           </dl>
-          <p className="mt-2 text-[11px] text-slate-400">{court} · final price is confirmed by the server.</p>
+          <p className="mt-2 text-[11px] text-slate-400">{courtName} · final price is confirmed by the server.</p>
         </section>
 
         <section className="glass rounded-3xl p-5">
@@ -303,6 +306,9 @@ export default function BookingFlow() {
       <header>
         <h1 className="text-2xl font-semibold">Book a court</h1>
         <p className="text-sm text-slate-500">Pick a date and a one-hour slot. Bookings open up to {MAX_ADVANCE_DAYS} days in advance.</p>
+        {initialHour !== undefined && selHour === initialHour && !slot && (
+          <p role="status" className="mt-2 rounded-xl bg-amber-400/15 px-3 py-2 text-xs text-amber-700">Your usual slot isn&apos;t available on this date. Please pick another time.</p>
+        )}
       </header>
 
       <section aria-label="Select date">
