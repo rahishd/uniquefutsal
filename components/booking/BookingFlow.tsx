@@ -6,7 +6,7 @@ import { CalendarPlus, Check, Gift, ChevronLeft, Loader2, Tag, X } from "lucide-
 import { addNotice, scheduleReminder } from "@/lib/notifications";
 import PaymentMethodPicker from "@/components/payment/PaymentMethodPicker";
 import { signInDemo, useSession } from "@/lib/session";
-import { spendVoucher, useVouchers } from "@/lib/points";
+import { pointsForGame, spendVoucher, useVouchers } from "@/lib/points";
 import PaymentQr from "@/components/payment/PaymentQr";
 import { METHOD_LABEL, isOnline, remarksFor } from "@/lib/payment";
 import {
@@ -139,7 +139,8 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   const discount = promo?.ok ? promo.discount : 0;
   // A free-game voucher covers a regular booking in full (it never applies to challenge games).
   const registeredNow = session.registered;
-  const free = registeredNow && useFree && vouchers > 0;
+  const voucher = slot ? vouchers.find((v) => v.period === slot.period) : undefined;
+  const free = registeredNow && useFree && Boolean(voucher);
   const total = free ? 0 : Math.max(0, base - discount);
   const phoneOk = /^9\d{9}$/.test(phone);
   // Registered customers are recognised automatically. Only guests type their details,
@@ -180,7 +181,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
       );
       if (free) {
         // Nothing to pay: the voucher covers it. The server must verify and spend the voucher itself.
-        if (!spendVoucher(res.id)) throw new Error("no voucher");
+        if (!slot || !spendVoucher(slot.period, res.id)) throw new Error("no voucher");
         const paid = { ...res, paymentStatus: "paid" as const };
         setFreeId(paid.id);
         notifyBooking(paid);
@@ -316,9 +317,12 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
             <div className="flex justify-between border-t border-white/60 pt-3 text-base"><dt className="font-medium">Total</dt><dd className="font-semibold">{formatRs(total)}</dd></div>
           </dl>
           <p className="mt-2 text-[11px] text-slate-400">{courtName} · final price is confirmed by the server.</p>
+          {registered && !free && total > 0 && (
+            <p className="mt-3 rounded-2xl bg-amber-400/15 px-3 py-2 text-xs text-amber-700">You&apos;ll earn {pointsForGame(total)} loyalty points after this game.</p>
+          )}
         </section>
 
-        {registered && vouchers > 0 && (
+        {registered && voucher && (
           <button
             type="button"
             onClick={() => setUseFree((v) => !v)}
@@ -326,7 +330,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
             className={`flex w-full items-center justify-between gap-3 rounded-3xl p-4 text-left ${free ? "glass-active text-white" : "glass"}`}
           >
             <span className="flex items-center gap-2 text-sm font-medium"><Gift size={18} className={free ? "text-orange-300" : "text-orange-500"} /> Use a free game voucher</span>
-            <span className={`text-xs ${free ? "text-white/70" : "text-slate-400"}`}>{vouchers} ready · {free ? "Applied" : "Tap to apply"}</span>
+            <span className={`text-xs ${free ? "text-white/70" : "text-slate-400"}`}>{slot?.period} shift · {free ? "Applied" : "Tap to apply"}</span>
           </button>
         )}
 

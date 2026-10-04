@@ -295,7 +295,7 @@ function RegisteredProfile() {
       <Card title="Loyalty points" action={<Link href="/points" className="flex items-center text-sm text-brand">View <ChevronRight size={16} /></Link>}>
         <div className="flex items-end justify-between">
           <p className="flex items-center gap-2 text-2xl font-semibold"><Star className="fill-amber-400 text-amber-400" size={22} /> {loy.remaining}</p>
-          <p className="text-xs text-slate-400">{loy.toNext} to next free game</p>
+          <p className="text-xs text-slate-400">{loy.toNext === 0 ? "Free game unlocked" : `${loy.toNext} to a free game`}</p>
         </div>
         <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to next reward">
           <div className="h-full rounded-full bg-gradient-to-r from-amber-300 to-amber-500" style={{ width: `${pct}%` }} />

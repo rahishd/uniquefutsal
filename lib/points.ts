@@ -1,17 +1,45 @@
 // Loyalty points: rules, sample history and the customer's balance.
 //
 // DEMO DATA kept in this browser. The real server owns the ledger: it adds points when a game is
-// completed, goods are bought, a membership is paid or a challenge is won, and deducts them when a
-// free game is claimed. Never trust the browser to award or spend points.
+// completed and paid, goods are bought, a membership is paid or a challenge is won, and deducts them
+// when a free game is claimed. Never trust the browser to award or spend points.
 
 import { useSyncExternalStore } from "react";
+import { priceFor, type Period } from "@/lib/booking";
 
-export const POINTS_PER_FREE_GAME = 100; // 100 points = 1 free game
-export const POINTS_PER_GAME = 10; // every completed regular game
+// Points are whole numbers: Rs. 100 of game price = 1 point, shown as "place value" (1.2 -> 12).
+export const RS_PER_POINT = 100;
+export const GAMES_PER_FREE = 10; // 10 games of a shift earn 1 free game of that shift
 export const POINTS_CAPTAIN_WIN = 5; // challenge games: ONLY the winning captain earns, and only 5
 export const GOODS_STEP_RS = 100; // every full Rs. 100 of extra goods...
 export const POINTS_PER_GOODS_STEP = 5; // ...earns 5 points
 export const MEMBERSHIP_3M_POINTS = 30; // buying or renewing the 3-month membership
+
+// Points one regular game earns: Rs. 1,250 -> 12 (never rounded up).
+export function pointsForGame(priceRs: number) {
+  return Math.floor(Math.max(0, priceRs) / RS_PER_POINT);
+}
+
+// Points a free game of that price costs: 10 games' worth.
+export function freeGameCost(priceRs: number) {
+  return pointsForGame(priceRs) * GAMES_PER_FREE;
+}
+
+export function pointsForGoods(amountRs: number) {
+  return Math.floor(Math.max(0, amountRs) / GOODS_STEP_RS) * POINTS_PER_GOODS_STEP;
+}
+
+export const SHIFTS: { period: Period; hour: number; label: string; hours: string }[] = [
+  { period: "Morning", hour: 6, label: "Morning", hours: "6 AM – 10 AM" },
+  { period: "Day", hour: 10, label: "Day", hours: "10 AM – 5 PM" },
+  { period: "Evening", hour: 17, label: "Evening", hours: "5 PM – 10 PM" },
+];
+
+export function shiftInfo(period: Period) {
+  const s = SHIFTS.find((x) => x.period === period) ?? SHIFTS[0];
+  const price = priceFor(s.hour);
+  return { ...s, price, perGame: pointsForGame(price), cost: freeGameCost(price) };
+}
 
 export type PointsKind = "game" | "captain-win" | "goods" | "membership" | "free-game";
 
@@ -25,25 +53,27 @@ export interface PointsEntry {
   points: number; // positive = earned, negative = spent on a free game
 }
 
-export function pointsForGoods(amountRs: number) {
-  return Math.floor(Math.max(0, amountRs) / GOODS_STEP_RS) * POINTS_PER_GOODS_STEP;
+export interface Voucher {
+  id: string;
+  period: Period; // valid for a regular game in this shift
+  cost: number;
 }
 
 interface PointsState {
   ledger: PointsEntry[]; // newest first
-  vouchers: number; // free games claimed but not yet used to book
+  vouchers: Voucher[]; // free games claimed but not yet used to book
 }
 
 // Sample history. Replace with `GET /api/loyalty`.
 const SEED: PointsState = {
-  vouchers: 0,
+  vouchers: [],
   ledger: [
     { id: "p6", kind: "captain-win", title: "Challenge game won", detail: "Winning captain bonus", date: "3 Oct", dateKey: "2026-10-03", points: POINTS_CAPTAIN_WIN },
     { id: "p5", kind: "goods", title: "Extra goods", detail: "Rs. 350 spent (3 x Rs. 100)", date: "3 Oct", dateKey: "2026-10-03", points: pointsForGoods(350) },
-    { id: "p4", kind: "game", title: "Game played", detail: "Sat, 26 Sep · Court 1", date: "26 Sep", dateKey: "2026-09-26", points: POINTS_PER_GAME },
-    { id: "p3", kind: "free-game", title: "Free game claimed", detail: "Used for booking UF-20260924-00071", date: "24 Sep", dateKey: "2026-09-24", points: -POINTS_PER_FREE_GAME },
-    { id: "p2", kind: "game", title: "Game played", detail: "Sat, 19 Sep · Court 2", date: "19 Sep", dateKey: "2026-09-19", points: POINTS_PER_GAME },
-    { id: "p1", kind: "game", title: "Earlier games", detail: "21 games before 19 Sep", date: "Before Sep", dateKey: "2026-09-01", points: 21 * POINTS_PER_GAME },
+    { id: "p4", kind: "game", title: "Game played", detail: "Sat, 26 Sep · Evening · Rs. 1,500", date: "26 Sep", dateKey: "2026-09-26", points: pointsForGame(1500) },
+    { id: "p3", kind: "free-game", title: "Free game claimed", detail: "Morning game · used for booking UF-20260924-00071", date: "24 Sep", dateKey: "2026-09-24", points: -freeGameCost(1000) },
+    { id: "p2", kind: "game", title: "Game played", detail: "Sat, 19 Sep · Day · Rs. 1,200", date: "19 Sep", dateKey: "2026-09-19", points: pointsForGame(1200) },
+    { id: "p1", kind: "game", title: "Earlier games", detail: "Games before 19 Sep", date: "Before Sep", dateKey: "2026-09-01", points: 200 },
   ],
 };
 
@@ -52,30 +82,31 @@ export interface PointsSummary {
   claimed: number; // points already turned into free games
   freeGamesClaimed: number;
   remaining: number; // points still in the account
-  canClaim: number; // free games the remaining points can still pay for
-  toNext: number; // points still needed for the next free game
-  progressPct: number; // progress towards the next free game, 0-100
+  cheapestCost: number; // cheapest free game (points)
+  toNext: number; // points still needed for the cheapest free game, 0 when one is available
+  progressPct: number; // progress towards the cheapest free game, 0-100
 }
 
 export function summarize(ledger: PointsEntry[]): PointsSummary {
   const earned = ledger.filter((e) => e.points > 0).reduce((n, e) => n + e.points, 0);
-  const claimed = -ledger.filter((e) => e.points < 0).reduce((n, e) => n + e.points, 0);
+  const spent = ledger.filter((e) => e.points < 0);
+  const claimed = -spent.reduce((n, e) => n + e.points, 0);
   const remaining = Math.max(0, earned - claimed);
-  const inProgress = remaining % POINTS_PER_FREE_GAME;
+  const cheapestCost = Math.min(...SHIFTS.map((s) => shiftInfo(s.period).cost));
   return {
     earned,
     claimed,
-    freeGamesClaimed: Math.round(claimed / POINTS_PER_FREE_GAME),
+    freeGamesClaimed: spent.length,
     remaining,
-    canClaim: Math.floor(remaining / POINTS_PER_FREE_GAME),
-    toNext: POINTS_PER_FREE_GAME - inProgress,
-    progressPct: inProgress,
+    cheapestCost,
+    toNext: Math.max(0, cheapestCost - remaining),
+    progressPct: Math.min(100, Math.round((remaining / cheapestCost) * 100)),
   };
 }
 
 /* ---------- store (browser storage for now) ---------- */
 
-const KEY = "uf-points-v1";
+const KEY = "uf-points-v2";
 let cache: PointsState | null = null;
 const listeners = new Set<() => void>();
 
@@ -115,6 +146,12 @@ export function addPoints(e: Omit<PointsEntry, "date" | "dateKey">) {
   commit({ ...s, ledger: [{ ...e, ...today() }, ...s.ledger] });
 }
 
+// A regular game earns points from what it cost (Rs. 100 = 1 point). Awarded by the server once the
+// game is completed and paid; a free-game booking earns none. Nothing calls this in the demo yet.
+export function awardGame(bookingId: string, priceRs: number, detail: string) {
+  addPoints({ id: `game-${bookingId}`, kind: "game", title: "Game played", detail, points: pointsForGame(priceRs) });
+}
+
 // A challenge game earns points ONLY for the winning captain (5). The loser and a draw earn nothing.
 export function awardCaptainWin(challengeId: string) {
   addPoints({ id: `captain-win-${challengeId}`, kind: "captain-win", title: "Challenge game won", detail: "Winning captain bonus", points: POINTS_CAPTAIN_WIN });
@@ -132,26 +169,27 @@ export function awardMembership(orderId: string, billing: string, renewing: bool
   });
 }
 
-// Spend 100 points on a free-game voucher. The voucher books a REGULAR game; it cannot host a challenge.
-export function claimFreeGame(): { ok: boolean } {
+// Spend points on a free-game voucher for one shift. It books a REGULAR game; it cannot host a challenge.
+export function claimFreeGame(period: Period): { ok: boolean } {
   const s = load();
-  if (summarize(s.ledger).remaining < POINTS_PER_FREE_GAME) return { ok: false };
+  const info = shiftInfo(period);
+  if (summarize(s.ledger).remaining < info.cost) return { ok: false };
+  const id = `${Date.now()}`;
   commit({
-    vouchers: s.vouchers + 1,
-    ledger: [{ id: `claim-${Date.now()}`, kind: "free-game", title: "Free game claimed", detail: "Ready to use when you book", points: -POINTS_PER_FREE_GAME, ...today() }, ...s.ledger],
+    vouchers: [...s.vouchers, { id, period, cost: info.cost }],
+    ledger: [{ id: `claim-${id}`, kind: "free-game", title: "Free game claimed", detail: `${info.label} game · ready to use when you book`, points: -info.cost, ...today() }, ...s.ledger],
   });
   return { ok: true };
 }
 
-// Called when a booking is made with a voucher.
-export function spendVoucher(bookingId: string) {
+// Called when a booking is made with a voucher for that shift.
+export function spendVoucher(period: Period, bookingId: string) {
   const s = load();
-  if (s.vouchers < 1) return false;
-  const at = s.ledger.findIndex((x) => x.kind === "free-game" && x.detail.startsWith("Ready"));
+  const v = s.vouchers.find((x) => x.period === period);
+  if (!v) return false;
   commit({
-    ...s,
-    vouchers: s.vouchers - 1,
-    ledger: s.ledger.map((e, i) => (i === at ? { ...e, detail: `Used for booking ${bookingId}` } : e)),
+    vouchers: s.vouchers.filter((x) => x !== v),
+    ledger: s.ledger.map((e) => (e.id === `claim-${v.id}` ? { ...e, detail: `${v.period} game · used for booking ${bookingId}` } : e)),
   });
   return true;
 }
@@ -176,6 +214,7 @@ export function usePoints(): PointsState & { summary: PointsSummary } {
   return { ...s, summary: summarize(s.ledger) };
 }
 
-export function useVouchers(): number {
-  return useSyncExternalStore(subscribe, () => load().vouchers, () => 0);
+const NO_VOUCHERS: Voucher[] = [];
+export function useVouchers(): Voucher[] {
+  return useSyncExternalStore(subscribe, () => load().vouchers, () => NO_VOUCHERS);
 }
