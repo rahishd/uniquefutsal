@@ -5,7 +5,6 @@ import {
   ChevronRight,
   Crown,
   LayoutGrid,
-  Radio,
   Search,
   SlidersHorizontal,
   Star,
@@ -15,7 +14,8 @@ import {
   BarChart3,
 } from "lucide-react";
 import HeaderInfo from "@/components/HeaderInfo";
-import { sampleLive, sampleUpNext } from "@/lib/sample-data";
+import PromoCodes from "@/components/PromoCodes";
+import TournamentSection from "@/components/TournamentSection";
 
 const TILES = [
   { label: "Book", href: "/book", icon: CalendarDays, tone: "text-brand" },
@@ -114,43 +114,8 @@ export default function HomeScreen() {
         </ul>
       </section>
 
-      {/* Live matches */}
-      <section className="mt-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium">Live matches</h2>
-          <Link href="/tournaments" className="flex items-center text-sm text-brand">
-            See all <ChevronRight size={16} />
-          </Link>
-        </div>
-        <ul className="mt-4 space-y-3">
-          {sampleLive.map((m) => (
-            <li key={m.id} className="glass flex items-center justify-between rounded-3xl px-5 py-4">
-              <div className="text-sm font-medium leading-snug">
-                <p>{m.home}</p>
-                <p>{m.away}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-semibold">
-                  {m.homeScore} - {m.awayScore}
-                </p>
-                <p className="text-xs font-medium text-rose-500">{m.minute}&apos;</p>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <span className="text-xs text-slate-400">{m.venue}</span>
-                <span className="flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-1 text-[11px] font-medium text-rose-500">
-                  <Radio size={12} /> Live
-                </span>
-              </div>
-            </li>
-          ))}
-          <li className="glass flex items-center justify-between rounded-3xl px-5 py-4 text-sm">
-            <span className="text-xs font-medium text-brand">UP NEXT · {sampleUpNext.time}</span>
-            <span className="font-medium">
-              {sampleUpNext.home} <span className="text-brand">vs</span> {sampleUpNext.away}
-            </span>
-          </li>
-        </ul>
-      </section>
+      <PromoCodes />
+      <TournamentSection />
     </div>
   );
 }
