@@ -4,6 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { Bell, Check, ChevronRight, Crown, LogOut, Pencil, Star, Trophy, UserRound, X } from "lucide-react";
 import { signInDemo, signOut, useSession } from "@/lib/session";
+import { useTeams } from "@/lib/teams";
+import ProfileAvatar from "@/components/captain/ProfileAvatar";
+import { CaptainSummary, ModeToggle } from "@/components/captain/CaptainProfile";
 import {
   sampleBookings,
   sampleLoyalty,
@@ -65,6 +68,8 @@ export default function ProfileView() {
 }
 
 function RegisteredProfile() {
+  const teams = useTeams();
+  const captainMode = teams?.mode === "captain";
   const [profile, setProfile] = useState<ProfileData>(sampleProfile);
   const [draft, setDraft] = useState<ProfileData>(sampleProfile);
   const [editing, setEditing] = useState(false);
@@ -96,9 +101,7 @@ function RegisteredProfile() {
       {/* Identity */}
       <section className="glass rounded-3xl p-5">
         <div className="flex items-center gap-4">
-          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2a2a9c] to-brand text-2xl font-semibold text-white ring-2 ring-white shadow-md">
-            {profile.name.slice(0, 1).toUpperCase()}
-          </span>
+          <ProfileAvatar name={profile.name} captain={captainMode} size={64} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-lg font-medium">{profile.name}</p>
             <p className="text-sm text-slate-500">{profile.phone}</p>
@@ -143,6 +146,10 @@ function RegisteredProfile() {
         Demo mode: sample data is shown and changes aren&apos;t saved. Sign-in and the customer API come next.
       </p>
 
+      <ModeToggle />
+      {captainMode && <CaptainSummary />}
+
+      {!captainMode && (<>
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-3 text-center">
         {[["Games", s.played], ["Win rate", `${winRate}%`], ["Points", loy.points]].map(([k, v]) => (
@@ -259,6 +266,8 @@ function RegisteredProfile() {
           ))}
         </ul>
       </Card>
+
+      </>)}
 
       {/* Settings */}
       <Card title="Settings" action={<Bell size={18} className="text-slate-400" />}>

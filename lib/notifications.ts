@@ -4,7 +4,7 @@
 // deployment also needs the server to create challenge/payment/booking notices and to send
 // Web Push for when the app is closed (the service worker already handles `push` events).
 
-export type NoticeType = "challenge" | "payment" | "booking" | "reminder" | "membership";
+export type NoticeType = "challenge" | "payment" | "booking" | "reminder" | "membership" | "match";
 
 export interface Notice {
   id: string;
@@ -29,7 +29,6 @@ function seed(): Notice[] {
   if (!SEED_DEMO) return [];
   const now = Date.now();
   return [
-    { id: "seed-challenge", type: "challenge", title: "New challenge", body: "Team Alpha challenged you for Saturday, 7:00 PM.", at: now - 12 * 60_000, read: false, href: "/opponent" },
     { id: "seed-payment", type: "payment", title: "Payment received", body: "Rs. 1,215 received for booking UF-20261010-00125.", at: now - 3 * 3600_000, read: false, href: "/profile" },
     { id: "seed-booking", type: "booking", title: "Booking confirmed", body: "Sat, 10 Oct · 7:00 PM – 8:00 PM · Court 1.", at: now - 3 * 3600_000 - 60_000, read: true, href: "/profile" },
   ];

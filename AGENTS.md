@@ -47,3 +47,18 @@ What your server must provide (replace the demo code in `lib/payment.ts`, `lib/b
 - **Registered:** booking and membership never ask for name or mobile number; they use the account ("Booking as ..."). All payment methods are available, including Pay at venue.
 - **Guest:** must enter name and a valid mobile number, and must pay the full amount online (eSewa or Fonepay). Pay at venue is hidden. Guests have no membership, booking history or Quick Rebook.
 - The guest rule is also checked in `createBooking` and `purchaseMembership` (`guest` flag), but the real server must enforce it too and take identity from the session, never from the request body.
+
+# Captain mode, teams, challenges and ratings
+
+Code: `lib/teams.ts` (data, store, 5-star rating) and `components/captain/*`. Pages: `/opponent` (teams leaderboard, challenges, results), `/opponent/team/[id]` (another team's full player stats), `/team` (roster). Profile has a Player/Captain switch; Captain mode shows a gold (C) on the avatar. All of it is DEMO data in localStorage; none of it works across real users until the backend exists.
+
+Rules the app follows (the SERVER must enforce all of them):
+- Any registered player can switch to Captain mode and create a team. Guests cannot.
+- A team has at most 12 members (captain included). Members are registered players added by mobile number; a player can be in only one team. The captain cannot be removed.
+- Only a captain (Captain mode, team of at least 5) can challenge another team. The challenged captain is notified and can see every player's stats before answering.
+- After a game, the WINNING captain (either side after a draw) uploads the score and each own player's goals and assists (goals must add up to the team score). The OTHER captain approves or disputes. Only approved results change team records, player stats and ratings. Disputed results change nothing and need an admin (not built yet).
+- Challenge acceptance must create the court booking inside a transaction so two games cannot take the same slot (FRD section 17).
+
+Rating (`teamRating`): 1.0 to 5.0 stars from approved results only. Score = 55% win rate (draw = half), 25% goal difference per game (capped at +-3), 20% last-5 form, pulled toward the middle for small samples (like 5 virtual games) so a lucky streak cannot reach 5. Teams with under 3 games are "Unrated". Ranking sorts by rating, then games played, then goal difference. Tune the weights in one place.
+
+Demo-only buttons to remove once real: "They accept / They decline", "They approve", and the sample opponent activity created by `createTeam`.
