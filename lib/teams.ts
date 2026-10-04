@@ -158,10 +158,10 @@ export const FREE_AGENTS: Member[] = [
 export type ChallengeType = "match" | "competition";
 export type ChallengeStatus = "pending" | "accepted" | "declined" | "cancelled";
 
-// Who pays for the court. The LOSING team pays the larger share: 70/30 or 60/40 (loser/winner).
-// Challenge games are paid at the venue only; there is no online payment for them.
-export type LoserShare = 70 | 60;
-export const LOSER_SHARES: LoserShare[] = [70, 60];
+// Who pays for the court. The LOSING team pays the larger share: 70/30 or 60/40 (loser/winner),
+// or all of it (100/0). Challenge games are paid at the venue only; there is no online payment.
+export type LoserShare = 100 | 70 | 60;
+export const LOSER_SHARES: LoserShare[] = [70, 60, 100];
 
 export interface Challenge {
   id: string;
@@ -192,6 +192,11 @@ export function settlement(courtPrice: number, loserPct: LoserShare, myScore: nu
   const loserPays = Math.round((courtPrice * loserPct) / 100);
   const iLost = myScore < theirScore;
   return { basis: "loser-pays", myAmount: iLost ? loserPays : courtPrice - loserPays, theirAmount: iLost ? courtPrice - loserPays : loserPays, loserPct };
+}
+
+// Short names for the options, used on cards and results.
+export function shareLabel(pct: number) {
+  return pct === 100 ? "Loser pays in full" : `Loser pays ${pct}%`;
 }
 
 // Amounts shown before a result exists: what the loser and the winner would each pay.
@@ -417,7 +422,7 @@ export function sendChallenge(input: ChallengeInput): ActionResult {
     return { ok: false, error: "You already have a pending challenge to this team." };
   }
   const last = addDays(new Date(), MAX_ADVANCE_DAYS);
-  if (!LOSER_SHARES.includes(input.loserPct)) return { ok: false, error: "Choose who pays: the losing team pays 70% or 60%." };
+  if (!LOSER_SHARES.includes(input.loserPct)) return { ok: false, error: "Choose who pays: the losing team pays 70%, 60% or all of it." };
   if (input.date < dateKey(new Date()) || input.date > last) return { ok: false, error: `Pick a date within the next ${MAX_ADVANCE_DAYS} days.` };
   const c: Challenge = { id: `ch-${Date.now()}`, direction: "out", status: "pending", ...input, message: input.message?.trim().slice(0, 140) || undefined };
   commit({ ...s, challenges: [c, ...s.challenges] });

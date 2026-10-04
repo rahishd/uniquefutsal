@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
 import { MAX_ADVANCE_DAYS, OPEN_HOUR, CLOSE_HOUR, dateKey, formatHour, formatRs, parseKey, priceFor } from "@/lib/booking";
-import { LOSER_SHARES, sendChallenge, splitPreview, type ChallengeType, type LoserShare, type Team } from "@/lib/teams";
+import { LOSER_SHARES, sendChallenge, shareLabel, splitPreview, type ChallengeType, type LoserShare, type Team } from "@/lib/teams";
 
 const field = "w-full rounded-2xl bg-white/70 px-4 py-3 text-sm outline-none ring-1 ring-white/80 focus:ring-brand";
 
@@ -41,7 +41,7 @@ export default function ChallengeSheet({ target, onClose }: { target: Team; onCl
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!loserPct) {
-      setError("Choose who pays for the court: the losing team pays 70% or 60%.");
+      setError("Choose who pays for the court: the losing team pays 70%, 60% or all of it.");
       return;
     }
     const res = sendChallenge({ teamId: target.id, type, date: chosenDate, hour, loserPct, message });
@@ -105,7 +105,7 @@ export default function ChallengeSheet({ target, onClose }: { target: Team; onCl
 
             <fieldset>
               <legend className="text-xs text-slate-500">Who pays for the court? <span className="text-rose-500">*</span></legend>
-              <div role="radiogroup" aria-label="Who pays for the court" className="mt-2 grid grid-cols-2 gap-3">
+              <div role="radiogroup" aria-label="Who pays for the court" className="mt-2 space-y-2">
                 {LOSER_SHARES.map((pct) => {
                   const p = splitPreview(priceFor(hour), pct);
                   const on = loserPct === pct;
@@ -116,12 +116,16 @@ export default function ChallengeSheet({ target, onClose }: { target: Team; onCl
                       role="radio"
                       aria-checked={on}
                       onClick={() => { setLoserPct(pct); setError(null); }}
-                      className={`rounded-2xl p-3 text-left transition ${on ? "bg-brand text-white shadow-md" : "bg-slate-100"}`}
+                      className={`flex w-full items-center justify-between gap-3 rounded-2xl p-3 text-left transition ${on ? "bg-brand text-white shadow-md" : "bg-slate-100"}`}
                     >
-                      <span className="block text-sm font-semibold">Loser pays {pct}%</span>
-                      <span className={`block text-[11px] ${on ? "text-white/70" : "text-slate-400"}`}>Winner pays {100 - pct}%</span>
-                      <span className={`mt-2 block text-[11px] leading-snug ${on ? "text-white/90" : "text-slate-500"}`}>
-                        Loser {formatRs(p.loser)}<br />Winner {formatRs(p.winner)}
+                      <span>
+                        <span className="block text-sm font-semibold">{shareLabel(pct)}</span>
+                        <span className={`block text-[11px] ${on ? "text-white/70" : "text-slate-400"}`}>
+                          {pct === 100 ? "Winner pays nothing" : `Winner pays ${100 - pct}%`}
+                        </span>
+                      </span>
+                      <span className={`shrink-0 text-right text-[11px] leading-snug ${on ? "text-white/90" : "text-slate-500"}`}>
+                        Loser {formatRs(p.loser)}<br />Winner {p.winner === 0 ? "nothing" : formatRs(p.winner)}
                       </span>
                     </button>
                   );

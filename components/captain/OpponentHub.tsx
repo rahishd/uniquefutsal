@@ -19,6 +19,7 @@ import {
   pendingActions,
   rankTeams,
   settlement,
+  shareLabel,
   splitPreview,
   submitResult,
   useTeams,
@@ -265,7 +266,8 @@ function ChallengeCard({ c, name, status, children }: { c: Challenge; name: stri
         {status && <span className={chip(STATUS_CHIP[status])}>{status[0].toUpperCase() + status.slice(1)}</span>}
       </div>
       <p className="mt-2 rounded-2xl bg-brand/5 px-3 py-2 text-xs text-slate-600">
-        <span className="font-semibold text-brand">Loser pays {c.loserPct}%</span> ({formatRs(splitPreview(priceFor(c.hour), c.loserPct).loser)}) · winner pays {100 - c.loserPct}% ({formatRs(splitPreview(priceFor(c.hour), c.loserPct).winner)}). Paid at the venue.
+        <span className="font-semibold text-brand">{shareLabel(c.loserPct)}</span> ({formatRs(splitPreview(priceFor(c.hour), c.loserPct).loser)}) ·{" "}
+        {c.loserPct === 100 ? "winner pays nothing" : `winner pays ${100 - c.loserPct}% (${formatRs(splitPreview(priceFor(c.hour), c.loserPct).winner)})`}. Paid at the venue.
       </p>
       {c.message && <p className="mt-2 rounded-2xl bg-white/60 px-3 py-2 text-sm text-slate-600">“{c.message}”</p>}
       {children}
@@ -301,8 +303,8 @@ function ResultCard({ r, team, state, nameOf, children }: { r: Result; team: Tea
         <div className="mt-3 rounded-2xl bg-emerald-500/10 px-3 py-2.5 text-xs text-emerald-800">
           <p className="font-semibold">Pay at the venue after the game</p>
           <p className="mt-0.5">
-            You pay <b>{formatRs(pay.myAmount)}</b> · {opp} pays <b>{formatRs(pay.theirAmount)}</b>
-            {pay.basis === "draw-split" ? " (draw: split equally)." : ` (loser pays ${pay.loserPct}%).`}
+            {pay.myAmount === 0 ? <b>You pay nothing</b> : <>You pay <b>{formatRs(pay.myAmount)}</b></>} · {opp} {pay.theirAmount === 0 ? "pays nothing" : <>pays <b>{formatRs(pay.theirAmount)}</b></>}
+            {pay.basis === "draw-split" ? " (draw: split equally)." : pay.loserPct === 100 ? " (loser pays in full)." : ` (loser pays ${pay.loserPct}%).`}
           </p>
           {r.status === "awaiting_approval" && <p className="mt-0.5 text-emerald-700/80">Final once the result is approved. No online payment.</p>}
         </div>
