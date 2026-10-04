@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import FooterGate from "@/components/FooterGate";
+import CompanyHeader from "@/components/CompanyHeader";
 import SwRegister from "@/components/SwRegister";
 import InstallPrompt from "@/components/InstallPrompt";
 import ReminderScheduler from "@/components/ReminderScheduler";
@@ -29,7 +30,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${poppins.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <main className="mx-auto w-full max-w-md px-5 pt-6 min-h-[60vh]">{children}</main>
+        <CompanyHeader />
+        <main className="mx-auto w-full max-w-md px-5 pt-5 min-h-[60vh]">{children}</main>
         <FooterGate />
         <BottomNav />
         <SwRegister />

@@ -112,3 +112,7 @@ Everything is sample data in browser storage. The server must own the ledger, ex
 ASSUMPTIONS to confirm with the owner and set in `lib/gamezone.ts`: two consoles (`CONSOLES`), sessions between 10 AM and 10 PM (`OPEN_HOUR`, `CLOSE_HOUR`), 4 hours maximum (`MAX_HOURS`), only 1, 2 or 4 players, no promo codes and no loyalty points for Gamezone, and the bookings do not appear in Profile > My bookings yet. Availability is pseudo-random demo data; the server must own availability, price and payment status.
 
 Gamezone update: the customer chooses the console first (PS5 Station 1 or 2) and the start times shown are for THAT console only (`getGzSlots(key, now, hours, consoleId)`), so switching consoles changes the free slots. They must also choose a game from `GAMES` in `lib/gamezone.ts` (demo list: GTA 5, Forza Horizon, Red Dead Redemption, FIFA 26); the game is stored on the booking and shown in the summary, confirmation and notice. Console availability is demo data; the real server must hold per-console bookings and the list of games.
+
+# Company header and footer
+
+`components/CompanyHeader.tsx` (rendered in `app/layout.tsx`) is the pinned top bar on EVERY page: the logo (`public/logo.jpg`, shown as a small tile zoomed on the player) and "UNIQUE FUTSAL". It is sticky, so it never scrolls away. On Home the greeting ("Hello Player" with the bell) sits just below it. The footer on Home no longer repeats the logo, description and rating (name, blurb and rating in `lib/site.ts` are now unused); it keeps Contact us, Follow us and the map.
