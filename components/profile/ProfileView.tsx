@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { sampleLedger, summarize } from "@/lib/points";
 import { Bell, Check, ChevronDown, ChevronRight, Crown, Download, Loader2, LogOut, Pencil, Star, Trophy, UserRound, X } from "lucide-react";
 import { downloadPdf } from "@/lib/pdf";
 import { signInDemo, signOut, useSession } from "@/lib/session";
@@ -11,7 +12,6 @@ import ProfileAvatar from "@/components/captain/ProfileAvatar";
 import { CaptainSummary, ModeToggle } from "@/components/captain/CaptainProfile";
 import {
   sampleBookings,
-  sampleLoyalty,
   sampleMatches,
   sampleMembership,
   sampleProfile,
@@ -108,8 +108,8 @@ function RegisteredProfile() {
   const payments = pastList.concat(upcomingList).filter((b) => b.payment !== "Pay at venue").sort((a, b) => b.dateKey.localeCompare(a.dateKey));
   const s = sampleStats;
   const winRate = s.played ? ((s.wins / s.played) * 100).toFixed(1) : "0";
-  const loy = sampleLoyalty;
-  const pct = Math.min(100, Math.round((loy.points / loy.nextReward) * 100));
+  const loy = summarize(sampleLedger);
+  const pct = loy.progressPct;
   const m = sampleMembership;
   const phoneOk = /^9\d{9}$/.test(draft.phone);
   const canSave = draft.name.trim().length >= 2 && phoneOk;
@@ -266,7 +266,7 @@ function RegisteredProfile() {
       {!captainMode && (<>
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-3 text-center">
-        {[["Games", s.played], ["Win rate", `${winRate}%`], ["Points", loy.points]].map(([k, v]) => (
+        {[["Games", s.played], ["Win rate", `${winRate}%`], ["Points", loy.remaining]].map(([k, v]) => (
           <div key={k} className="glass rounded-2xl py-4">
             <p className="text-xl font-semibold">{v}</p>
             <p className="text-[11px] text-slate-400">{k}</p>
@@ -294,8 +294,8 @@ function RegisteredProfile() {
       {/* Loyalty */}
       <Card title="Loyalty points" action={<Link href="/points" className="flex items-center text-sm text-brand">View <ChevronRight size={16} /></Link>}>
         <div className="flex items-end justify-between">
-          <p className="flex items-center gap-2 text-2xl font-semibold"><Star className="fill-amber-400 text-amber-400" size={22} /> {loy.points}</p>
-          <p className="text-xs text-slate-400">{loy.nextReward - loy.points} to {loy.rewardLabel}</p>
+          <p className="flex items-center gap-2 text-2xl font-semibold"><Star className="fill-amber-400 text-amber-400" size={22} /> {loy.remaining}</p>
+          <p className="text-xs text-slate-400">{loy.toNext} to next free game</p>
         </div>
         <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to next reward">
           <div className="h-full rounded-full bg-gradient-to-r from-amber-300 to-amber-500" style={{ width: `${pct}%` }} />

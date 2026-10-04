@@ -32,8 +32,6 @@ export const sampleMembership = {
   benefits: ["Member pricing", "Priority booking", "Loyalty bonus"],
 };
 
-export const sampleLoyalty = { points: 850, nextReward: 1000, rewardLabel: "Free game voucher" };
-
 export interface BookingItem {
   id: string;
   dateKey: string; // YYYY-MM-DD, used for sorting
