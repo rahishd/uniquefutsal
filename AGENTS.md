@@ -90,3 +90,7 @@ Everything is sample data in browser storage. The server must own the ledger and
 # Promos page
 
 `/promos` (`components/promos/PromosPage.tsx`) lists offers in Active / Upcoming / Expired tabs, worked out from today's date against each promo's `from` and `until` (`lib/promos.ts`). Active cards have a Copy button and a Book / View plans button; "Ends in N days" shows for offers ending within 5 days. The Home "Live promo codes" strip shows the same active codes. Data is sample data and must match the codes the booking (`lib/booking.ts`) and membership (`lib/membership.ts`) screens accept; TIHAR20 and MONSOON15 are display-only because those screens don't know them. The server must own the codes, dates, eligibility and discount, and validate again at payment. Promo notifications (`type: "promo"`) show the red badge on the Promos tile.
+
+# Home banner mascot
+
+The football on the Home promo banner is now `components/KidSkills.tsx`: a smiling cartoon boy in an orange kit doing a 20-second routine on a loop (dribble, foot juggling, headers, ball spinning on a finger, "around the world", jump with a spin). It is pure SVG with generated CSS keyframes, no video or image files, and it stops moving when the device has "reduce motion" on. To change the routine, edit the point lists (`ballPath`, `legL`, `legR`, `armL`, `armR`, `bob`, `head`, `spin`); times are in seconds and `LOOP` is the total length.
