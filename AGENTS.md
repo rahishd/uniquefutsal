@@ -27,3 +27,9 @@ Mobile-first customer PWA (Next.js App Router, TypeScript, Tailwind 4). Spec: th
 4. Receive the "I'm coming" check-in (`POST /api/bookings/:id/arrival`, replacing the stub in `lib/arrival.ts`) and alert admin.
 
 The service worker (`public/sw.js`) already handles `push` and `notificationclick`. Limits: iPhone only supports Web Push for the home-screen-installed app (iOS 16.4+), and a push shows as a normal notification, not full screen; tapping it opens the app, which then shows the full-screen check-in.
+
+# Payments (QR) — needs the real gateway
+
+Bookings and membership share `lib/payment.ts`, `components/payment/PaymentMethodPicker.tsx` and `components/payment/PaymentQr.tsx`. Methods: eSewa, Fonepay, Pay at venue. For eSewa/Fonepay the app shows a QR for the final amount (after promo codes) with remarks "Regular game / Membership renew / Membership purchase - <order id>", valid for 10 minutes (`QR_HOLD_MS`).
+
+The QR is a DEMO placeholder (`demoQrPayload`). In production the server must create the real merchant QR with the gateway for the exact amount and remarks, return it to the app, and confirm payment only from the gateway callback or verification API. "I've paid" must never mark an order paid; it only tells the server to expect the payment (optionally with the customer's transaction ID).

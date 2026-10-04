@@ -5,6 +5,8 @@
 // the browser must never decide price, discount, availability or payment status.
 // Replace the functions below with API calls; the UI only depends on these signatures.
 
+import type { PayMethod } from "@/lib/payment";
+
 export const COURTS = [
   { id: "c1", name: "Court 1" },
   { id: "c2", name: "Court 2" },
@@ -26,14 +28,7 @@ export interface Slot {
   price: number;
 }
 
-export type PaymentMethod = "esewa" | "khalti" | "fonepay" | "venue";
-
-export const PAYMENT_METHODS: { id: PaymentMethod; label: string; note: string }[] = [
-  { id: "esewa", label: "eSewa", note: "Pay online" },
-  { id: "khalti", label: "Khalti", note: "Pay online" },
-  { id: "fonepay", label: "Fonepay", note: "Pay online" },
-  { id: "venue", label: "Pay at venue", note: "Cash or QR on arrival" },
-];
+export type PaymentMethod = PayMethod; // eSewa, Fonepay or Pay at venue (see lib/payment.ts)
 
 export function dateKey(d: Date) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -138,6 +133,7 @@ export interface BookingConfirmation {
   total: number;
   // Online payments are confirmed by the gateway callback on the server, never by the browser.
   paymentStatus: "pending_payment" | "pay_at_venue";
+  createdAt: number; // epoch ms; the QR hold counts from here (the server owns this in production)
 }
 
 // DEMO: pretends to create a booking. The real API must re-check availability inside a
@@ -153,5 +149,6 @@ export async function createBooking(req: BookingRequest, quote: { base: number; 
     request: req,
     ...quote,
     paymentStatus: req.method === "venue" ? "pay_at_venue" : "pending_payment",
+    createdAt: Date.now(),
   };
 }

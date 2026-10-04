@@ -2,9 +2,12 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, Crown, Loader2, Sparkles } from "lucide-react";
+import { Check, ChevronLeft, Crown, Loader2, Sparkles, Tag, X } from "lucide-react";
+import PaymentMethodPicker from "@/components/payment/PaymentMethodPicker";
+import PaymentQr from "@/components/payment/PaymentQr";
 import { addNotice } from "@/lib/notifications";
 import { dateKey } from "@/lib/booking";
+import { METHOD_LABEL, isOnline, remarksFor, type PayMethod } from "@/lib/payment";
 import {
   BILLINGS,
   BILLING_LABEL,
@@ -13,16 +16,19 @@ import {
   daysLeft,
   fmtDate,
   formatRs,
+  isRenewal,
   priceOf,
   savings,
   purchaseMembership,
   sampleCurrent,
   statusOf,
+  validateMemberPromo,
   type Billing,
+  type MemberPromoResult,
   type MemberStatus,
   type Membership,
   type Plan,
-  type PurchaseRequest,
+  type PurchaseResult,
 } from "@/lib/membership";
 import { sampleProfile } from "@/lib/sample-profile";
 
@@ -37,12 +43,6 @@ const STATUS_STYLE: Record<MemberStatus, string> = {
   Pending: "bg-sky-400/25 text-sky-200",
 };
 
-const METHODS: { id: PurchaseRequest["method"]; label: string }[] = [
-  { id: "esewa", label: "eSewa" },
-  { id: "khalti", label: "Khalti" },
-  { id: "fonepay", label: "Fonepay" },
-];
-
 const field = "w-full rounded-2xl bg-white/70 px-4 py-3 text-sm outline-none ring-1 ring-white/80 focus:ring-brand";
 
 function planOf(id: string) {
@@ -56,14 +56,17 @@ export default function MembershipPage() {
   // A purchase stays pending until the server verifies the payment; it never replaces an active plan.
   const [pending, setPending] = useState<Membership | null>(null);
   const [billing, setBilling] = useState<Billing>("monthly");
-  const [step, setStep] = useState<"browse" | "review" | "done">("browse");
+  const [step, setStep] = useState<"browse" | "review" | "qr" | "done">("browse");
   const [chosen, setChosen] = useState<Plan | null>(null);
   const [name, setName] = useState(sampleProfile.name);
   const [phone, setPhone] = useState(sampleProfile.phone);
-  const [method, setMethod] = useState<PurchaseRequest["method"]>("esewa");
+  const [method, setMethod] = useState<PayMethod>("esewa");
+  const [promoInput, setPromoInput] = useState("");
+  const [promo, setPromo] = useState<MemberPromoResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<Membership | null>(null);
+  const [order, setOrder] = useState<PurchaseResult | null>(null); // the created order (held while the QR is shown)
+  const [txnRef, setTxnRef] = useState<string | null>(null);
 
   if (!today) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
 
@@ -77,8 +80,31 @@ export default function MembershipPage() {
   function choose(p: Plan) {
     setChosen(p);
     setError(null);
+    setPromo(null);
+    setPromoInput("");
     setStep("review");
     window.scrollTo({ top: 0 });
+  }
+
+  function finish(res: PurchaseResult, plan: Plan) {
+    const venue = method === "venue";
+    setOrder(res);
+    setPending(res.membership);
+    addNotice({
+      id: `membership-${res.membership.id}`,
+      type: "membership",
+      title: venue ? "Membership reserved" : "Membership payment submitted",
+      body: venue
+        ? `${plan.name} (${BILLING_LABEL[billing]}) · pay ${formatRs(res.total)} at the venue to activate it.`
+        : `${plan.name} (${BILLING_LABEL[billing]}) · ${formatRs(res.total)}. We'll activate it once the payment is verified.`,
+      href: "/member",
+    });
+    setStep("done");
+    window.scrollTo({ top: 0 });
+  }
+
+  function applyPromo(base: number, renewing: boolean) {
+    setPromo(validateMemberPromo(promoInput, { renewing, base, today }));
   }
 
   async function pay() {
@@ -86,18 +112,18 @@ export default function MembershipPage() {
     setBusy(true);
     setError(null);
     try {
-      const res = await purchaseMembership({ planId: chosen.id, billing, method, name: name.trim(), phone }, active, today);
-      setResult(res.membership);
-      setPending(res.membership);
-      addNotice({
-        id: `membership-${res.membership.id}`,
-        type: "membership",
-        title: "Membership payment submitted",
-        body: `${chosen.name} (${BILLING_LABEL[billing]}) · ${formatRs(res.total)}. We'll activate it once the payment is verified.`,
-        href: "/member",
-      });
-      setStep("done");
-      window.scrollTo({ top: 0 });
+      const res = await purchaseMembership(
+        { planId: chosen.id, billing, method, promoCode: promo?.ok ? promo.code : undefined, name: name.trim(), phone },
+        active,
+        today,
+      );
+      setOrder(res);
+      if (isOnline(method)) {
+        setStep("qr"); // show the QR for the final amount; the customer pays, then taps "I've paid"
+        window.scrollTo({ top: 0 });
+      } else {
+        finish(res, chosen);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Payment could not be completed. Your membership has not been activated.");
     } finally {
@@ -105,36 +131,59 @@ export default function MembershipPage() {
     }
   }
 
+  /* ---------- pay with the QR (eSewa / Fonepay) ---------- */
+  if (step === "qr" && order && chosen && isOnline(method)) {
+    return (
+      <PaymentQr
+        method={method}
+        amount={order.total}
+        remarks={remarksFor(order.renewing ? "renew" : "purchase", order.membership.id)}
+        heldAt={order.createdAt}
+        onBack={() => { setOrder(null); setStep("review"); }}
+        onPaid={(ref) => {
+          setTxnRef(ref ?? null); // DEMO: the real API receives this to match the payment faster
+          finish(order, chosen);
+        }}
+      />
+    );
+  }
+
   /* ---------- confirmation ---------- */
-  if (step === "done" && result && chosen) {
+  if (step === "done" && order && chosen) {
+    const venue = method === "venue";
     return (
       <div className="space-y-5">
         <div className="glass rounded-3xl p-6 text-center">
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-sky-500/15 text-sky-600">
             <Check size={34} />
           </span>
-          <h1 className="mt-4 text-2xl font-semibold">Payment submitted</h1>
-          <p className="mt-1 text-sm text-slate-500">Your membership activates as soon as the payment is verified.</p>
+          <h1 className="mt-4 text-2xl font-semibold">{venue ? "Membership reserved" : "Payment submitted"}</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {venue ? "Pay at the venue to activate your membership." : "Your membership activates as soon as the payment is verified."}
+          </p>
           <p className="mt-4 text-xs text-slate-400">Membership ID</p>
-          <p className="font-mono text-lg font-semibold tracking-wide">{result.id}</p>
+          <p className="font-mono text-lg font-semibold tracking-wide">{order.membership.id}</p>
         </div>
 
         <dl className="glass space-y-3 rounded-3xl p-5 text-sm">
           {[
-            ["Plan", `${chosen.name} · ${BILLING_LABEL[result.billing]}`],
-            ["Valid", `${fmtDate(result.startKey)} – ${fmtDate(result.endKey)}`],
-            ["Status", "Pending verification"],
+            ["Plan", `${chosen.name} · ${BILLING_LABEL[order.membership.billing]}`],
+            ["Valid", `${fmtDate(order.membership.startKey)} – ${fmtDate(order.membership.endKey)}`],
+            ["Payment", METHOD_LABEL[method]],
+            ["Status", venue ? "Awaiting payment at venue" : "Pending verification"],
+            ...(txnRef ? [["Transaction ID", txnRef]] : []),
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4"><dt className="text-slate-400">{k}</dt><dd className="text-right font-medium">{v}</dd></div>
           ))}
-          <div className="flex justify-between border-t border-white/60 pt-3 text-base"><dt className="font-medium">Total</dt><dd className="font-semibold">{formatRs(result.paid)}</dd></div>
+          {order.discount > 0 && <div className="flex justify-between text-emerald-600"><dt>Promo</dt><dd>− {formatRs(order.discount)}</dd></div>}
+          <div className="flex justify-between border-t border-white/60 pt-3 text-base"><dt className="font-medium">Total</dt><dd className="font-semibold">{formatRs(order.total)}</dd></div>
         </dl>
 
         <p className="rounded-2xl bg-amber-400/15 px-4 py-3 text-xs text-amber-700">
           Demo mode: no payment was taken and nothing was saved. Real memberships need the backend and payment gateway.
         </p>
 
-        <button type="button" onClick={() => { setStep("browse"); setChosen(null); }} className="glass-btn block w-full rounded-full py-3.5 text-center text-sm font-medium text-white">
+        <button type="button" onClick={() => { setStep("browse"); setChosen(null); setOrder(null); setTxnRef(null); }} className="glass-btn block w-full rounded-full py-3.5 text-center text-sm font-medium text-white">
           View my membership
         </button>
       </div>
@@ -143,20 +192,37 @@ export default function MembershipPage() {
 
   /* ---------- review & pay ---------- */
   if (step === "review" && chosen) {
-    const total = priceOf(chosen, billing);
-    const renewing = active && active.planId === chosen.id && daysLeft(active.endKey, today) >= 0;
+    const base = priceOf(chosen, billing);
+    const renewing = isRenewal(active, chosen.id, today);
+    const discount = promo?.ok ? promo.discount : 0;
+    const total = Math.max(0, base - discount);
     return (
       <div className="space-y-5">
         <button type="button" onClick={() => setStep("browse")} className="flex items-center gap-1 text-sm text-brand"><ChevronLeft size={18} /> Back to plans</button>
-        <h1 className="text-2xl font-semibold">Confirm membership</h1>
+        <h1 className="text-2xl font-semibold">{renewing ? "Renew membership" : "Confirm membership"}</h1>
 
         <section className="rounded-3xl bg-gradient-to-br from-[#0c0b5d] via-[#16167f] to-[#2a2aa8] p-5 text-white shadow-[0_10px_30px_rgba(12,11,93,0.35)]">
           <p className="flex items-center gap-2 text-sm text-white/70"><Crown size={16} /> {chosen.name} · {BILLING_LABEL[billing]}</p>
           <p className="mt-1 text-3xl font-semibold">{formatRs(total)}</p>
+          {discount > 0 && <p className="text-xs text-emerald-300">Was {formatRs(base)} · promo saves {formatRs(discount)}</p>}
           <p className="text-xs text-white/60">{renewing ? "Renewal continues from your current end date." : "Starts when your payment is verified."}</p>
           <ul className="mt-4 space-y-2 text-sm">
             {chosen.benefits.map((b) => <li key={b} className="flex items-start gap-2"><Check size={16} className="mt-0.5 shrink-0 text-emerald-300" /> {b}</li>)}
           </ul>
+        </section>
+
+        <section className="glass rounded-3xl p-5">
+          <label htmlFor="mpromo" className="flex items-center gap-2 text-sm font-medium"><Tag size={16} className="text-brand" /> Promo code</label>
+          <div className="mt-3 flex gap-2">
+            <input id="mpromo" value={promoInput} onChange={(e) => { setPromoInput(e.target.value); setPromo(null); }} placeholder="e.g. MEMBER10" autoCapitalize="characters" className="min-w-0 flex-1 rounded-2xl bg-white/70 px-4 py-3 text-sm uppercase outline-none ring-1 ring-white/80 focus:ring-brand" />
+            <button type="button" onClick={() => applyPromo(base, Boolean(renewing))} className="rounded-2xl bg-brand px-5 text-sm font-medium text-white">Apply</button>
+          </div>
+          {promo && (
+            <p role="status" className={`mt-2 flex items-center gap-1 text-xs ${promo.ok ? "text-emerald-600" : "text-rose-500"}`}>
+              {promo.ok ? <Check size={14} /> : <X size={14} />}
+              {promo.ok ? `Promo applied: ${promo.label} (− ${formatRs(promo.discount)})` : promo.message}
+            </p>
+          )}
         </section>
 
         <section className="glass space-y-3 rounded-3xl p-5">
@@ -168,22 +234,12 @@ export default function MembershipPage() {
           </div>
         </section>
 
-        <section className="glass rounded-3xl p-5">
-          <h2 className="text-sm font-medium">Payment method</h2>
-          <div role="radiogroup" aria-label="Payment method" className="mt-3 grid grid-cols-3 gap-3">
-            {METHODS.map((m) => (
-              <button key={m.id} type="button" role="radio" aria-checked={method === m.id} onClick={() => setMethod(m.id)}
-                className={`rounded-2xl py-3 text-sm font-medium transition ${method === m.id ? "bg-brand text-white shadow-md" : "bg-white/60"}`}>
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </section>
+        <PaymentMethodPicker value={method} onChange={setMethod} />
 
         {error && <p role="alert" className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-600">{error}</p>}
 
         <button type="button" onClick={pay} disabled={!canPay || busy} className="glass-btn flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-semibold text-white disabled:opacity-50">
-          {busy ? <><Loader2 size={18} className="animate-spin" /> Processing…</> : `Pay ${formatRs(total)}`}
+          {busy ? <><Loader2 size={18} className="animate-spin" /> Processing…</> : method === "venue" ? `Reserve · ${formatRs(total)}` : `Continue to ${METHOD_LABEL[method]} QR · ${formatRs(total)}`}
         </button>
       </div>
     );

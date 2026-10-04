@@ -4,10 +4,12 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { CalendarPlus, Check, ChevronLeft, Loader2, Tag, X } from "lucide-react";
 import { addNotice, scheduleReminder } from "@/lib/notifications";
+import PaymentMethodPicker from "@/components/payment/PaymentMethodPicker";
+import PaymentQr from "@/components/payment/PaymentQr";
+import { METHOD_LABEL, isOnline, remarksFor } from "@/lib/payment";
 import {
   MAX_ADVANCE_DAYS,
   COURTS,
-  PAYMENT_METHODS,
   createBooking,
   dateKey,
   formatHour,
@@ -109,6 +111,8 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<BookingConfirmation | null>(null);
+  const [qr, setQr] = useState<{ booking: BookingConfirmation; heldAt: number } | null>(null);
+  const [txnRef, setTxnRef] = useState<string | null>(null);
 
   if (!now) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
 
@@ -158,14 +162,42 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
         { dateKey: activeDate, hour: selHour, courtId: court, promoCode: promo?.ok ? promo.code : undefined, method, name: name.trim(), phone },
         { base, discount, total },
       );
-      notifyBooking(res);
-      setDone(res);
-      setStep(2);
+      if (isOnline(res.request.method)) {
+        // The booking is held; the customer pays with the QR, then taps "I've paid".
+        setQr({ booking: res, heldAt: res.createdAt });
+      } else {
+        notifyBooking(res);
+        setDone(res);
+        setStep(2);
+      }
     } catch {
       setError("Sorry, we couldn't complete your booking. Please try again.");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  /* ---------- Step 2b: pay with the QR (eSewa / Fonepay) ---------- */
+  if (qr && !done && isOnline(qr.booking.request.method)) {
+    return (
+      <div className="space-y-5">
+        <Steps step={1} />
+        <PaymentQr
+          method={qr.booking.request.method}
+          amount={qr.booking.total}
+          remarks={remarksFor("game", qr.booking.id)}
+          heldAt={qr.heldAt}
+          onBack={() => setQr(null)}
+          onPaid={(ref) => {
+            setTxnRef(ref ?? null); // DEMO: the real API receives this to match the payment faster
+            notifyBooking(qr.booking);
+            setDone(qr.booking);
+            setQr(null);
+            setStep(2);
+          }}
+        />
+      </div>
+    );
   }
 
   /* ---------- Step 3: confirmation ---------- */
@@ -193,6 +225,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
             ["Time", `${formatHour(done.request.hour)} – ${formatHour(done.request.hour + 1)}`],
             ["Court", court ?? ""],
             ["Payment", venue ? "Pay at venue" : "Awaiting payment confirmation"],
+            ...(txnRef ? [["Transaction ID", txnRef]] : []),
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4">
               <dt className="text-slate-400">{k}</dt>
@@ -289,24 +322,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           </div>
         </section>
 
-        <section className="glass rounded-3xl p-5">
-          <h2 className="text-sm font-medium">Payment method</h2>
-          <div role="radiogroup" aria-label="Payment method" className="mt-3 grid grid-cols-2 gap-3">
-            {PAYMENT_METHODS.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                role="radio"
-                aria-checked={method === m.id}
-                onClick={() => setMethod(m.id)}
-                className={`rounded-2xl px-3 py-3 text-left transition ${method === m.id ? "bg-brand text-white shadow-md" : "bg-white/60"}`}
-              >
-                <span className="block text-sm font-medium">{m.label}</span>
-                <span className={`text-[11px] ${method === m.id ? "text-white/70" : "text-slate-400"}`}>{m.note}</span>
-              </button>
-            ))}
-          </div>
-        </section>
+        <PaymentMethodPicker value={method} onChange={setMethod} />
 
         {error && <p role="alert" className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-600">{error}</p>}
 
@@ -316,7 +332,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           disabled={!canPay || submitting}
           className="glass-btn flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-semibold text-white disabled:opacity-50"
         >
-          {submitting ? <><Loader2 size={18} className="animate-spin" /> Processing…</> : method === "venue" ? `Reserve · ${formatRs(total)}` : `Proceed to payment · ${formatRs(total)}`}
+          {submitting ? <><Loader2 size={18} className="animate-spin" /> Processing…</> : method === "venue" ? `Reserve · ${formatRs(total)}` : `Continue to ${METHOD_LABEL[method]} QR · ${formatRs(total)}`}
         </button>
       </div>
     );

@@ -5,6 +5,7 @@
 // happens only after the server verifies the payment (FRD sections 25-27, 33-35).
 
 import { dateKey, formatRs, parseKey } from "@/lib/booking";
+import type { PayMethod } from "@/lib/payment";
 
 export type Billing = "monthly" | "quarterly" | "half";
 
@@ -121,31 +122,73 @@ export const sampleCurrent: Membership = {
 export interface PurchaseRequest {
   planId: string;
   billing: Billing;
-  method: "esewa" | "khalti" | "fonepay";
+  method: PayMethod;
+  promoCode?: string;
   name: string;
   phone: string;
 }
 
 export interface PurchaseResult {
   membership: Membership;
+  base: number;
+  discount: number;
   total: number;
+  renewing: boolean; // same plan continued, versus a new or switched plan
+  createdAt: number; // epoch ms; the QR hold counts from here (the server owns this in production)
 }
 
-// DEMO: pretends to start a purchase. The real API creates the order, takes the payment through
-// the gateway and activates the membership only after the gateway callback is verified server-side.
-// Until then the membership is "Pending" and must never be treated as active.
+export type MemberPromoResult =
+  | { ok: true; code: string; discount: number; label: string }
+  | { ok: false; message: string };
+
+// DEMO membership promo codes. In production the server validates these.
+const MEMBER_PROMOS: Record<string, { type: "percent" | "flat"; value: number; until: string; renewOnly?: boolean }> = {
+  MEMBER10: { type: "percent", value: 10, until: "2026-12-31" },
+  RENEW200: { type: "flat", value: 200, until: "2026-12-31", renewOnly: true },
+};
+
+export function validateMemberPromo(rawCode: string, ctx: { renewing: boolean; base: number; today: string }): MemberPromoResult {
+  const code = rawCode.trim().toUpperCase();
+  if (!code) return { ok: false, message: "Enter a promo code." };
+  const p = MEMBER_PROMOS[code];
+  if (!p) return { ok: false, message: "This promo code is invalid." };
+  if (ctx.today > p.until) return { ok: false, message: "This promotional code has expired." };
+  if (p.renewOnly && !ctx.renewing) return { ok: false, message: "This code is only valid when renewing your current plan." };
+  const discount = p.type === "percent" ? Math.round((ctx.base * p.value) / 100) : Math.min(p.value, ctx.base);
+  return { ok: true, code, discount, label: p.type === "percent" ? `${p.value}% off` : `${formatRs(p.value)} off` };
+}
+
+export function isRenewal(current: Membership | null, planId: string, today: string) {
+  return Boolean(current && current.planId === planId && daysLeft(current.endKey, today) >= 0);
+}
+
+// DEMO: pretends to create the order. The real API creates the order, returns the gateway QR, and
+// activates the membership only after the gateway callback is verified server-side. Until then the
+// membership is "Pending" and must never be treated as active. Pay-at-venue stays pending until
+// staff mark it paid.
 export async function purchaseMembership(req: PurchaseRequest, current: Membership | null, today: string): Promise<PurchaseResult> {
   await new Promise((r) => setTimeout(r, 900));
   const plan = PLANS.find((p) => p.id === req.planId);
   if (!plan) throw new Error("This membership is no longer available.");
-  const total = priceOf(plan, req.billing);
+  const base = priceOf(plan, req.billing);
+  const renewing = isRenewal(current, plan.id, today);
+  // Re-validate the promo here: the browser's discount is never trusted.
+  let discount = 0;
+  if (req.promoCode) {
+    const promo = validateMemberPromo(req.promoCode, { renewing, base, today });
+    if (promo.ok) discount = promo.discount;
+  }
+  const total = Math.max(0, base - discount);
   // Renewing the same plan continues from the current end date; anything else starts today.
-  const renewing = current && current.planId === plan.id && daysLeft(current.endKey, today) >= 0;
   const start = renewing ? new Date(parseKey(current!.endKey).getTime() + 86400000) : parseKey(today);
   const end = new Date(addMonths(start, BILLING_MONTHS[req.billing]).getTime() - 86400000);
   const digits = String(Math.floor(Math.random() * 99999)).padStart(5, "0");
   return {
+    base,
+    discount,
     total,
+    renewing,
+    createdAt: Date.now(),
     membership: {
       id: `MEM-${digits}`,
       planId: plan.id,
