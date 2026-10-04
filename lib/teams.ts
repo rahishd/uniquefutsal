@@ -158,6 +158,11 @@ export const FREE_AGENTS: Member[] = [
 export type ChallengeType = "match" | "competition";
 export type ChallengeStatus = "pending" | "accepted" | "declined" | "cancelled";
 
+// Who pays for the court. The LOSING team pays the larger share: 70/30 or 60/40 (loser/winner).
+// Challenge games are paid at the venue only; there is no online payment for them.
+export type LoserShare = 70 | 60;
+export const LOSER_SHARES: LoserShare[] = [70, 60];
+
 export interface Challenge {
   id: string;
   direction: "in" | "out"; // in = another captain challenged us
@@ -165,8 +170,34 @@ export interface Challenge {
   type: ChallengeType;
   date: string; // YYYY-MM-DD
   hour: number;
+  loserPct: LoserShare;
   message?: string;
   status: ChallengeStatus;
+}
+
+export interface Settlement {
+  basis: "loser-pays" | "draw-split";
+  myAmount: number;
+  theirAmount: number;
+  loserPct: number; // the loser's share; 50 for a draw
+}
+
+// What each team pays at the venue once the result is known. A draw has no loser, so it is split
+// equally. Rounded to whole rupees; the other team takes the remainder so the total is exact.
+export function settlement(courtPrice: number, loserPct: LoserShare, myScore: number, theirScore: number): Settlement {
+  if (myScore === theirScore) {
+    const mine = Math.round(courtPrice / 2);
+    return { basis: "draw-split", myAmount: mine, theirAmount: courtPrice - mine, loserPct: 50 };
+  }
+  const loserPays = Math.round((courtPrice * loserPct) / 100);
+  const iLost = myScore < theirScore;
+  return { basis: "loser-pays", myAmount: iLost ? loserPays : courtPrice - loserPays, theirAmount: iLost ? courtPrice - loserPays : loserPays, loserPct };
+}
+
+// Amounts shown before a result exists: what the loser and the winner would each pay.
+export function splitPreview(courtPrice: number, loserPct: LoserShare) {
+  const loser = Math.round((courtPrice * loserPct) / 100);
+  return { loser, winner: courtPrice - loser };
 }
 
 export type ResultStatus = "awaiting_approval" | "approved" | "disputed";
@@ -206,7 +237,9 @@ function load(): State {
   if (cache) return cache;
   try {
     const raw = localStorage.getItem(KEY);
-    cache = raw ? ({ ...EMPTY, ...(JSON.parse(raw) as State) }) : EMPTY;
+    const parsed = raw ? ({ ...EMPTY, ...(JSON.parse(raw) as State) }) : EMPTY;
+    // Challenges saved before the cost split existed get the 70/30 default.
+    cache = { ...parsed, challenges: parsed.challenges.map((c) => ({ ...c, loserPct: c.loserPct ?? 70 })) };
   } catch {
     cache = EMPTY;
   }
@@ -308,9 +341,9 @@ export function createTeam(name: string, captain: { id: string; name: string; ph
     stats: { played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, form: [] },
   };
   const challenges: Challenge[] = [
-    { id: "ch-alpha", direction: "in", teamId: "alpha", type: "competition", date: addDays(now, 3), hour: 19, message: "Friendly before the league? Let's play!", status: "pending" },
-    { id: "ch-red", direction: "out", teamId: "red", type: "match", date: addDays(now, -1), hour: 18, status: "accepted" },
-    { id: "ch-storm", direction: "in", teamId: "storm", type: "match", date: addDays(now, -2), hour: 20, status: "accepted" },
+    { id: "ch-alpha", direction: "in", teamId: "alpha", type: "competition", date: addDays(now, 3), hour: 19, loserPct: 70, message: "Friendly before the league? Let's play!", status: "pending" },
+    { id: "ch-red", direction: "out", teamId: "red", type: "match", date: addDays(now, -1), hour: 18, loserPct: 60, status: "accepted" },
+    { id: "ch-storm", direction: "in", teamId: "storm", type: "match", date: addDays(now, -2), hour: 20, loserPct: 70, status: "accepted" },
   ];
   const storm = SAMPLE_TEAMS.find((t) => t.id === "storm")!;
   const results: Result[] = [
@@ -330,7 +363,7 @@ export function createTeam(name: string, captain: { id: string; name: string; ph
     },
   ];
   commit({ ...s, team, mode: "captain", challenges, results });
-  addNotice({ id: "ch-alpha-notice", type: "challenge", title: "New challenge", body: "Team Alpha challenged your team to a competition match.", href: "/opponent" });
+  addNotice({ id: "ch-alpha-notice", type: "challenge", title: "New challenge", body: "Team Alpha challenged your team to a competition match. Loser pays 70%, paid at the venue.", href: "/opponent" });
   addNotice({ id: "res-storm-notice", type: "match", title: "Result awaiting your approval", body: "Storm FC reported a 6–4 win over your team. Approve or dispute it.", href: "/opponent" });
 }
 
@@ -369,6 +402,7 @@ export interface ChallengeInput {
   type: ChallengeType;
   date: string;
   hour: number;
+  loserPct: LoserShare;
   message?: string;
 }
 
@@ -383,6 +417,7 @@ export function sendChallenge(input: ChallengeInput): ActionResult {
     return { ok: false, error: "You already have a pending challenge to this team." };
   }
   const last = addDays(new Date(), MAX_ADVANCE_DAYS);
+  if (!LOSER_SHARES.includes(input.loserPct)) return { ok: false, error: "Choose who pays: the losing team pays 70% or 60%." };
   if (input.date < dateKey(new Date()) || input.date > last) return { ok: false, error: `Pick a date within the next ${MAX_ADVANCE_DAYS} days.` };
   const c: Challenge = { id: `ch-${Date.now()}`, direction: "out", status: "pending", ...input, message: input.message?.trim().slice(0, 140) || undefined };
   commit({ ...s, challenges: [c, ...s.challenges] });

@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
-import { MAX_ADVANCE_DAYS, OPEN_HOUR, CLOSE_HOUR, dateKey, formatHour, parseKey } from "@/lib/booking";
-import { sendChallenge, type ChallengeType, type Team } from "@/lib/teams";
+import { MAX_ADVANCE_DAYS, OPEN_HOUR, CLOSE_HOUR, dateKey, formatHour, formatRs, parseKey, priceFor } from "@/lib/booking";
+import { LOSER_SHARES, sendChallenge, splitPreview, type ChallengeType, type LoserShare, type Team } from "@/lib/teams";
 
 const field = "w-full rounded-2xl bg-white/70 px-4 py-3 text-sm outline-none ring-1 ring-white/80 focus:ring-brand";
 
@@ -13,6 +13,7 @@ export default function ChallengeSheet({ target, onClose }: { target: Team; onCl
   const [type, setType] = useState<ChallengeType>("match");
   const [date, setDate] = useState<string | null>(null);
   const [hour, setHour] = useState(19);
+  const [loserPct, setLoserPct] = useState<LoserShare | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -39,7 +40,11 @@ export default function ChallengeSheet({ target, onClose }: { target: Team; onCl
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const res = sendChallenge({ teamId: target.id, type, date: chosenDate, hour, message });
+    if (!loserPct) {
+      setError("Choose who pays for the court: the losing team pays 70% or 60%.");
+      return;
+    }
+    const res = sendChallenge({ teamId: target.id, type, date: chosenDate, hour, loserPct, message });
     if (res.ok) setSent(true);
     else setError(res.error);
   }
@@ -97,6 +102,35 @@ export default function ChallengeSheet({ target, onClose }: { target: Team; onCl
                 </select>
               </div>
             </div>
+
+            <fieldset>
+              <legend className="text-xs text-slate-500">Who pays for the court? <span className="text-rose-500">*</span></legend>
+              <div role="radiogroup" aria-label="Who pays for the court" className="mt-2 grid grid-cols-2 gap-3">
+                {LOSER_SHARES.map((pct) => {
+                  const p = splitPreview(priceFor(hour), pct);
+                  const on = loserPct === pct;
+                  return (
+                    <button
+                      key={pct}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => { setLoserPct(pct); setError(null); }}
+                      className={`rounded-2xl p-3 text-left transition ${on ? "bg-brand text-white shadow-md" : "bg-slate-100"}`}
+                    >
+                      <span className="block text-sm font-semibold">Loser pays {pct}%</span>
+                      <span className={`block text-[11px] ${on ? "text-white/70" : "text-slate-400"}`}>Winner pays {100 - pct}%</span>
+                      <span className={`mt-2 block text-[11px] leading-snug ${on ? "text-white/90" : "text-slate-500"}`}>
+                        Loser {formatRs(p.loser)}<br />Winner {formatRs(p.winner)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-slate-400">
+                Based on {formatRs(priceFor(hour))} for the court at {formatHour(hour)}. Paid at the venue after the game. No online payment is needed. A draw is split equally.
+              </p>
+            </fieldset>
 
             <div>
               <label htmlFor="ch-msg" className="text-xs text-slate-500">Message (optional)</label>

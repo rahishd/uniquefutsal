@@ -6,7 +6,7 @@ import { Check, ChevronRight, Swords, Trophy, Users, X } from "lucide-react";
 import CaptainGate from "@/components/captain/CaptainGate";
 import ChallengeSheet from "@/components/captain/ChallengeSheet";
 import Stars from "@/components/captain/Stars";
-import { formatHour, parseKey } from "@/lib/booking";
+import { formatHour, formatRs, parseKey, priceFor } from "@/lib/booking";
 import {
   allTeams,
   answerChallenge,
@@ -18,6 +18,8 @@ import {
   getOtherTeam,
   pendingActions,
   rankTeams,
+  settlement,
+  splitPreview,
   submitResult,
   useTeams,
   type Challenge,
@@ -262,6 +264,9 @@ function ChallengeCard({ c, name, status, children }: { c: Challenge; name: stri
         </div>
         {status && <span className={chip(STATUS_CHIP[status])}>{status[0].toUpperCase() + status.slice(1)}</span>}
       </div>
+      <p className="mt-2 rounded-2xl bg-brand/5 px-3 py-2 text-xs text-slate-600">
+        <span className="font-semibold text-brand">Loser pays {c.loserPct}%</span> ({formatRs(splitPreview(priceFor(c.hour), c.loserPct).loser)}) · winner pays {100 - c.loserPct}% ({formatRs(splitPreview(priceFor(c.hour), c.loserPct).winner)}). Paid at the venue.
+      </p>
       {c.message && <p className="mt-2 rounded-2xl bg-white/60 px-3 py-2 text-sm text-slate-600">“{c.message}”</p>}
       {children}
     </div>
@@ -272,6 +277,8 @@ function ResultCard({ r, team, state, nameOf, children }: { r: Result; team: Tea
   const opp = nameOf(r.teamId);
   const outcome = r.myScore > r.theirScore ? "Win" : r.myScore < r.theirScore ? "Loss" : "Draw";
   const scorerTeam = r.submittedBy === "me" ? team : getOtherTeam(state, r.teamId);
+  const game = state.challenges.find((c) => c.id === r.challengeId);
+  const pay = game ? settlement(priceFor(game.hour), game.loserPct, r.myScore, r.theirScore) : null;
   const scorers = Object.entries(r.scorers).filter(([, v]) => v.goals > 0 || v.assists > 0);
   return (
     <div className="glass rounded-3xl p-4">
@@ -290,6 +297,16 @@ function ResultCard({ r, team, state, nameOf, children }: { r: Result; team: Tea
         </p>
       )}
       {r.status === "disputed" && <p className="mt-2 text-xs text-slate-400">No stats were changed. An admin will review this result.</p>}
+      {pay && r.status !== "disputed" && (
+        <div className="mt-3 rounded-2xl bg-emerald-500/10 px-3 py-2.5 text-xs text-emerald-800">
+          <p className="font-semibold">Pay at the venue after the game</p>
+          <p className="mt-0.5">
+            You pay <b>{formatRs(pay.myAmount)}</b> · {opp} pays <b>{formatRs(pay.theirAmount)}</b>
+            {pay.basis === "draw-split" ? " (draw: split equally)." : ` (loser pays ${pay.loserPct}%).`}
+          </p>
+          {r.status === "awaiting_approval" && <p className="mt-0.5 text-emerald-700/80">Final once the result is approved. No online payment.</p>}
+        </div>
+      )}
       {children}
     </div>
   );
