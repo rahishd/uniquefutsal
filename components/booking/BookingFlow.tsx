@@ -102,6 +102,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   const slots = getSlots(activeDate, now);
   const slot: Slot | undefined = slots.find((s) => s.hour === selHour && s.status !== "booked" && s.status !== "past");
   const court = selCourt ?? slot?.freeCourts[0] ?? null;
+  const openSlots = slots.filter((s) => s.status === "available" || s.status === "almost");
   const base = slot?.price ?? 0;
   const discount = promo?.ok ? promo.discount : 0;
   const total = Math.max(0, base - discount);
@@ -333,35 +334,37 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
       </section>
 
       <section aria-label="Select time slot" className="space-y-5">
-        {PERIODS.map((p) => (
-          <div key={p}>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">{p}</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {slots.filter((s) => s.period === p).map((s) => {
-                const disabled = s.status === "booked" || s.status === "past";
-                const active = s.hour === selHour;
-                return (
-                  <button
-                    key={s.hour}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => pickSlot(s)}
-                    aria-pressed={active}
-                    className={`rounded-2xl px-3 py-3 text-left transition ${
-                      active ? "glass-active text-white" : disabled ? "bg-white/30 text-slate-300" : "glass"
-                    }`}
-                  >
-                    <span className="block text-sm font-medium">{formatHour(s.hour)}</span>
-                    <span className={`text-[11px] ${active ? "text-white/70" : s.status === "almost" ? "text-orange-500" : disabled ? "text-slate-300" : "text-emerald-600"}`}>
-                      {s.status === "past" ? "Passed" : s.status === "booked" ? "Booked" : s.status === "almost" ? "Almost full" : "Available"}
-                      {!disabled && ` · ${formatRs(s.price)}`}
-                    </span>
-                  </button>
-                );
-              })}
+        {/* Only bookable slots are listed: booked and past ones are hidden. */}
+        {openSlots.length === 0 ? (
+          <p className="glass rounded-2xl px-4 py-6 text-center text-sm text-slate-500">
+            No slots available on this date. Please pick another day.
+          </p>
+        ) : (
+          PERIODS.filter((p) => openSlots.some((s) => s.period === p)).map((p) => (
+            <div key={p}>
+              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">{p}</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {openSlots.filter((s) => s.period === p).map((s) => {
+                  const active = s.hour === selHour;
+                  return (
+                    <button
+                      key={s.hour}
+                      type="button"
+                      onClick={() => pickSlot(s)}
+                      aria-pressed={active}
+                      className={`rounded-2xl px-3 py-3 text-left transition ${active ? "glass-active text-white" : "glass"}`}
+                    >
+                      <span className="block text-sm font-medium">{formatHour(s.hour)}</span>
+                      <span className={`text-[11px] ${active ? "text-white/70" : s.status === "almost" ? "text-orange-500" : "text-emerald-600"}`}>
+                        {s.status === "almost" ? "Almost full" : "Available"} · {formatRs(s.price)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </section>
 
       <button
