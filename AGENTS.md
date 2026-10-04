@@ -64,3 +64,7 @@ Rules the app follows (the SERVER must enforce all of them):
 Rating (`teamRating`): 1.0 to 5.0 stars from approved results only. Score = 55% win rate (draw = half), 25% goal difference per game (capped at +-3), 20% last-5 form, pulled toward the middle for small samples (like 5 virtual games) so a lucky streak cannot reach 5. Teams with under 3 games are "Unrated". Ranking sorts by rating, then games played, then goal difference. Tune the weights in one place.
 
 Demo-only buttons to remove once real: "They accept / They decline", "They approve", and the sample opponent activity created by `createTeam`.
+
+# Home "Popular" tile badges
+
+`components/PopularGrid.tsx` shows a red count on a tile when there are messages for that service (9+ for ten or more). A tile counts unread notifications of its own types: Book (booking, reminder, payment), Membership (membership), Points (points), Promos (promo), Tournaments (tournament). Opening a tile marks its messages read (`markReadByTypes`). To make a tile show messages, create notifications with the matching `type` (the server or `addNotice`). Opponent is action based, not read based: it counts challenges waiting for your answer plus results waiting for your approval (`pendingActions`), so it only clears when the captain acts. Only registered captains in Captain mode see it.

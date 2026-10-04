@@ -4,7 +4,7 @@
 // deployment also needs the server to create challenge/payment/booking notices and to send
 // Web Push for when the app is closed (the service worker already handles `push` events).
 
-export type NoticeType = "challenge" | "payment" | "booking" | "reminder" | "membership" | "match";
+export type NoticeType = "challenge" | "payment" | "booking" | "reminder" | "membership" | "match" | "promo" | "points" | "tournament";
 
 export interface Notice {
   id: string;
@@ -96,6 +96,13 @@ export function addNotice(n: Omit<Notice, "id" | "at" | "read"> & { id?: string 
 
 export function markRead(id: string) {
   commit(load().map((n) => (n.id === id ? { ...n, read: true } : n)));
+}
+
+// Used by the Popular tiles on the home screen: opening a tile clears its unread messages.
+export function markReadByTypes(types: NoticeType[]) {
+  const list = load();
+  if (!list.some((n) => !n.read && types.includes(n.type))) return;
+  commit(list.map((n) => (!n.read && types.includes(n.type) ? { ...n, read: true } : n)));
 }
 
 export function markAllRead() {

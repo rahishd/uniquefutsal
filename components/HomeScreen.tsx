@@ -1,34 +1,12 @@
 import Link from "next/link";
-import {
-  CalendarDays,
-  ChevronRight,
-  Crown,
-  LayoutGrid,
-  Search,
-  SlidersHorizontal,
-  Star,
-  Swords,
-  Tag,
-  Trophy,
-  BarChart3,
-} from "lucide-react";
+import { CalendarDays, Search, SlidersHorizontal } from "lucide-react";
 import HeaderInfo from "@/components/HeaderInfo";
 import NotificationBell from "@/components/NotificationBell";
 import UserBadge from "@/components/UserBadge";
 import QuickRebook from "@/components/QuickRebook";
+import PopularGrid from "@/components/PopularGrid";
 import PromoCodes from "@/components/PromoCodes";
 import TournamentSection from "@/components/TournamentSection";
-
-const TILES = [
-  { label: "Book", href: "/book", icon: CalendarDays, tone: "text-brand" },
-  { label: "Membership", href: "/member", icon: Crown, tone: "text-amber-500" },
-  { label: "Opponent", href: "/opponent", icon: Swords, tone: "text-rose-500" },
-  { label: "Points", href: "/points", icon: Star, tone: "text-yellow-500" },
-  { label: "Promos", href: "/promos", icon: Tag, tone: "text-emerald-500" },
-  { label: "My stats", href: "/profile", icon: BarChart3, tone: "text-indigo-500" },
-  { label: "Tournaments", href: "/tournaments", icon: Trophy, tone: "text-orange-500" },
-  { label: "More", href: "/profile", icon: LayoutGrid, tone: "text-brand" },
-];
 
 export default function HomeScreen() {
   return (
@@ -72,27 +50,7 @@ export default function HomeScreen() {
         </span>
       </section>
 
-      {/* Popular */}
-      <section className="mt-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium">Popular</h2>
-          <Link href="/profile" className="flex items-center text-sm text-brand">
-            See all <ChevronRight size={16} />
-          </Link>
-        </div>
-        <ul className="mt-4 grid grid-cols-4 gap-x-3 gap-y-5">
-          {TILES.map(({ label, href, icon: Icon, tone }) => (
-            <li key={label}>
-              <Link href={href} className="flex flex-col items-center gap-2">
-                <span className="glass flex h-[70px] w-[70px] items-center justify-center rounded-3xl">
-                  <Icon size={30} className={tone} />
-                </span>
-                <span className="text-center text-xs text-slate-600">{label}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <PopularGrid />
 
       <PromoCodes />
       <TournamentSection />
