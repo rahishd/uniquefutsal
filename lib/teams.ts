@@ -9,6 +9,7 @@
 import { useSyncExternalStore } from "react";
 import { MAX_ADVANCE_DAYS, dateKey } from "@/lib/booking";
 import { addNotice } from "@/lib/notifications";
+import { awardCaptainWin } from "@/lib/points";
 
 export const MAX_TEAM_SIZE = 12; // captain included
 export const MIN_GAMES_FOR_RATING = 3;
@@ -500,6 +501,8 @@ function setResultStatus(id: string, status: ResultStatus) {
   if (!r || r.status !== "awaiting_approval") return;
   const updated = { ...s, results: s.results.map((x) => (x.id === id ? { ...x, status } : x)) };
   commit(status === "approved" ? apply(updated, r) : updated);
+  // Loyalty: only the winning captain earns points; the loser and a draw earn nothing.
+  if (status === "approved" && r.myScore > r.theirScore) awardCaptainWin(r.challengeId);
 }
 
 // I (the losing captain) approve a result the other captain uploaded.

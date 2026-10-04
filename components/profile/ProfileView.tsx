@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { sampleLedger, summarize } from "@/lib/points";
+import { usePoints } from "@/lib/points";
 import { Bell, Check, ChevronDown, ChevronRight, Crown, Download, Loader2, LogOut, Pencil, Star, Trophy, UserRound, X } from "lucide-react";
 import { downloadPdf } from "@/lib/pdf";
 import { signInDemo, signOut, useSession } from "@/lib/session";
@@ -108,7 +108,7 @@ function RegisteredProfile() {
   const payments = pastList.concat(upcomingList).filter((b) => b.payment !== "Pay at venue").sort((a, b) => b.dateKey.localeCompare(a.dateKey));
   const s = sampleStats;
   const winRate = s.played ? ((s.wins / s.played) * 100).toFixed(1) : "0";
-  const loy = summarize(sampleLedger);
+  const { summary: loy } = usePoints();
   const pct = loy.progressPct;
   const m = sampleMembership;
   const phoneOk = /^9\d{9}$/.test(draft.phone);

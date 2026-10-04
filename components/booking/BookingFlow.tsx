@@ -2,10 +2,11 @@
 
 import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { CalendarPlus, Check, ChevronLeft, Loader2, Tag, X } from "lucide-react";
+import { CalendarPlus, Check, Gift, ChevronLeft, Loader2, Tag, X } from "lucide-react";
 import { addNotice, scheduleReminder } from "@/lib/notifications";
 import PaymentMethodPicker from "@/components/payment/PaymentMethodPicker";
 import { signInDemo, useSession } from "@/lib/session";
+import { spendVoucher, useVouchers } from "@/lib/points";
 import PaymentQr from "@/components/payment/PaymentQr";
 import { METHOD_LABEL, isOnline, remarksFor } from "@/lib/payment";
 import {
@@ -116,6 +117,9 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   const [done, setDone] = useState<BookingConfirmation | null>(null);
   const [qr, setQr] = useState<{ booking: BookingConfirmation; heldAt: number } | null>(null);
   const session = useSession();
+  const vouchers = useVouchers(); // free games claimed on the Loyalty Points page
+  const [useFree, setUseFree] = useState(false);
+  const [freeId, setFreeId] = useState<string | null>(null);
 
   if (!now || !session) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
 
@@ -133,12 +137,15 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   const openSlots = slots.filter((s) => s.status === "available" || s.status === "almost");
   const base = slot?.price ?? 0;
   const discount = promo?.ok ? promo.discount : 0;
-  const total = Math.max(0, base - discount);
+  // A free-game voucher covers a regular booking in full (it never applies to challenge games).
+  const registeredNow = session.registered;
+  const free = registeredNow && useFree && vouchers > 0;
+  const total = free ? 0 : Math.max(0, base - discount);
   const phoneOk = /^9\d{9}$/.test(phone);
   // Registered customers are recognised automatically. Only guests type their details,
   // and guests must pay in full online (no "pay at venue").
   const registered = session.registered;
-  const effMethod: PaymentMethod = !registered && method === "venue" ? "esewa" : method;
+  const effMethod: PaymentMethod = free ? "venue" : !registered && method === "venue" ? "esewa" : method;
   const custName = session.registered ? session.name : name.trim();
   const custPhone = session.registered ? session.phone : phone;
   const canPay = Boolean(slot && court && (registered || (name.trim().length >= 2 && phoneOk)));
@@ -171,7 +178,15 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
         { dateKey: activeDate, hour: selHour, courtId: court, promoCode: promo?.ok ? promo.code : undefined, method: effMethod, name: custName, phone: custPhone, guest: !registered },
         { base, discount, total },
       );
-      if (isOnline(res.request.method)) {
+      if (free) {
+        // Nothing to pay: the voucher covers it. The server must verify and spend the voucher itself.
+        if (!spendVoucher(res.id)) throw new Error("no voucher");
+        const paid = { ...res, paymentStatus: "paid" as const };
+        setFreeId(paid.id);
+        notifyBooking(paid);
+        setDone(paid);
+        setStep(2);
+      } else if (isOnline(res.request.method)) {
         // The booking is held; the customer pays with the QR and the screen detects the payment.
         setQr({ booking: res, heldAt: res.createdAt });
       } else {
@@ -236,7 +251,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
             ["Date", longDate(done.request.dateKey)],
             ["Time", `${formatHour(done.request.hour)} – ${formatHour(done.request.hour + 1)}`],
             ["Court", court ?? ""],
-            ["Payment", paid ? `Paid via ${METHOD_LABEL[done.request.method]}` : venue ? "Pay at venue" : "Awaiting payment confirmation"],
+            ["Payment", paid ? (done.id === freeId ? "Free game (loyalty points)" : `Paid via ${METHOD_LABEL[done.request.method]}`) : venue ? "Pay at venue" : "Awaiting payment confirmation"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4">
               <dt className="text-slate-400">{k}</dt>
@@ -303,7 +318,19 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           <p className="mt-2 text-[11px] text-slate-400">{courtName} · final price is confirmed by the server.</p>
         </section>
 
-        <section className="glass rounded-3xl p-5">
+        {registered && vouchers > 0 && (
+          <button
+            type="button"
+            onClick={() => setUseFree((v) => !v)}
+            aria-pressed={free}
+            className={`flex w-full items-center justify-between gap-3 rounded-3xl p-4 text-left ${free ? "glass-active text-white" : "glass"}`}
+          >
+            <span className="flex items-center gap-2 text-sm font-medium"><Gift size={18} className={free ? "text-orange-300" : "text-orange-500"} /> Use a free game voucher</span>
+            <span className={`text-xs ${free ? "text-white/70" : "text-slate-400"}`}>{vouchers} ready · {free ? "Applied" : "Tap to apply"}</span>
+          </button>
+        )}
+
+        {!free && <section className="glass rounded-3xl p-5">
           <label htmlFor="promo" className="flex items-center gap-2 text-sm font-medium"><Tag size={16} className="text-brand" /> Promo code</label>
           <div className="mt-3 flex gap-2">
             <input
@@ -322,7 +349,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
               {promo.ok ? `Promo applied: ${promo.label} (− ${formatRs(promo.discount)})` : promo.message}
             </p>
           )}
-        </section>
+        </section>}
 
         {session.registered ? (
           <p className="glass flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm">
@@ -343,7 +370,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           </section>
         )}
 
-        <PaymentMethodPicker value={effMethod} onChange={setMethod} allowVenue={registered} />
+        {!free && <PaymentMethodPicker value={effMethod} onChange={setMethod} allowVenue={registered} />}
 
         {error && <p role="alert" className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-600">{error}</p>}
 
@@ -353,7 +380,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           disabled={!canPay || submitting}
           className="glass-btn flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-semibold text-white disabled:opacity-50"
         >
-          {submitting ? <><Loader2 size={18} className="animate-spin" /> Processing…</> : effMethod === "venue" ? `Reserve · ${formatRs(total)}` : `Continue to ${METHOD_LABEL[effMethod]} QR · ${formatRs(total)}`}
+          {submitting ? <><Loader2 size={18} className="animate-spin" /> Processing…</> : free ? "Book free game" : effMethod === "venue" ? `Reserve · ${formatRs(total)}` : `Continue to ${METHOD_LABEL[effMethod]} QR · ${formatRs(total)}`}
         </button>
       </div>
     );

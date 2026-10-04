@@ -2,17 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Gift, Star, Trophy, ShoppingBag, Gamepad2, UserRound, ChevronDown } from "lucide-react";
+import { Gift, Star, Trophy, ShoppingBag, Gamepad2, UserRound, ChevronDown, Crown, Check } from "lucide-react";
 import { useSession, signInDemo } from "@/lib/session";
 import {
-  GOODS_STEP_RS, POINTS_CAPTAIN_WIN, POINTS_PER_FREE_GAME, POINTS_PER_GAME, POINTS_PER_GOODS_STEP,
-  sampleLedger, summarize, type PointsKind,
+  GOODS_STEP_RS, MEMBERSHIP_3M_POINTS, POINTS_CAPTAIN_WIN, POINTS_PER_FREE_GAME, POINTS_PER_GAME, POINTS_PER_GOODS_STEP,
+  claimFreeGame, usePoints, type PointsKind,
 } from "@/lib/points";
 
 const KIND: Record<PointsKind, { icon: typeof Star; tone: string }> = {
   game: { icon: Gamepad2, tone: "bg-emerald-400/20 text-emerald-600" },
   "captain-win": { icon: Trophy, tone: "bg-amber-400/25 text-amber-600" },
   goods: { icon: ShoppingBag, tone: "bg-sky-400/20 text-sky-600" },
+  membership: { icon: Crown, tone: "bg-violet-400/20 text-violet-600" },
   "free-game": { icon: Gift, tone: "bg-orange-400/20 text-orange-600" },
 };
 
@@ -21,7 +22,8 @@ const SHOWN = 4;
 export default function PointsPage() {
   const session = useSession();
   const [all, setAll] = useState(false);
-  const sum = summarize(sampleLedger);
+  const { ledger, vouchers, summary: sum } = usePoints();
+  const [confirming, setConfirming] = useState(false);
 
   if (!session) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
   if (!session.registered) {
@@ -35,7 +37,7 @@ export default function PointsPage() {
     );
   }
 
-  const rows = all ? sampleLedger : sampleLedger.slice(0, SHOWN);
+  const rows = all ? ledger : ledger.slice(0, SHOWN);
 
   return (
     <div className="space-y-5 pb-4">
@@ -47,13 +49,41 @@ export default function PointsPage() {
         <div className="mt-1 flex items-end justify-between">
           <p className="flex items-center gap-2 text-5xl font-semibold"><Star className="fill-amber-400 text-amber-400" size={34} /> {sum.remaining}</p>
           <p className="rounded-full bg-orange-400/25 px-3 py-1 text-xs font-medium text-orange-100">
-            {sum.freeGamesReady} free {sum.freeGamesReady === 1 ? "game" : "games"} ready
+            {sum.canClaim} free {sum.canClaim === 1 ? "game" : "games"} to claim
           </p>
         </div>
         <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-valuenow={sum.progressPct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to your next free game">
           <div className="h-full rounded-full bg-gradient-to-r from-amber-300 to-orange-400" style={{ width: `${sum.progressPct}%` }} />
         </div>
         <p className="mt-2 text-xs text-white/70">{sum.toNext} more points for your next free game</p>
+      </section>
+
+      {/* Claim a free game */}
+      <section className="glass rounded-3xl p-5" aria-label="Claim a free game">
+        {vouchers > 0 && (
+          <div className="mb-4 rounded-2xl bg-emerald-400/15 p-4">
+            <p className="flex items-center gap-2 text-sm font-medium text-emerald-700"><Check size={16} /> {vouchers} free game {vouchers === 1 ? "voucher" : "vouchers"} ready</p>
+            <p className="mt-1 text-xs text-slate-500">Choose it at the payment step when you book.</p>
+            <Link href="/book" className="glass-btn mt-3 inline-flex rounded-full px-5 py-2.5 text-sm font-medium text-white">Book my free game</Link>
+          </div>
+        )}
+        <h2 className="text-base font-semibold">Claim a free game</h2>
+        <p className="mt-1 text-xs text-slate-500">Spend {POINTS_PER_FREE_GAME} points to book one regular game for free. It can&apos;t be used to host a challenge.</p>
+        {confirming ? (
+          <div className="mt-4 flex gap-2">
+            <button type="button" onClick={() => { claimFreeGame(); setConfirming(false); }} className="glass-btn flex-1 rounded-full py-3 text-sm font-semibold text-white">Yes, use {POINTS_PER_FREE_GAME} points</button>
+            <button type="button" onClick={() => setConfirming(false)} className="rounded-full bg-white/70 px-5 py-3 text-sm font-medium text-slate-600">Cancel</button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            disabled={sum.canClaim < 1}
+            onClick={() => setConfirming(true)}
+            className="glass-btn mt-4 w-full rounded-full py-3.5 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {sum.canClaim < 1 ? `Need ${sum.toNext} more points` : "Claim free game"}
+          </button>
+        )}
       </section>
 
       {/* Claimed vs remaining */}
@@ -76,7 +106,8 @@ export default function PointsPage() {
         <ul className="mt-3 space-y-3 text-sm">
           <li className="flex gap-3"><Gift size={20} className="mt-0.5 shrink-0 text-orange-500" /><span><b>{POINTS_PER_FREE_GAME} points = 1 free game.</b></span></li>
           <li className="flex gap-3"><Gamepad2 size={20} className="mt-0.5 shrink-0 text-emerald-600" /><span>Every game you play earns <b>{POINTS_PER_GAME} points</b>.</span></li>
-          <li className="flex gap-3"><Trophy size={20} className="mt-0.5 shrink-0 text-amber-600" /><span>Winning captain of a challenge game earns <b>{POINTS_CAPTAIN_WIN} points</b>.</span></li>
+          <li className="flex gap-3"><Trophy size={20} className="mt-0.5 shrink-0 text-amber-600" /><span>Challenge games: only the <b>winning captain</b> earns <b>{POINTS_CAPTAIN_WIN} points</b>.</span></li>
+          <li className="flex gap-3"><Crown size={20} className="mt-0.5 shrink-0 text-violet-600" /><span>Buy or renew the <b>3-month membership</b> and earn <b>{MEMBERSHIP_3M_POINTS} points</b>.</span></li>
           <li className="flex gap-3"><ShoppingBag size={20} className="mt-0.5 shrink-0 text-sky-600" /><span>Extra goods: every <b>Rs. {GOODS_STEP_RS}</b> earns <b>{POINTS_PER_GOODS_STEP} points</b>.</span></li>
         </ul>
       </section>
@@ -100,9 +131,9 @@ export default function PointsPage() {
             );
           })}
         </ul>
-        {sampleLedger.length > SHOWN && (
+        {ledger.length > SHOWN && (
           <button type="button" onClick={() => setAll((v) => !v)} aria-expanded={all} className="mt-4 flex w-full items-center justify-center gap-1 rounded-2xl bg-white/60 py-2.5 text-sm font-medium text-brand">
-            {all ? "Show less" : `Show all (${sampleLedger.length})`} <ChevronDown size={16} className={all ? "rotate-180" : ""} />
+            {all ? "Show less" : `Show all (${ledger.length})`} <ChevronDown size={16} className={all ? "rotate-180" : ""} />
           </button>
         )}
       </section>
