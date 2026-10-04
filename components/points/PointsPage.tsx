@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Gift, Star, Trophy, ShoppingBag, Gamepad2, UserRound, ChevronDown, Crown, Check } from "lucide-react";
+import { Gift, Star, Trophy, ShoppingBag, Gamepad2, UserRound, ChevronDown, Crown, Check, Clock, TriangleAlert } from "lucide-react";
 import { useSession, signInDemo } from "@/lib/session";
 import {
-  GAMES_PER_FREE, MEMBERSHIP_3M_POINTS, POINTS_CAPTAIN_WIN, RS_PER_POINT, SHIFTS,
-  claimFreeGame, shiftInfo, usePoints, type PointsKind,
+  GAMES_PER_FREE, GAME_POINTS_MONTHS, MEMBERSHIP_POINTS, POINTS_CAPTAIN_WIN, RS_PER_POINT, SHIFTS,
+  claimFreeGame, fmtPts, shiftInfo, usePoints, type PointsEntry, type PointsKind,
 } from "@/lib/points";
 import { formatRs, type Period } from "@/lib/booking";
+import { fmtDay } from "@/lib/promos";
 
 const KIND: Record<PointsKind, { icon: typeof Star; tone: string }> = {
   game: { icon: Gamepad2, tone: "bg-emerald-400/20 text-emerald-600" },
@@ -48,15 +49,21 @@ export default function PointsPage() {
       <section className="rounded-3xl bg-gradient-to-br from-[#0c0b5d] to-[#2a2aa8] p-5 text-white shadow-lg" aria-label="Your points balance">
         <p className="text-xs uppercase tracking-wide text-white/60">Remaining points</p>
         <div className="mt-1 flex items-end justify-between">
-          <p className="flex items-center gap-2 text-5xl font-semibold"><Star className="fill-amber-400 text-amber-400" size={34} /> {sum.remaining}</p>
+          <p className="flex items-center gap-2 text-5xl font-semibold"><Star className="fill-amber-400 text-amber-400" size={34} /> {fmtPts(sum.remaining)}</p>
           {sum.toNext === 0 && <p className="rounded-full bg-orange-400/25 px-3 py-1 text-xs font-medium text-orange-100">Free game unlocked</p>}
         </div>
         <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-valuenow={sum.progressPct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to a free game">
           <div className="h-full rounded-full bg-gradient-to-r from-amber-300 to-orange-400" style={{ width: `${sum.progressPct}%` }} />
         </div>
         <p className="mt-2 text-xs text-white/70">
-          {sum.toNext === 0 ? "You have enough points to claim a free game below." : `${sum.toNext} more points to unlock a free game`}
+          {sum.toNext === 0 ? "You have enough points to claim a free game below." : `${fmtPts(sum.toNext)} more points to unlock a free game`}
         </p>
+        {sum.expiringSoon && (
+          <p role="status" className="mt-4 flex items-start gap-2 rounded-2xl bg-amber-400/20 px-3 py-2.5 text-xs text-amber-100">
+            <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+            {fmtPts(sum.expiringSoon.points)} points expire on {fmtDay(sum.expiringSoon.key)}. Claim a free game before then.
+          </p>
+        )}
       </section>
 
       {/* Claim a free game */}
@@ -81,11 +88,11 @@ export default function PointsPage() {
               <li key={s.period} className="flex items-center gap-3 rounded-2xl bg-white/60 p-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{info.label} <span className="text-xs font-normal text-slate-400">{info.hours}</span></p>
-                  <p className="text-xs text-slate-500">{formatRs(info.price)} game · costs <b>{info.cost}</b> points</p>
+                  <p className="text-xs text-slate-500">{formatRs(info.price)} game · costs <b>{fmtPts(info.cost)}</b> points</p>
                 </div>
                 {sure ? (
                   <div className="flex gap-1.5">
-                    <button type="button" onClick={() => { claimFreeGame(s.period); setConfirming(null); }} className="glass-btn rounded-full px-4 py-2 text-xs font-semibold text-white">Use {info.cost}</button>
+                    <button type="button" onClick={() => { claimFreeGame(s.period); setConfirming(null); }} className="glass-btn rounded-full px-4 py-2 text-xs font-semibold text-white">Use {fmtPts(info.cost)}</button>
                     <button type="button" onClick={() => setConfirming(null)} aria-label="Cancel" className="rounded-full bg-white/80 px-3 py-2 text-xs text-slate-500">No</button>
                   </div>
                 ) : (
@@ -95,7 +102,7 @@ export default function PointsPage() {
                     onClick={() => setConfirming(s.period)}
                     className="glass-btn rounded-full px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
                   >
-                    {enough ? "Claim" : `Need ${info.cost - sum.remaining} more`}
+                    {enough ? "Claim" : `Need ${fmtPts(info.cost - sum.remaining)} more`}
                   </button>
                 )}
               </li>
@@ -108,13 +115,13 @@ export default function PointsPage() {
       <section className="grid grid-cols-2 gap-3" aria-label="Claimed and remaining">
         <div className="glass rounded-3xl p-4">
           <p className="text-xs text-slate-500">Claimed</p>
-          <p className="mt-1 text-2xl font-semibold">{sum.claimed}</p>
+          <p className="mt-1 text-2xl font-semibold">{fmtPts(sum.claimed)}</p>
           <p className="text-xs text-slate-400">{sum.freeGamesClaimed} free {sum.freeGamesClaimed === 1 ? "game" : "games"} used</p>
         </div>
         <div className="glass rounded-3xl p-4">
           <p className="text-xs text-slate-500">Remaining</p>
-          <p className="mt-1 text-2xl font-semibold text-accent">{sum.remaining}</p>
-          <p className="text-xs text-slate-400">of {sum.earned} earned</p>
+          <p className="mt-1 text-2xl font-semibold text-accent">{fmtPts(sum.remaining)}</p>
+          <p className="text-xs text-slate-400">of {fmtPts(sum.earned)} earned{sum.expired > 0 ? ` · ${fmtPts(sum.expired)} expired` : ""}</p>
         </div>
       </section>
 
@@ -122,12 +129,38 @@ export default function PointsPage() {
       <section className="glass rounded-3xl p-5">
         <h2 className="text-base font-semibold">How it works</h2>
         <ul className="mt-3 space-y-3 text-sm">
-          <li className="flex gap-3"><Gamepad2 size={20} className="mt-0.5 shrink-0 text-emerald-600" /><span>Every <b>Rs. {RS_PER_POINT}</b> you pay for a game = <b>1 point</b>. A Rs. 1,250 game earns 12 (1.2 &times; 10).</span></li>
-          <li className="flex gap-3"><Gift size={20} className="mt-0.5 shrink-0 text-orange-500" /><span><b>{GAMES_PER_FREE} games = 1 free game</b> in any shift you have enough points for.</span></li>
+          <li className="flex gap-3"><Gamepad2 size={20} className="mt-0.5 shrink-0 text-emerald-600" /><span>Every game earns <b>price ÷ {RS_PER_POINT}</b> points. {SHIFTS.map((s) => `${s.label} ${formatRs(shiftInfo(s.period).price)} = ${fmtPts(shiftInfo(s.period).perGame)}`).join(" · ")}.</span></li>
+          <li className="flex gap-3"><Gift size={20} className="mt-0.5 shrink-0 text-orange-500" /><span><b>{GAMES_PER_FREE} games = 1 free game</b> in any shift you have the points for: {SHIFTS.map((s) => `${s.label} ${fmtPts(shiftInfo(s.period).cost)}`).join(" · ")}.</span></li>
+          <li className="flex gap-3"><ShoppingBag size={20} className="mt-0.5 shrink-0 text-sky-600" /><span>Extra goods: every <b>Rs. {RS_PER_POINT}</b> spent = <b>1 point</b>. Rs. 10,000 = 100 points.</span></li>
+          <li className="flex gap-3"><Crown size={20} className="mt-0.5 shrink-0 text-violet-600" /><span>Membership purchase or renewal: <b>3 months = {MEMBERSHIP_POINTS.quarterly} points</b>, <b>6 months = {MEMBERSHIP_POINTS.half} points</b>.</span></li>
           <li className="flex gap-3"><Trophy size={20} className="mt-0.5 shrink-0 text-amber-600" /><span>Challenge games: only the <b>winning captain</b> earns <b>{POINTS_CAPTAIN_WIN} points</b>.</span></li>
-          <li className="flex gap-3"><Crown size={20} className="mt-0.5 shrink-0 text-violet-600" /><span>Buy or renew the <b>3-month membership</b> and earn <b>{MEMBERSHIP_3M_POINTS} points</b>.</span></li>
-          <li className="flex gap-3"><ShoppingBag size={20} className="mt-0.5 shrink-0 text-sky-600" /><span>Extra goods: same rate, every <b>Rs. {RS_PER_POINT}</b> = <b>1 point</b>.</span></li>
         </ul>
+      </section>
+
+      {/* Expiry */}
+      <section className="glass rounded-3xl p-5" aria-label="When points expire">
+        <h2 className="flex items-center gap-2 text-base font-semibold"><Clock size={18} className="text-brand" /> When points expire</h2>
+        <ul className="mt-3 divide-y divide-white/70 text-sm">
+          {[
+            { label: "Game points", rule: `${GAME_POINTS_MONTHS} months from the game`, b: sum.byType.games },
+            { label: "Extra goods", rule: "1 year from purchase", b: sum.byType.goods },
+            { label: "Membership", rule: "Never expire", b: sum.byType.membership },
+          ].map((r) => (
+            <li key={r.label} className="flex items-center justify-between gap-3 py-2.5">
+              <div>
+                <p className="font-medium">{r.label}</p>
+                <p className="text-xs text-slate-500">{r.rule}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold">{fmtPts(r.b.points)}</p>
+                <p className="text-[11px] text-slate-400">{r.b.nextExpiry ? `next ${fmtDay(r.b.nextExpiry)}` : r.b.points > 0 ? "no expiry" : "—"}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 rounded-2xl bg-white/60 px-3 py-2 text-xs text-slate-500">
+          Play {GAMES_PER_FREE} games within {GAME_POINTS_MONTHS} months to claim a free game. Game points not used in time vanish automatically, and the points that expire soonest are spent first.
+        </p>
       </section>
 
       {/* History */}
@@ -143,8 +176,9 @@ export default function PointsPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{e.title}</p>
                   <p className="truncate text-xs text-slate-400">{e.detail} · {e.date}</p>
+                  {e.points > 0 && <Validity e={e} lot={sum.lotById[e.id]} />}
                 </div>
-                <p className={`text-sm font-semibold ${e.points > 0 ? "text-emerald-600" : "text-orange-600"}`}>{e.points > 0 ? "+" : "−"}{Math.abs(e.points)}</p>
+                <p className={`text-sm font-semibold ${e.points > 0 ? "text-emerald-600" : "text-orange-600"}`}>{e.points > 0 ? "+" : "−"}{fmtPts(Math.abs(e.points))}</p>
               </li>
             );
           })}
@@ -156,9 +190,27 @@ export default function PointsPage() {
         )}
       </section>
 
+      <section className="rounded-3xl bg-white/40 p-5 text-xs text-slate-500" aria-label="Terms">
+        <h2 className="text-sm font-semibold text-slate-700">Terms</h2>
+        <ul className="mt-2 list-disc space-y-1.5 pl-4">
+          <li>Points are earned only by the registered account holder (the main person). Guests don&apos;t earn points.</li>
+          <li>Game points last {GAME_POINTS_MONTHS} months. Play {GAMES_PER_FREE} games within {GAME_POINTS_MONTHS} months to claim a free game, or the game points are cancelled.</li>
+          <li>Extra goods points last 1 year. Membership points never expire.</li>
+          <li>A free game is for one regular booking in the shift you chose. It can&apos;t be used to host a challenge and has no cash value.</li>
+          <li>The final points are confirmed by Unique Futsal after the game or payment.</li>
+        </ul>
+      </section>
+
       <p className="px-2 text-center text-xs text-slate-400">
         Ready to use a free game? <Link href="/book" className="font-medium text-brand">Book now</Link>
       </p>
     </div>
   );
+}
+
+function Validity({ e, lot }: { e: PointsEntry; lot?: { left: number; expired: boolean; expiresKey: string | null } }) {
+  if (!lot || lot.left <= 0) return <p className="text-[11px] text-slate-400">Used</p>;
+  if (lot.expired) return <p className="text-[11px] font-medium text-rose-500">Expired {fmtDay(lot.expiresKey as string)}</p>;
+  if (e.expiresKey === null) return <p className="text-[11px] text-emerald-600">Never expires</p>;
+  return <p className="text-[11px] text-slate-400">Valid until {fmtDay(lot.expiresKey as string)}</p>;
 }

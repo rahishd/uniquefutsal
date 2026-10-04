@@ -77,16 +77,6 @@ Profile > Settings has a "Pop-up reminder" switch (default on) next to "Booking 
 
 My bookings shows only the next game and the last completed game; Gameplay stats shows only the most recent game (season totals and earlier games are under the arrow); Payment history shows the two latest transactions. When there is more, a dropdown arrow reveals the rest and "Download PDF" exports the full list (`lib/pdf.ts`, jsPDF, loaded only on click). Everything shown is sample data in `lib/sample-profile.ts`. With a real API, fetch the newest items first and let the expand/PDF actions page through or request the full history (the PDF should be generated from the complete server-side history, not just what is loaded). Payment history excludes pay-at-venue bookings until the venue marks them paid.
 
-# Loyalty points
-
-Page `/points` (`components/points/PointsPage.tsx`); rules, store and sample ledger in `lib/points.ts`.
-
-Rules: points follow the game price. Rs. 100 paid = 1 point, rounded DOWN, whole numbers ("place value": Rs. 1,250 = 1.2 x 10 = 12 points). A free game of a shift costs 10 games' worth of points (`freeGameCost`: price/100 x 10), so 10 games = 1 free game in any shift the customer has enough points for (demo prices: Morning Rs. 1,000 = 100 points, Day 1,200 = 120, Evening 1,500 = 150; they come from `priceFor` in `lib/booking.ts`, so real prices flow through). Points are earned on the amount actually paid; a free-game booking earns none. Challenge games: ONLY the winning captain earns 5 (loser and draw nothing). Extra goods use the same rate as games (every full Rs. 100 = 1 point). Buying or renewing the 3-month membership = 30 points (not 1- or 6-month plans).
-
-Claiming: on /points the customer picks a shift and spends its cost to get a voucher (`claimFreeGame(period)`). At the booking review step, a voucher for the chosen slot's shift can be applied ("Use a free game voucher"): total Rs. 0, no payment step, voucher spent (`spendVoucher`). Regular bookings only, never for hosting a challenge. Booking review also says how many points the game will earn.
-
-Everything is sample data in browser storage. The server must own the ledger and vouchers: award game points only after the game is completed and paid (`awardGame` is not called by anything in the demo yet; same for goods points), award points idempotently per id, deduct on claim, and re-check on booking that the voucher is unused and matches the shift.
-
 # Promos page
 
 `/promos` (`components/promos/PromosPage.tsx`) lists offers in Active / Upcoming / Expired tabs, worked out from today's date against each promo's `from` and `until` (`lib/promos.ts`). Active cards have a Copy button and a Book / View plans button; "Ends in N days" shows for offers ending within 5 days. The Home "Live promo codes" strip shows the same active codes. Data is sample data and must match the codes the booking (`lib/booking.ts`) and membership (`lib/membership.ts`) screens accept; TIHAR20 and MONSOON15 are display-only because those screens don't know them. The server must own the codes, dates, eligibility and discount, and validate again at payment. Promo notifications (`type: "promo"`) show the red badge on the Promos tile.
@@ -94,3 +84,15 @@ Everything is sample data in browser storage. The server must own the ledger and
 # Home banner mascot
 
 The football on the Home promo banner is now `components/KidSkills.tsx`: a smiling cartoon boy in an orange kit doing a 20-second routine on a loop (dribble, foot juggling, headers, ball spinning on a finger, "around the world", jump with a spin). It is pure SVG with generated CSS keyframes, no video or image files, and it stops moving when the device has "reduce motion" on. To change the routine, edit the point lists (`ballPath`, `legL`, `legR`, `armL`, `armR`, `bob`, `head`, `spin`); times are in seconds and `LOOP` is the total length.
+
+# Loyalty points
+
+Page `/points` (`components/points/PointsPage.tsx`); rules, expiry, store and sample ledger in `lib/points.ts`. Only the registered account holder (the main person) earns; guests earn nothing.
+
+Earning: a regular game earns price / 100 points, kept to one decimal (Rs. 1,250 = 12.5). 10 games = 1 free game of that shift, so a free game costs price / 10 (Rs. 1,250 = 125, 1,150 = 115, 1,350 = 135; the page computes these from `priceFor` in `lib/booking.ts`). Extra goods: every Rs. 100 = 1 point (Rs. 10,000 = 100). Membership purchase or renewal: 3 months = 30, 6 months = 70, monthly = 0 (`MEMBERSHIP_POINTS`). Challenge games: only the winning captain, 5 points. Points are earned on the amount actually paid; free-game bookings earn none.
+
+Expiry: game and challenge points last 3 months from the game; extra-goods points 1 year; membership points never expire. This is per earning (each game's points expire 3 months after that game), which means a customer must collect 10 games' worth inside 3 months, and no games for 3 months empties the game points. If the owner meant a cycle that starts at the first game and restarts after a claim, change `expiryFor` and `buildLots`. Claiming spends the points that expire soonest first (never-expiring last) and can only spend points valid on the claim day. The page warns when points expire within 30 days, shows valid points per type with the next expiry, tags history rows (valid until / never expires / used / expired) and lists the terms.
+
+Claiming: on /points the customer picks a shift and spends its cost to get a voucher (`claimFreeGame(period)`). At the booking review step, a voucher for the chosen slot's shift can be applied ("Use a free game voucher"): total Rs. 0, no payment step, voucher spent (`spendVoucher`). Regular bookings only, never for hosting a challenge. Vouchers have no expiry in the demo (not specified by the owner).
+
+Everything is sample data in browser storage. The server must own the ledger, expiry and vouchers: award game points only after the game is completed and paid, goods points when goods are sold, membership points when the payment is confirmed (all idempotent per id), expire them on schedule, deduct on claim, and re-check on booking that the voucher is unused and matches the shift. `awardGame` and the goods points have no trigger in the demo yet.

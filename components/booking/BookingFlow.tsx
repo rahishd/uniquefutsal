@@ -6,7 +6,7 @@ import { CalendarPlus, Check, Gift, ChevronLeft, Loader2, Tag, X } from "lucide-
 import { addNotice, scheduleReminder } from "@/lib/notifications";
 import PaymentMethodPicker from "@/components/payment/PaymentMethodPicker";
 import { signInDemo, useSession } from "@/lib/session";
-import { pointsForGame, spendVoucher, useVouchers } from "@/lib/points";
+import { fmtPts, pointsForGame, spendVoucher, useVouchers } from "@/lib/points";
 import PaymentQr from "@/components/payment/PaymentQr";
 import { METHOD_LABEL, isOnline, remarksFor } from "@/lib/payment";
 import {
@@ -318,7 +318,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           </dl>
           <p className="mt-2 text-[11px] text-slate-400">{courtName} · final price is confirmed by the server.</p>
           {registered && !free && total > 0 && (
-            <p className="mt-3 rounded-2xl bg-amber-400/15 px-3 py-2 text-xs text-amber-700">You&apos;ll earn {pointsForGame(total)} loyalty points after this game.</p>
+            <p className="mt-3 rounded-2xl bg-amber-400/15 px-3 py-2 text-xs text-amber-700">You&apos;ll earn {fmtPts(pointsForGame(total))} loyalty points after this game.</p>
           )}
         </section>
 

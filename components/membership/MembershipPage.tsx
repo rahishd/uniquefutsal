@@ -1,6 +1,6 @@
 "use client";
 
-import { MEMBERSHIP_3M_POINTS, awardMembership } from "@/lib/points";
+import { MEMBERSHIP_POINTS, awardMembership } from "@/lib/points";
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Check, ChevronLeft, Crown, Loader2, Sparkles, Tag, X } from "lucide-react";
@@ -238,8 +238,8 @@ export default function MembershipPage() {
           <ul className="mt-4 space-y-2 text-sm">
             {chosen.benefits.map((b) => <li key={b} className="flex items-start gap-2"><Check size={16} className="mt-0.5 shrink-0 text-emerald-300" /> {b}</li>)}
           </ul>
-          {billing === "quarterly" && registered && (
-            <p className="mt-4 rounded-2xl bg-amber-400/20 px-3 py-2 text-xs text-amber-100">Earn {MEMBERSHIP_3M_POINTS} loyalty points once this payment is received.</p>
+          {MEMBERSHIP_POINTS[billing] && registered && (
+            <p className="mt-4 rounded-2xl bg-amber-400/20 px-3 py-2 text-xs text-amber-100">Earn {MEMBERSHIP_POINTS[billing]} loyalty points (never expire) once this payment is received.</p>
           )}
         </section>
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePoints } from "@/lib/points";
+import { fmtPts, usePoints } from "@/lib/points";
 import { Bell, Check, ChevronDown, ChevronRight, Crown, Download, Loader2, LogOut, Pencil, Star, Trophy, UserRound, X } from "lucide-react";
 import { downloadPdf } from "@/lib/pdf";
 import { signInDemo, signOut, useSession } from "@/lib/session";
@@ -266,7 +266,7 @@ function RegisteredProfile() {
       {!captainMode && (<>
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-3 text-center">
-        {[["Games", s.played], ["Win rate", `${winRate}%`], ["Points", loy.remaining]].map(([k, v]) => (
+        {[["Games", s.played], ["Win rate", `${winRate}%`], ["Points", fmtPts(loy.remaining)]].map(([k, v]) => (
           <div key={k} className="glass rounded-2xl py-4">
             <p className="text-xl font-semibold">{v}</p>
             <p className="text-[11px] text-slate-400">{k}</p>
@@ -294,8 +294,8 @@ function RegisteredProfile() {
       {/* Loyalty */}
       <Card title="Loyalty points" action={<Link href="/points" className="flex items-center text-sm text-brand">View <ChevronRight size={16} /></Link>}>
         <div className="flex items-end justify-between">
-          <p className="flex items-center gap-2 text-2xl font-semibold"><Star className="fill-amber-400 text-amber-400" size={22} /> {loy.remaining}</p>
-          <p className="text-xs text-slate-400">{loy.toNext === 0 ? "Free game unlocked" : `${loy.toNext} to a free game`}</p>
+          <p className="flex items-center gap-2 text-2xl font-semibold"><Star className="fill-amber-400 text-amber-400" size={22} /> {fmtPts(loy.remaining)}</p>
+          <p className="text-xs text-slate-400">{loy.toNext === 0 ? "Free game unlocked" : `${fmtPts(loy.toNext)} to a free game`}</p>
         </div>
         <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to next reward">
           <div className="h-full rounded-full bg-gradient-to-r from-amber-300 to-amber-500" style={{ width: `${pct}%` }} />
