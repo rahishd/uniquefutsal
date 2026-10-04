@@ -5,6 +5,7 @@ import BottomNav from "@/components/BottomNav";
 import FooterGate from "@/components/FooterGate";
 import SwRegister from "@/components/SwRegister";
 import InstallPrompt from "@/components/InstallPrompt";
+import ReminderScheduler from "@/components/ReminderScheduler";
 
 const poppins = Poppins({ variable: "--font-poppins", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <BottomNav />
         <SwRegister />
         <InstallPrompt />
+        <ReminderScheduler />
       </body>
     </html>
   );

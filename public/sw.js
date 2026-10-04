@@ -52,3 +52,38 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+// Web Push (sent by the server once the backend supports it): show the alert and
+// open the right page when it is tapped.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "Unique Futsal", body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Unique Futsal", {
+      body: data.body || "",
+      icon: "/icons/192",
+      badge: "/icons/192",
+      data: { href: data.href || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const href = (event.notification.data && event.notification.data.href) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        if ("focus" in w) {
+          w.navigate(href);
+          return w.focus();
+        }
+      }
+      return self.clients.openWindow(href);
+    }),
+  );
+});

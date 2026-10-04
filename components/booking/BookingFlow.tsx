@@ -3,6 +3,7 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { CalendarPlus, Check, ChevronLeft, Loader2, Tag, X } from "lucide-react";
+import { addNotice, scheduleReminder } from "@/lib/notifications";
 import {
   MAX_ADVANCE_DAYS,
   COURTS,
@@ -56,6 +57,26 @@ function downloadIcs(c: BookingConfirmation) {
   a.download = `${c.id}.ics`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// Notices for a new booking, plus the 1-hour reminder before kick-off.
+// "Payment received" is never raised here: only the server can confirm a payment.
+function notifyBooking(c: BookingConfirmation) {
+  const when = `${longDate(c.request.dateKey)} · ${formatHour(c.request.hour)} – ${formatHour(c.request.hour + 1)}`;
+  addNotice({ id: `booking-${c.id}`, type: "booking", title: "Booking confirmed", body: `${when}. ID ${c.id}.`, href: "/profile" });
+  addNotice({
+    id: `payment-${c.id}`,
+    type: "payment",
+    title: c.paymentStatus === "pay_at_venue" ? "Pay at the venue" : "Payment pending",
+    body:
+      c.paymentStatus === "pay_at_venue"
+        ? `Please pay ${formatRs(c.total)} when you arrive.`
+        : `${formatRs(c.total)} is awaiting payment confirmation for ${c.id}.`,
+    href: "/profile",
+  });
+  const start = parseKey(c.request.dateKey);
+  start.setHours(c.request.hour, 0, 0, 0);
+  scheduleReminder(c.id, start.getTime());
 }
 
 function Steps({ step }: { step: number }) {
@@ -137,6 +158,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
         { dateKey: activeDate, hour: selHour, courtId: court, promoCode: promo?.ok ? promo.code : undefined, method, name: name.trim(), phone },
         { base, discount, total },
       );
+      notifyBooking(res);
       setDone(res);
       setStep(2);
     } catch {

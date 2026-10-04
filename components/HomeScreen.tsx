@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  Bell,
   CalendarDays,
   ChevronRight,
   Crown,
@@ -14,6 +13,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import HeaderInfo from "@/components/HeaderInfo";
+import NotificationBell from "@/components/NotificationBell";
 import QuickRebook from "@/components/QuickRebook";
 import PromoCodes from "@/components/PromoCodes";
 import TournamentSection from "@/components/TournamentSection";
@@ -31,7 +31,6 @@ const TILES = [
 
 export default function HomeScreen() {
   const userName = "Player"; // TODO: from auth once login exists
-  const unread = 2; // TODO: from notifications API
 
   return (
     <div>
@@ -48,18 +47,7 @@ export default function HomeScreen() {
             <span className="block text-2xl font-medium leading-tight">{userName}</span>
           </span>
         </Link>
-        <button
-          type="button"
-          aria-label={`Notifications, ${unread} unread`}
-          className="glass relative flex h-12 w-12 items-center justify-center rounded-2xl text-slate-600"
-        >
-          <Bell size={22} />
-          {unread > 0 && (
-            <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] font-semibold text-white">
-              {unread}
-            </span>
-          )}
-        </button>
+        <NotificationBell />
       </header>
 
       <HeaderInfo />
