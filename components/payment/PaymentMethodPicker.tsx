@@ -2,13 +2,20 @@
 
 import { PAY_METHODS, type PayMethod } from "@/lib/payment";
 
+interface Props {
+  value: PayMethod;
+  onChange: (m: PayMethod) => void;
+  allowVenue?: boolean; // false for guests, who must pay in full online
+}
+
 // eSewa, Fonepay or Pay at venue. Shared by booking and membership.
-export default function PaymentMethodPicker({ value, onChange }: { value: PayMethod; onChange: (m: PayMethod) => void }) {
+export default function PaymentMethodPicker({ value, onChange, allowVenue = true }: Props) {
+  const methods = PAY_METHODS.filter((m) => allowVenue || m.id !== "venue");
   return (
     <section className="glass rounded-3xl p-5">
       <h2 className="text-sm font-medium">Payment method</h2>
-      <div role="radiogroup" aria-label="Payment method" className="mt-3 grid grid-cols-3 gap-3">
-        {PAY_METHODS.map((m) => (
+      <div role="radiogroup" aria-label="Payment method" className={`mt-3 grid gap-3 ${methods.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+        {methods.map((m) => (
           <button
             key={m.id}
             type="button"
@@ -22,6 +29,7 @@ export default function PaymentMethodPicker({ value, onChange }: { value: PayMet
           </button>
         ))}
       </div>
+      {!allowVenue && <p className="mt-3 text-xs text-slate-500">Guest bookings are paid in full online. Sign in to pay at the venue.</p>}
     </section>
   );
 }

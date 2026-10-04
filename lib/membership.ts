@@ -120,6 +120,7 @@ export const sampleCurrent: Membership = {
 };
 
 export interface PurchaseRequest {
+  guest?: boolean; // true when nobody is signed in; guests must pay in full online
   planId: string;
   billing: Billing;
   method: PayMethod;
@@ -167,6 +168,8 @@ export function isRenewal(current: Membership | null, planId: string, today: str
 // membership is "Pending" and must never be treated as active. Pay-at-venue stays pending until
 // staff mark it paid.
 export async function purchaseMembership(req: PurchaseRequest, current: Membership | null, today: string): Promise<PurchaseResult> {
+  // The server must enforce this too: guests pay the full amount online, never at the venue.
+  if (req.guest && req.method === "venue") throw new Error("Guests must pay in full online.");
   await new Promise((r) => setTimeout(r, 900));
   const plan = PLANS.find((p) => p.id === req.planId);
   if (!plan) throw new Error("This membership is no longer available.");

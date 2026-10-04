@@ -6,12 +6,14 @@ import { ArrowRight, Zap } from "lucide-react";
 import { formatHour, formatRs, parseKey } from "@/lib/booking";
 import { detectUsualSlot, findRebookTarget } from "@/lib/rebook";
 import { sampleBookingHistory } from "@/lib/sample-profile";
+import { useSession } from "@/lib/session";
 
 const noop = () => () => {};
 const minuteKey = () => String(Math.floor(Date.now() / 60000));
 
 export default function QuickRebook() {
   const tick = useSyncExternalStore(noop, minuteKey, () => "");
+  const session = useSession();
 
   const view = useMemo(() => {
     if (!tick) return null;
@@ -22,7 +24,8 @@ export default function QuickRebook() {
   }, [tick]);
 
   // Only offer "Book again" when the usual slot is actually open.
-  if (!view || !view.target.available) return null;
+  // Guests have no booking history, so there is no usual slot to offer.
+  if (!session?.registered || !view || !view.target.available) return null;
   const { usual, target } = view;
 
   const day = parseKey(target.dateKey);

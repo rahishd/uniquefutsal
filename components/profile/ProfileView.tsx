@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Bell, Check, ChevronRight, Crown, LogOut, Pencil, Star, Trophy, X } from "lucide-react";
+import { Bell, Check, ChevronRight, Crown, LogOut, Pencil, Star, Trophy, UserRound, X } from "lucide-react";
+import { signInDemo, signOut, useSession } from "@/lib/session";
 import {
   sampleBookings,
   sampleLoyalty,
@@ -45,7 +46,25 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 
 const input = "w-full rounded-2xl bg-white/70 px-4 py-3 text-sm outline-none ring-1 ring-white/80 focus:ring-brand";
 
+// Registered customers see their profile; guests are asked to sign in.
 export default function ProfileView() {
+  const session = useSession();
+  if (!session) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
+  if (!session.registered) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
+        <span className="glass flex h-20 w-20 items-center justify-center rounded-3xl text-brand"><UserRound size={34} /></span>
+        <h1 className="mt-6 text-2xl font-semibold">You&apos;re browsing as a guest</h1>
+        <p className="mt-2 max-w-xs text-sm text-slate-500">Sign in to see your bookings, membership and points, and to book without typing your details each time.</p>
+        <button type="button" onClick={signInDemo} className="glass-btn mt-6 rounded-full px-8 py-3.5 text-sm font-semibold text-white">Sign in (demo)</button>
+        <Link href="/book" className="mt-4 text-sm font-medium text-brand">Continue to book as a guest</Link>
+      </div>
+    );
+  }
+  return <RegisteredProfile />;
+}
+
+function RegisteredProfile() {
   const [profile, setProfile] = useState<ProfileData>(sampleProfile);
   const [draft, setDraft] = useState<ProfileData>(sampleProfile);
   const [editing, setEditing] = useState(false);
@@ -252,7 +271,7 @@ export default function ProfileView() {
             </select>
           </li>
         </ul>
-        <button type="button" className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-white/70 py-3 text-sm font-medium text-rose-500"><LogOut size={16} /> Sign out</button>
+        <button type="button" onClick={signOut} className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-white/70 py-3 text-sm font-medium text-rose-500"><LogOut size={16} /> Sign out</button>
       </Card>
     </div>
   );

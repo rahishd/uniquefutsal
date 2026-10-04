@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CalendarPlus, Check, ChevronLeft, Loader2, Tag, X } from "lucide-react";
 import { addNotice, scheduleReminder } from "@/lib/notifications";
 import PaymentMethodPicker from "@/components/payment/PaymentMethodPicker";
+import { signInDemo, useSession } from "@/lib/session";
 import PaymentQr from "@/components/payment/PaymentQr";
 import { METHOD_LABEL, isOnline, remarksFor } from "@/lib/payment";
 import {
@@ -114,8 +115,9 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<BookingConfirmation | null>(null);
   const [qr, setQr] = useState<{ booking: BookingConfirmation; heldAt: number } | null>(null);
+  const session = useSession();
 
-  if (!now) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
+  if (!now || !session) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
 
   const today = dateKey(now);
   const days = Array.from({ length: MAX_ADVANCE_DAYS + 1 }, (_, i) => {
@@ -133,7 +135,13 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   const discount = promo?.ok ? promo.discount : 0;
   const total = Math.max(0, base - discount);
   const phoneOk = /^9\d{9}$/.test(phone);
-  const canPay = Boolean(slot && court && name.trim().length >= 2 && phoneOk);
+  // Registered customers are recognised automatically. Only guests type their details,
+  // and guests must pay in full online (no "pay at venue").
+  const registered = session.registered;
+  const effMethod: PaymentMethod = !registered && method === "venue" ? "esewa" : method;
+  const custName = session.registered ? session.name : name.trim();
+  const custPhone = session.registered ? session.phone : phone;
+  const canPay = Boolean(slot && court && (registered || (name.trim().length >= 2 && phoneOk)));
 
   function pickDate(k: string) {
     setSelDate(k);
@@ -160,11 +168,11 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
     setError(null);
     try {
       const res = await createBooking(
-        { dateKey: activeDate, hour: selHour, courtId: court, promoCode: promo?.ok ? promo.code : undefined, method, name: name.trim(), phone },
+        { dateKey: activeDate, hour: selHour, courtId: court, promoCode: promo?.ok ? promo.code : undefined, method: effMethod, name: custName, phone: custPhone, guest: !registered },
         { base, discount, total },
       );
       if (isOnline(res.request.method)) {
-        // The booking is held; the customer pays with the QR, then taps "I've paid".
+        // The booking is held; the customer pays with the QR and the screen detects the payment.
         setQr({ booking: res, heldAt: res.createdAt });
       } else {
         notifyBooking(res);
@@ -316,16 +324,26 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           )}
         </section>
 
-        <section className="glass space-y-3 rounded-3xl p-5">
-          <h2 className="text-sm font-medium">Your details</h2>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoComplete="name" className="w-full rounded-2xl bg-white/70 px-4 py-3 text-sm outline-none ring-1 ring-white/80 focus:ring-brand" />
-          <div>
-            <input value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="Mobile number (98XXXXXXXX)" autoComplete="tel" className="w-full rounded-2xl bg-white/70 px-4 py-3 text-sm outline-none ring-1 ring-white/80 focus:ring-brand" />
-            {phone.length > 0 && !phoneOk && <p className="mt-1 text-xs text-rose-500">Enter a 10-digit mobile number starting with 9.</p>}
-          </div>
-        </section>
+        {session.registered ? (
+          <p className="glass flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm">
+            <span className="text-slate-500">Booking as</span>
+            <span className="text-right font-medium">{session.name} · {session.phone}</span>
+          </p>
+        ) : (
+          <section className="glass space-y-3 rounded-3xl p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-medium">Guest details</h2>
+              <button type="button" onClick={signInDemo} className="text-xs font-medium text-brand">Have an account? Sign in</button>
+            </div>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" aria-label="Full name" autoComplete="name" className="w-full rounded-2xl bg-white/70 px-4 py-3 text-sm outline-none ring-1 ring-white/80 focus:ring-brand" />
+            <div>
+              <input value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="Mobile number (98XXXXXXXX)" aria-label="Mobile number" autoComplete="tel" className="w-full rounded-2xl bg-white/70 px-4 py-3 text-sm outline-none ring-1 ring-white/80 focus:ring-brand" />
+              {phone.length > 0 && !phoneOk && <p className="mt-1 text-xs text-rose-500">Enter a 10-digit mobile number starting with 9.</p>}
+            </div>
+          </section>
+        )}
 
-        <PaymentMethodPicker value={method} onChange={setMethod} />
+        <PaymentMethodPicker value={effMethod} onChange={setMethod} allowVenue={registered} />
 
         {error && <p role="alert" className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-600">{error}</p>}
 
@@ -335,7 +353,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           disabled={!canPay || submitting}
           className="glass-btn flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-semibold text-white disabled:opacity-50"
         >
-          {submitting ? <><Loader2 size={18} className="animate-spin" /> Processing…</> : method === "venue" ? `Reserve · ${formatRs(total)}` : `Continue to ${METHOD_LABEL[method]} QR · ${formatRs(total)}`}
+          {submitting ? <><Loader2 size={18} className="animate-spin" /> Processing…</> : effMethod === "venue" ? `Reserve · ${formatRs(total)}` : `Continue to ${METHOD_LABEL[effMethod]} QR · ${formatRs(total)}`}
         </button>
       </div>
     );

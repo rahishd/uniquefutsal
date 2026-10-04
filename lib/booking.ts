@@ -116,6 +116,7 @@ export function validatePromo(rawCode: string, ctx: { dateKey: string; hour: num
 }
 
 export interface BookingRequest {
+  guest?: boolean; // true when nobody is signed in; guests must pay in full online
   dateKey: string;
   hour: number;
   courtId: string;
@@ -139,6 +140,8 @@ export interface BookingConfirmation {
 // DEMO: pretends to create a booking. The real API must re-check availability inside a
 // database transaction (prevent double booking) and recompute price and promo itself.
 export async function createBooking(req: BookingRequest, quote: { base: number; discount: number; total: number }): Promise<BookingConfirmation> {
+  // The server must enforce this too: guests pay the full amount online, never at the venue.
+  if (req.guest && req.method === "venue") throw new Error("Guests must pay in full online.");
   const limit = new Date();
   limit.setDate(limit.getDate() + MAX_ADVANCE_DAYS);
   if (req.dateKey > dateKey(limit)) throw new Error(`Bookings open only ${MAX_ADVANCE_DAYS} days in advance.`);

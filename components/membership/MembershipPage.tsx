@@ -30,7 +30,7 @@ import {
   type Plan,
   type PurchaseResult,
 } from "@/lib/membership";
-import { sampleProfile } from "@/lib/sample-profile";
+import { signInDemo, useSession } from "@/lib/session";
 
 const noop = () => () => {};
 const nowKey = () => dateKey(new Date());
@@ -52,15 +52,16 @@ function planOf(id: string) {
 export default function MembershipPage() {
   const today = useSyncExternalStore(noop, nowKey, () => "");
 
-  const [active, setActive] = useState<Membership | null>(sampleCurrent);
+  const session = useSession();
+  const [activeState, setActive] = useState<Membership | null>(sampleCurrent);
   // A purchase stays pending until the server verifies the payment; it never replaces an active plan.
   const [pending, setPending] = useState<Membership | null>(null);
   const [billing, setBilling] = useState<Billing>("monthly");
   const [step, setStep] = useState<"browse" | "review" | "qr" | "done">("browse");
   const [chosen, setChosen] = useState<Plan | null>(null);
-  const [name, setName] = useState(sampleProfile.name);
-  const [phone, setPhone] = useState(sampleProfile.phone);
-  const [method, setMethod] = useState<PayMethod>("esewa");
+  const [name, setName] = useState(""); // guests only
+  const [phone, setPhone] = useState(""); // guests only
+  const [methodChoice, setMethod] = useState<PayMethod>("esewa");
   const [promoInput, setPromoInput] = useState("");
   const [promo, setPromo] = useState<MemberPromoResult | null>(null);
   const [busy, setBusy] = useState(false);
@@ -68,10 +69,17 @@ export default function MembershipPage() {
   const [order, setOrder] = useState<PurchaseResult | null>(null); // the created order (held while the QR is shown)
   const [paid, setPaid] = useState(false); // true once the server has reported the order as paid
 
-  if (!today) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
+  if (!today || !session) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
 
   const phoneOk = /^9\d{9}$/.test(phone);
-  const canPay = Boolean(chosen && name.trim().length >= 2 && phoneOk);
+  // Registered customers are recognised automatically. Only guests type their details,
+  // and guests must pay in full online (no "pay at venue").
+  const registered = session.registered;
+  const active = registered ? activeState : null; // guests have no membership
+  const method: PayMethod = !registered && methodChoice === "venue" ? "esewa" : methodChoice;
+  const custName = session.registered ? session.name : name.trim();
+  const custPhone = session.registered ? session.phone : phone;
+  const canPay = Boolean(chosen && (registered || (name.trim().length >= 2 && phoneOk)));
   const current = active ?? pending; // what the dashboard card shows
   const curPlan = current ? planOf(current.planId) : undefined;
   const pendingPlan = pending ? planOf(pending.planId) : undefined;
@@ -134,7 +142,7 @@ export default function MembershipPage() {
     setError(null);
     try {
       const res = await purchaseMembership(
-        { planId: chosen.id, billing, method, promoCode: promo?.ok ? promo.code : undefined, name: name.trim(), phone },
+        { planId: chosen.id, billing, method, promoCode: promo?.ok ? promo.code : undefined, name: custName, phone: custPhone, guest: !registered },
         active,
         today,
       );
@@ -244,16 +252,26 @@ export default function MembershipPage() {
           )}
         </section>
 
-        <section className="glass space-y-3 rounded-3xl p-5">
-          <h2 className="text-sm font-medium">Your details</h2>
-          <input className={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" aria-label="Full name" autoComplete="name" />
-          <div>
-            <input className={field} value={phone} inputMode="numeric" onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="Mobile number (98XXXXXXXX)" aria-label="Mobile number" autoComplete="tel" />
-            {phone.length > 0 && !phoneOk && <p className="mt-1 text-xs text-rose-500">Enter a 10-digit mobile number starting with 9.</p>}
-          </div>
-        </section>
+        {session.registered ? (
+          <p className="glass flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm">
+            <span className="text-slate-500">Membership for</span>
+            <span className="text-right font-medium">{session.name} · {session.phone}</span>
+          </p>
+        ) : (
+          <section className="glass space-y-3 rounded-3xl p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-medium">Guest details</h2>
+              <button type="button" onClick={signInDemo} className="text-xs font-medium text-brand">Have an account? Sign in</button>
+            </div>
+            <input className={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" aria-label="Full name" autoComplete="name" />
+            <div>
+              <input className={field} value={phone} inputMode="numeric" onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="Mobile number (98XXXXXXXX)" aria-label="Mobile number" autoComplete="tel" />
+              {phone.length > 0 && !phoneOk && <p className="mt-1 text-xs text-rose-500">Enter a 10-digit mobile number starting with 9.</p>}
+            </div>
+          </section>
+        )}
 
-        <PaymentMethodPicker value={method} onChange={setMethod} />
+        <PaymentMethodPicker value={method} onChange={setMethod} allowVenue={registered} />
 
         {error && <p role="alert" className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-600">{error}</p>}
 

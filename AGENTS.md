@@ -39,3 +39,11 @@ What your server must provide (replace the demo code in `lib/payment.ts`, `lib/b
 2. `GET /api/payments/:orderId/status` returning `pending` or `paid`. Set `paid` only after the gateway confirms it (callback/webhook, or the gateway's payment status API). Never trust the browser. Make callbacks idempotent.
 3. Re-check availability inside a transaction, recompute price and promo server-side, and expire unpaid orders after the QR hold.
 4. Remove the demo-only pieces: `DEMO_PAYMENTS`, `demoSimulatePayment` and the "Demo: simulate payment received" button.
+
+# Registered customers vs guests
+
+`lib/session.ts` says who is using the app. DEMO: it starts signed in as the sample customer and "Sign out" (Profile) makes the visitor a guest; "Sign in (demo)" and "Have an account? Sign in" reverse it. Replace it with the real session from your login (for example a cookie plus `GET /api/auth/me`).
+
+- **Registered:** booking and membership never ask for name or mobile number; they use the account ("Booking as ..."). All payment methods are available, including Pay at venue.
+- **Guest:** must enter name and a valid mobile number, and must pay the full amount online (eSewa or Fonepay). Pay at venue is hidden. Guests have no membership, booking history or Quick Rebook.
+- The guest rule is also checked in `createBooking` and `purchaseMembership` (`guest` flag), but the real server must enforce it too and take identity from the session, never from the request body.

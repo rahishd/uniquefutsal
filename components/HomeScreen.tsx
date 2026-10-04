@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import HeaderInfo from "@/components/HeaderInfo";
 import NotificationBell from "@/components/NotificationBell";
+import UserBadge from "@/components/UserBadge";
 import QuickRebook from "@/components/QuickRebook";
 import PromoCodes from "@/components/PromoCodes";
 import TournamentSection from "@/components/TournamentSection";
@@ -30,23 +31,11 @@ const TILES = [
 ];
 
 export default function HomeScreen() {
-  const userName = "Player"; // TODO: from auth once login exists
-
   return (
     <div>
       {/* Header: user info left, notifications right */}
       <header className="flex items-center justify-between">
-        <Link href="/profile" className="flex items-center gap-3">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#2a2a9c] to-brand text-lg font-semibold text-white ring-2 ring-white shadow-md">
-            {userName.slice(0, 1).toUpperCase()}
-          </span>
-          <span>
-            <span className="block text-sm text-slate-400">
-              Hello <span aria-hidden>👋</span>
-            </span>
-            <span className="block text-2xl font-medium leading-tight">{userName}</span>
-          </span>
-        </Link>
+        <UserBadge />
         <NotificationBell />
       </header>
 
