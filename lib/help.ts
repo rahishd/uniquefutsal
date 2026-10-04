@@ -158,6 +158,17 @@ export const helpTopics: HelpTopic[] = [
     href: { label: "Tournaments", to: "/tournaments" },
   },
   {
+    id: "urgent",
+    icon: "bell",
+    title: "Need urgent help?",
+    summary: "Chat with the venue on WhatsApp from Home.",
+    points: [
+      "On Home, tap the green WhatsApp button at the bottom right.",
+      "Pick what you need help with and WhatsApp opens with your message ready. Just press send.",
+      "You can also call the venue from the same screen.",
+    ],
+  },
+  {
     id: "install",
     icon: "install",
     title: "Put the app on your phone",

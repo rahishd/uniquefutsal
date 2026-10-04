@@ -8,6 +8,7 @@ import PopularGrid from "@/components/PopularGrid";
 import PromoCodes from "@/components/PromoCodes";
 import TournamentSection from "@/components/TournamentSection";
 import KidSkills from "@/components/KidSkills";
+import WhatsAppChat from "@/components/WhatsAppChat";
 
 export default function HomeScreen() {
   return (
@@ -53,6 +54,7 @@ export default function HomeScreen() {
 
       <PromoCodes />
       <TournamentSection />
+      <WhatsAppChat />
     </div>
   );
 }

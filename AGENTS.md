@@ -100,3 +100,7 @@ Everything is sample data in browser storage. The server must own the ledger, ex
 # Help page
 
 `/help` (`components/help/HelpPage.tsx`) is opened from the "Help" tile in Popular (it replaced the old "More" tile). Its topics live ONLY in `lib/help.ts` (`helpTopics`: title, one-line summary, short points, optional button). Numbers such as the booking window, renewal notice days, points rules and membership points are read from `lib/booking.ts`, `lib/membership.ts` and `lib/points.ts`, so they stay correct when those change. **Whenever a customer-facing feature is added or changed, update `lib/help.ts` in the same change** (add a topic, or edit the wording). The page has a search box and Call / WhatsApp buttons from `lib/site.ts`.
+
+# Urgent help (WhatsApp)
+
+`components/WhatsAppChat.tsx`: a floating green WhatsApp button on Home only (bottom right, above the bottom bar). It opens a sheet with topics (booking, payment, change or cancel, membership, other) and a Call button. Each topic opens `wa.me/<number>` with a pre-written message; the number comes from `site.whatsapp` / `site.phone` in `lib/site.ts`. No personal data goes in the link. This opens WhatsApp itself, it is not a chat inside the app: a real in-app chat with admin needs the backend (messages, admin inbox) or the WhatsApp Business Cloud API with a chatbot.
