@@ -5,24 +5,32 @@ import LiveAvailability from "@/components/home/LiveAvailability";
 import Promotions from "@/components/home/Promotions";
 import MembershipPackages from "@/components/home/MembershipPackages";
 import AdPopup from "@/components/AdPopup";
+import MobileHome from "@/components/app/MobileHome";
 
 
 export default function HomePage() {
   return (
-    <div className="relative isolate min-h-screen w-full overflow-hidden flex flex-col">
+    <>
       <AdPopup />
-      <Navbar />
 
+      {/* Mobile: app-style home */}
+      <div className="relative z-10 md:hidden">
+        <MobileHome />
+      </div>
 
-      <main className="relative z-10">
-        <HeroSection />
-        <LiveAvailability />
-        <Promotions light={false} />
-        <MembershipPackages light={true} />
-      </main>
+      {/* Tablet/desktop: existing marketing home */}
+      <div className="relative isolate hidden min-h-screen w-full flex-col overflow-hidden md:flex">
+        <Navbar />
 
-      {/* Footer */}
-      <Footer />
-    </div>
+        <main className="relative z-10">
+          <HeroSection />
+          <LiveAvailability />
+          <Promotions light={false} />
+          <MembershipPackages light={true} />
+        </main>
+
+        <Footer />
+      </div>
+    </>
   );
 }

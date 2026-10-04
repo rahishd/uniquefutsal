@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import QueryProvider from "@/components/providers/QueryProvider";
 import { Toaster } from "sonner";
 import PageTracker from "@/components/PageTracker";
+import BottomNav from "@/components/app/BottomNav";
 
 // Font loading moved to globals.css to bypass build-time network issues
 // const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -60,7 +61,10 @@ export default function RootLayout({
         <div className="fixed bottom-0 right-1/4 -mb-20 h-[500px] w-[500px] rounded-full bg-blue-100/20 opacity-30 blur-[100px] z-0 pointer-events-none" />
         
         <PageTracker />
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          {children}
+          <BottomNav />
+        </QueryProvider>
         <Toaster position="top-right" richColors closeButton expand={true} />
       </body>
     </html>

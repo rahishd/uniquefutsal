@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Lexend:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -12,6 +13,7 @@
   --color-secondary: #FA6400;
   --color-accent: #FA6400;
   --color-brand-white: #FEFEFE;
+  --font-heading: "Rajdhani", ui-sans-serif, system-ui, sans-serif;
 
   --background-image-brand-gradient: linear-gradient(135deg, #0c0b5d 0%, #FA6400 100%);
 }
