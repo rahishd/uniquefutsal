@@ -12,6 +12,7 @@ import {
   answerChallenge,
   approveResult,
   cancelChallenge,
+  demoAdminMarksPaid,
   demoOpponentAnswers,
   demoOpponentApproves,
   disputeResult,
@@ -45,12 +46,13 @@ function startsAt(c: { date: string; hour: number }) {
 
 const chip = (cls: string) => `rounded-full px-2.5 py-1 text-[11px] font-medium ${cls}`;
 
-function Hub({ team }: { team: Team }) {
+function Hub({ team, reportId }: { team: Team; reportId?: string }) {
   const state = useTeams();
   const nowMs = useSyncExternalStore(noop, minute, () => 0);
-  const [tab, setTab] = useState<Tab>("teams");
+  // Opening /opponent?report=<game> (from the "Did you win?" popup) lands on that game's score form.
+  const [tab, setTab] = useState<Tab>(reportId ? "results" : "teams");
   const [target, setTarget] = useState<Team | null>(null);
-  const [reporting, setReporting] = useState<string | null>(null);
+  const [reporting, setReporting] = useState<string | null>(reportId ?? null);
 
   if (!state || !nowMs) return null;
 
@@ -168,7 +170,16 @@ function Hub({ team }: { team: Team }) {
               const hasResult = state.results.some((r) => r.challengeId === c.id && r.status !== "disputed");
               return (
                 <ChallengeCard key={c.id} c={c} name={nameOf(c.teamId)} status="accepted">
-                  {played && !hasResult && <button type="button" onClick={() => goReport(c.id)} className="glass-btn mt-3 w-full rounded-full py-2.5 text-sm font-semibold text-white">Report result</button>}
+                  <p className={`mt-3 text-xs font-medium ${c.venuePaidAt ? "text-emerald-600" : "text-slate-400"}`}>
+                    {c.venuePaidAt ? "✓ Paid at the venue and confirmed by admin" : "Payment is made at the venue after the game."}
+                  </p>
+                  {played && !c.venuePaidAt && (
+                    <div className="mt-2 rounded-2xl bg-amber-400/15 p-3 text-xs text-amber-700">
+                      Demo: venue staff confirm the payment in the admin system, and both captains get a &quot;Did you win?&quot; popup.
+                      <button type="button" onClick={() => demoAdminMarksPaid(c.id)} className="mt-2 block rounded-full bg-amber-500 px-3 py-1.5 font-semibold text-white">Admin: mark paid at venue</button>
+                    </div>
+                  )}
+                  {played && !hasResult &&<button type="button" onClick={() => goReport(c.id)} className="glass-btn mt-3 w-full rounded-full py-2.5 text-sm font-semibold text-white">Report result</button>}
                   {hasResult && <p className="mt-2 text-xs text-slate-400">Result uploaded. See the Results tab.</p>}
                   {!played && <p className="mt-2 text-xs text-slate-400">You can upload the result once the game has been played.</p>}
                 </ChallengeCard>
@@ -372,6 +383,7 @@ function ResultForm({ challenge, team, opponent, onDone }: { challenge: Challeng
   );
 }
 
-export default function OpponentHub() {
-  return <CaptainGate>{(team) => <Hub team={team} />}</CaptainGate>;
+export default function OpponentHub({ reportId }: { reportId?: string }) {
+  // key: opening a ?report=<game> link while the hub is already open must re-apply the starting tab and form
+  return <CaptainGate>{(team) => <Hub key={reportId ?? "hub"} team={team} reportId={reportId} />}</CaptainGate>;
 }

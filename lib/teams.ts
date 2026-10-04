@@ -173,6 +173,9 @@ export interface Challenge {
   loserPct: LoserShare;
   message?: string;
   status: ChallengeStatus;
+  // Set when venue staff confirm the payment in the admin system (admin panel not built yet).
+  // That moment prompts BOTH captains: "Did you win? Update your score".
+  venuePaidAt?: number;
 }
 
 export interface Settlement {
@@ -441,6 +444,23 @@ export function answerChallenge(id: string, accept: boolean) {
 
 export function cancelChallenge(id: string) {
   setChallengeStatus(id, "cancelled");
+}
+
+// DEMO ONLY: stands in for venue staff confirming in the admin system that this game was paid for
+// at the venue. In production the server sets `venuePaidAt` when admin approves, then pushes a
+// notification to BOTH captains; their apps show the "Did you win?" popup.
+export function demoAdminMarksPaid(id: string) {
+  const s = load();
+  const c = s.challenges.find((x) => x.id === id);
+  if (!c || c.venuePaidAt) return;
+  commit({ ...s, challenges: s.challenges.map((x) => (x.id === id ? { ...x, venuePaidAt: Date.now() } : x)) });
+  addNotice({
+    id: `venue-paid-${id}`,
+    type: "match",
+    title: "Payment confirmed. Did you win?",
+    body: "The venue confirmed your payment. Update your score in your dashboard to boost your public visibility.",
+    href: `/opponent?report=${id}`,
+  });
 }
 
 // DEMO ONLY: stands in for the other captain answering my challenge on their own phone.
