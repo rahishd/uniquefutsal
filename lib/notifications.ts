@@ -132,10 +132,11 @@ async function showSystemNotification(title: string, body: string, href?: string
 
 /* ---------- 1-hour game reminders ---------- */
 
-interface ReminderEntry {
+export interface ReminderEntry {
   id: string; // booking id
   startsAt: number; // epoch ms
   done: boolean;
+  label?: string; // e.g. "Court 1", shown on the check-in screen
 }
 
 export function loadReminders(): ReminderEntry[] {
@@ -155,9 +156,9 @@ function saveReminders(list: ReminderEntry[]) {
 }
 
 // Called when a booking is created. startsAt is the local kick-off time.
-export function scheduleReminder(bookingId: string, startsAt: number) {
+export function scheduleReminder(bookingId: string, startsAt: number, label?: string) {
   const list = loadReminders().filter((r) => r.id !== bookingId);
-  list.push({ id: bookingId, startsAt, done: false });
+  list.push({ id: bookingId, startsAt, done: false, label });
   saveReminders(list.filter((r) => r.startsAt > Date.now() - 24 * 3600_000));
   window.dispatchEvent(new Event("uf-reminders-changed"));
 }

@@ -76,7 +76,7 @@ function notifyBooking(c: BookingConfirmation) {
   });
   const start = parseKey(c.request.dateKey);
   start.setHours(c.request.hour, 0, 0, 0);
-  scheduleReminder(c.id, start.getTime());
+  scheduleReminder(c.id, start.getTime(), COURTS.find((x) => x.id === c.request.courtId)?.name);
 }
 
 function Steps({ step }: { step: number }) {

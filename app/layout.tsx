@@ -6,6 +6,7 @@ import FooterGate from "@/components/FooterGate";
 import SwRegister from "@/components/SwRegister";
 import InstallPrompt from "@/components/InstallPrompt";
 import ReminderScheduler from "@/components/ReminderScheduler";
+import ArrivalPrompt from "@/components/ArrivalPrompt";
 
 const poppins = Poppins({ variable: "--font-poppins", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SwRegister />
         <InstallPrompt />
         <ReminderScheduler />
+        <ArrivalPrompt />
       </body>
     </html>
   );
