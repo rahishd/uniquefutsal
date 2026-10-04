@@ -17,3 +17,13 @@ Mobile-first customer PWA (Next.js App Router, TypeScript, Tailwind 4). Spec: th
 - Placeholder data is in `lib/sample-data.ts`; replace with real API calls as endpoints become available.
 - Keep price, promo, loyalty and payment-status logic on the server, never trust the browser.
 - Put new FRDs in `FRD/`.
+
+# Deferred until the production database exists
+
+**Closed-app alerts (Web Push).** Today reminders, the notification centre and the full-screen "I'm coming" check-in only work while the app is open (`components/ReminderScheduler.tsx`, `components/ArrivalPrompt.tsx`, `lib/notifications.ts`, `lib/arrival.ts`). To reach a closed app the server must:
+1. Generate VAPID keys; expose the public key to the app.
+2. Store each customer's push subscription (`PushManager.subscribe` result) against their account.
+3. Run a scheduled job that sends a push 1 hour before every confirmed booking, and on challenge and payment events.
+4. Receive the "I'm coming" check-in (`POST /api/bookings/:id/arrival`, replacing the stub in `lib/arrival.ts`) and alert admin.
+
+The service worker (`public/sw.js`) already handles `push` and `notificationclick`. Limits: iPhone only supports Web Push for the home-screen-installed app (iOS 16.4+), and a push shows as a normal notification, not full screen; tapping it opens the app, which then shows the full-screen check-in.
