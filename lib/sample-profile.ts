@@ -36,6 +36,7 @@ export const sampleLoyalty = { points: 850, nextReward: 1000, rewardLabel: "Free
 
 export interface BookingItem {
   id: string;
+  dateKey: string; // YYYY-MM-DD, used for sorting
   date: string;
   time: string;
   court: string;
@@ -46,11 +47,11 @@ export interface BookingItem {
 }
 
 export const sampleBookings: BookingItem[] = [
-  { id: "UF-20261010-00125", date: "Sat, 10 Oct 2026", time: "7:00 PM – 8:00 PM", court: "Court 1", amount: 1215, payment: "Paid", status: "Confirmed", upcoming: true },
-  { id: "UF-20261013-00311", date: "Tue, 13 Oct 2026", time: "6:00 AM – 7:00 AM", court: "Court 2", amount: 1000, payment: "Pay at venue", status: "Confirmed", upcoming: true },
-  { id: "UF-20260926-00098", date: "Sat, 26 Sep 2026", time: "7:00 PM – 8:00 PM", court: "Court 1", amount: 1500, payment: "Paid", status: "Completed", upcoming: false },
-  { id: "UF-20260919-00044", date: "Sat, 19 Sep 2026", time: "5:00 PM – 6:00 PM", court: "Court 2", amount: 1200, payment: "Paid", status: "Completed", upcoming: false },
-  { id: "UF-20260912-00017", date: "Sat, 12 Sep 2026", time: "8:00 PM – 9:00 PM", court: "Court 1", amount: 1500, payment: "Refunded", status: "Cancelled", upcoming: false },
+  { id: "UF-20261010-00125", dateKey: "2026-10-10", date: "Sat, 10 Oct 2026", time: "7:00 PM – 8:00 PM", court: "Court 1", amount: 1215, payment: "Paid", status: "Confirmed", upcoming: true },
+  { id: "UF-20261013-00311", dateKey: "2026-10-13", date: "Tue, 13 Oct 2026", time: "6:00 AM – 7:00 AM", court: "Court 2", amount: 1000, payment: "Pay at venue", status: "Confirmed", upcoming: true },
+  { id: "UF-20260926-00098", dateKey: "2026-09-26", date: "Sat, 26 Sep 2026", time: "7:00 PM – 8:00 PM", court: "Court 1", amount: 1500, payment: "Paid", status: "Completed", upcoming: false },
+  { id: "UF-20260919-00044", dateKey: "2026-09-19", date: "Sat, 19 Sep 2026", time: "5:00 PM – 6:00 PM", court: "Court 2", amount: 1200, payment: "Paid", status: "Completed", upcoming: false },
+  { id: "UF-20260912-00017", dateKey: "2026-09-12", date: "Sat, 12 Sep 2026", time: "8:00 PM – 9:00 PM", court: "Court 1", amount: 1500, payment: "Refunded", status: "Cancelled", upcoming: false },
 ];
 
 export const sampleStats = { played: 42, wins: 27, losses: 10, draws: 5, goals: 58, assists: 31 };

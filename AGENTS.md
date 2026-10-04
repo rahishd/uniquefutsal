@@ -72,3 +72,7 @@ Demo-only buttons to remove once real: "They accept / They decline", "They appro
 # Settings: Pop-up reminder
 
 Profile > Settings has a "Pop-up reminder" switch (default on) next to "Booking reminders (SMS)" and "Promotional notifications". It controls the full-screen "I'm coming" slider shown 1 hour before a game (`components/ArrivalPrompt.tsx`). When off, the slider never covers the screen, but the 1-hour bell notification still arrives. All three switches are saved by `lib/prefs.ts` (browser storage for now). Move them to the customer's account on the server so they follow the customer across devices, and have the server skip the "I'm coming" push when `popup` is off. The SMS and promo switches are saved but nothing sends SMS or promos yet.
+
+# Profile history sections
+
+My bookings shows only the next game and the last completed game; Gameplay stats shows only the most recent game (season totals and earlier games are under the arrow); Payment history shows the two latest transactions. When there is more, a dropdown arrow reveals the rest and "Download PDF" exports the full list (`lib/pdf.ts`, jsPDF, loaded only on click). Everything shown is sample data in `lib/sample-profile.ts`. With a real API, fetch the newest items first and let the expand/PDF actions page through or request the full history (the PDF should be generated from the complete server-side history, not just what is loaded). Payment history excludes pay-at-venue bookings until the venue marks them paid.

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Bell, Check, ChevronRight, Crown, LogOut, Pencil, Star, Trophy, UserRound, X } from "lucide-react";
+import { Bell, Check, ChevronDown, ChevronRight, Crown, Download, Loader2, LogOut, Pencil, Star, Trophy, UserRound, X } from "lucide-react";
+import { downloadPdf } from "@/lib/pdf";
 import { signInDemo, signOut, useSession } from "@/lib/session";
 import { useTeams } from "@/lib/teams";
 import { setPref, usePrefs } from "@/lib/prefs";
@@ -30,6 +31,20 @@ function Card({ title, action, children }: { title: string; action?: React.React
       </div>
       {children}
     </section>
+  );
+}
+
+// Dropdown arrow that reveals the older items, next to a button that downloads the full list as a PDF.
+function MoreBar({ id, open, onToggle, label, pdfLabel, onPdf, busy }: { id: string; open: boolean; onToggle: () => void; label: string; pdfLabel: string; onPdf: () => void; busy: boolean }) {
+  return (
+    <div className="mt-4 flex items-center justify-between gap-3">
+      <button type="button" onClick={onToggle} aria-expanded={open} aria-controls={id} className="flex items-center gap-1.5 text-sm font-medium text-brand">
+        {label} <ChevronDown size={16} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      <button type="button" onClick={onPdf} disabled={busy} aria-label={pdfLabel} className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/70 px-3.5 py-2 text-xs font-medium text-brand disabled:opacity-50">
+        {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Download PDF
+      </button>
+    </div>
   );
 }
 
@@ -74,13 +89,23 @@ function RegisteredProfile() {
   const [profile, setProfile] = useState<ProfileData>(sampleProfile);
   const [draft, setDraft] = useState<ProfileData>(sampleProfile);
   const [editing, setEditing] = useState(false);
-  const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
   const [bookings, setBookings] = useState<BookingItem[]>(sampleBookings);
   const [cancelId, setCancelId] = useState<string | null>(null);
+  const [openBookings, setOpenBookings] = useState(false);
+  const [openGames, setOpenGames] = useState(false);
+  const [openPay, setOpenPay] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState<string | null>(null);
   const prefs = usePrefs();
   const [lang, setLang] = useState("en");
 
-  const shown = bookings.filter((b) => (tab === "upcoming" ? b.upcoming : !b.upcoming));
+  // Bookings: show the next game and the last game played; everything else sits under the arrow.
+  const upcomingList = bookings.filter((b) => b.upcoming).sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  const pastList = bookings.filter((b) => !b.upcoming).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
+  const lastGame = pastList.find((b) => b.status === "Completed");
+  const primary = [upcomingList[0], lastGame].filter((b): b is BookingItem => Boolean(b));
+  const restBookings = [...upcomingList.slice(1), ...pastList.filter((b) => b !== lastGame)];
+  const games = sampleMatches; // newest first
+  const payments = pastList.concat(upcomingList).filter((b) => b.payment !== "Pay at venue").sort((a, b) => b.dateKey.localeCompare(a.dateKey));
   const s = sampleStats;
   const winRate = s.played ? ((s.wins / s.played) * 100).toFixed(1) : "0";
   const loy = sampleLoyalty;
@@ -93,6 +118,94 @@ function RegisteredProfile() {
     // DEMO: the real API decides refund and fee from the cancellation policy.
     setBookings((all) => all.map((b) => (b.id === id ? { ...b, upcoming: false, status: "Cancelled" } : b)));
     setCancelId(null);
+  }
+
+  async function exportPdf(kind: "bookings" | "games" | "payments") {
+    setPdfBusy(kind);
+    try {
+      const who = `${profile.name} · ${profile.phone} · ID ${profile.customerId}`;
+      if (kind === "bookings") {
+        await downloadPdf({
+          filename: "unique-futsal-bookings.pdf",
+          title: "My bookings",
+          lines: [who],
+          columns: [{ header: "Date", width: 85 }, { header: "Time", width: 100 }, { header: "Court", width: 45 }, { header: "Booking ID", width: 105 }, { header: "Amount", width: 55 }, { header: "Payment", width: 60 }, { header: "Status", width: 65 }],
+          rows: [...upcomingList, ...pastList].map((b) => [b.date, b.time, b.court, b.id, rs(b.amount), b.payment, b.status]),
+        });
+      } else if (kind === "games") {
+        await downloadPdf({
+          filename: "unique-futsal-gameplay.pdf",
+          title: "Gameplay stats",
+          lines: [who, `Played ${s.played} · Won ${s.wins} · Lost ${s.losses} · Drawn ${s.draws} · Goals ${s.goals} · Assists ${s.assists}`],
+          columns: [{ header: "Date", width: 70 }, { header: "Match", width: 215 }, { header: "Score", width: 70 }, { header: "Result", width: 160 }],
+          rows: games.map((g) => [g.date, `${g.you} vs ${g.opp}`, `${g.yourScore} - ${g.oppScore}`, g.yourScore > g.oppScore ? "Win" : g.yourScore < g.oppScore ? "Loss" : "Draw"]),
+        });
+      } else {
+        await downloadPdf({
+          filename: "unique-futsal-payments.pdf",
+          title: "Payment history",
+          lines: [who],
+          columns: [{ header: "Date", width: 100 }, { header: "Booking ID", width: 150 }, { header: "Amount", width: 100 }, { header: "Status", width: 165 }],
+          rows: payments.map((b) => [b.date, b.id, rs(b.amount), b.payment]),
+        });
+      }
+    } finally {
+      setPdfBusy(null);
+    }
+  }
+
+  function renderBooking(b: BookingItem, tag?: string) {
+    return (
+      <li key={b.id} className="rounded-2xl bg-white/60 p-4 text-sm">
+        {tag && <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-brand">{tag}</p>}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-medium">{b.date}</p>
+            <p className="text-slate-500">{b.time} · {b.court}</p>
+          </div>
+          <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${b.status === "Cancelled" ? "bg-rose-500/10 text-rose-500" : b.status === "Completed" ? "bg-slate-200 text-slate-500" : "bg-emerald-500/10 text-emerald-600"}`}>{b.status}</span>
+        </div>
+        <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
+          <span className="font-mono">{b.id}</span>
+          <span>{rs(b.amount)} · {b.payment}</span>
+        </div>
+        {b.upcoming && (
+          cancelId === b.id ? (
+            <div className="mt-3 rounded-xl bg-rose-500/10 p-3 text-xs text-rose-700">
+              <p>Cancelling may be subject to the cancellation policy. The refund amount is confirmed by the venue.</p>
+              <div className="mt-2 flex gap-2">
+                <button type="button" onClick={() => setCancelId(null)} className="flex-1 rounded-full bg-white py-2 font-medium">Keep booking</button>
+                <button type="button" onClick={() => cancel(b.id)} className="flex-1 rounded-full bg-rose-500 py-2 font-medium text-white">Confirm cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setCancelId(b.id)} className="mt-3 text-xs font-medium text-rose-500">Cancel booking</button>
+          )
+        )}
+      </li>
+    );
+  }
+
+  function renderGame(g: (typeof sampleMatches)[number], tag?: string) {
+    const r = g.yourScore > g.oppScore ? "WIN" : g.yourScore < g.oppScore ? "LOSS" : "DRAW";
+    return (
+      <li key={g.id} className="flex items-center justify-between rounded-2xl bg-white/60 px-4 py-3">
+        <span>
+          {tag && <span className="mb-0.5 block text-[11px] font-semibold uppercase tracking-wider text-brand">{tag}</span>}
+          <span className="text-xs text-slate-400">{g.date}</span><br />{g.you} vs {g.opp}
+        </span>
+        <span className="text-right"><b>{g.yourScore} – {g.oppScore}</b><br /><span className={`text-xs font-semibold ${r === "WIN" ? "text-emerald-600" : r === "LOSS" ? "text-rose-500" : "text-slate-400"}`}>{r}</span></span>
+      </li>
+    );
+  }
+
+  function renderPayment(b: BookingItem) {
+    return (
+      <li key={b.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+        <span><span className="block font-medium">{b.date}</span><span className="font-mono text-[11px] text-slate-400">{b.id}</span></span>
+        <span className="text-right"><span className="block font-medium">{rs(b.amount)}</span><span className={`text-[11px] ${b.payment === "Refunded" ? "text-rose-500" : "text-emerald-600"}`}>{b.payment}</span></span>
+      </li>
+    );
   }
 
   return (
@@ -189,83 +302,53 @@ function RegisteredProfile() {
         </div>
       </Card>
 
-      {/* Bookings */}
+      {/* Bookings: the next game and the last game; everything else is under the arrow */}
       <Card title="My bookings">
-        <div role="tablist" className="mb-4 grid grid-cols-2 gap-2 rounded-full bg-white/50 p-1">
-          {(["upcoming", "past"] as const).map((t) => (
-            <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`rounded-full py-2 text-sm font-medium capitalize ${tab === t ? "glass-active text-white" : "text-slate-500"}`}>{t}</button>
-          ))}
-        </div>
-        {shown.length === 0 ? (
-          <p className="py-6 text-center text-sm text-slate-400">{tab === "upcoming" ? "No upcoming games." : "No past bookings."}</p>
+        {primary.length === 0 ? (
+          <p className="py-6 text-center text-sm text-slate-400">No bookings yet.</p>
         ) : (
-          <ul className="space-y-3">
-            {shown.map((b) => (
-              <li key={b.id} className="rounded-2xl bg-white/60 p-4 text-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{b.date}</p>
-                    <p className="text-slate-500">{b.time} · {b.court}</p>
-                  </div>
-                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${b.status === "Cancelled" ? "bg-rose-500/10 text-rose-500" : b.status === "Completed" ? "bg-slate-200 text-slate-500" : "bg-emerald-500/10 text-emerald-600"}`}>{b.status}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
-                  <span className="font-mono">{b.id}</span>
-                  <span>{rs(b.amount)} · {b.payment}</span>
-                </div>
-                {b.upcoming && (
-                  cancelId === b.id ? (
-                    <div className="mt-3 rounded-xl bg-rose-500/10 p-3 text-xs text-rose-700">
-                      <p>Cancelling may be subject to the cancellation policy. The refund amount is confirmed by the venue.</p>
-                      <div className="mt-2 flex gap-2">
-                        <button type="button" onClick={() => setCancelId(null)} className="flex-1 rounded-full bg-white py-2 font-medium">Keep booking</button>
-                        <button type="button" onClick={() => cancel(b.id)} className="flex-1 rounded-full bg-rose-500 py-2 font-medium text-white">Confirm cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={() => setCancelId(b.id)} className="mt-3 text-xs font-medium text-rose-500">Cancel booking</button>
-                  )
-                )}
-              </li>
-            ))}
-          </ul>
+          <ul className="space-y-3">{primary.map((b) => renderBooking(b, b.upcoming ? "Next game" : "Last game"))}</ul>
+        )}
+        {restBookings.length > 0 && (
+          <>
+            <MoreBar id="more-bookings" open={openBookings} onToggle={() => setOpenBookings((o) => !o)} label={`All bookings (${bookings.length})`} pdfLabel="Download bookings as PDF" onPdf={() => exportPdf("bookings")} busy={pdfBusy === "bookings"} />
+            {openBookings && <ul id="more-bookings" className="mt-3 space-y-3">{restBookings.map((b) => renderBooking(b))}</ul>}
+          </>
         )}
       </Card>
 
-      {/* Gameplay */}
+      {/* Gameplay: the most recent game; season totals and earlier games are under the arrow */}
       <Card title="Gameplay stats" action={<Trophy size={18} className="text-amber-500" />}>
-        <dl className="grid grid-cols-3 gap-3 text-center">
-          {[["Played", s.played], ["Wins", s.wins], ["Losses", s.losses], ["Draws", s.draws], ["Goals", s.goals], ["Assists", s.assists]].map(([k, v]) => (
-            <div key={k} className="rounded-2xl bg-white/60 py-3">
-              <dd className="text-lg font-semibold">{v}</dd>
-              <dt className="text-[11px] text-slate-400">{k}</dt>
-            </div>
-          ))}
-        </dl>
-        <h3 className="mb-2 mt-5 text-xs font-semibold uppercase tracking-wider text-slate-400">Recent games</h3>
-        <ul className="space-y-2 text-sm">
-          {sampleMatches.map((g) => {
-            const r = g.yourScore > g.oppScore ? "WIN" : g.yourScore < g.oppScore ? "LOSS" : "DRAW";
-            return (
-              <li key={g.id} className="flex items-center justify-between rounded-2xl bg-white/60 px-4 py-3">
-                <span><span className="text-xs text-slate-400">{g.date}</span><br />{g.you} vs {g.opp}</span>
-                <span className="text-right"><b>{g.yourScore} – {g.oppScore}</b><br /><span className={`text-xs font-semibold ${r === "WIN" ? "text-emerald-600" : r === "LOSS" ? "text-rose-500" : "text-slate-400"}`}>{r}</span></span>
-              </li>
-            );
-          })}
-        </ul>
+        {games[0] ? <ul className="text-sm">{renderGame(games[0], "Last game")}</ul> : <p className="py-6 text-center text-sm text-slate-400">No games yet.</p>}
+        <MoreBar id="more-games" open={openGames} onToggle={() => setOpenGames((o) => !o)} label={games.length > 1 ? "Season totals and earlier games" : "Season totals"} pdfLabel="Download gameplay stats as PDF" onPdf={() => exportPdf("games")} busy={pdfBusy === "games"} />
+        {openGames && (
+          <div id="more-games" className="mt-3 space-y-4">
+            <dl className="grid grid-cols-3 gap-3 text-center">
+              {[["Played", s.played], ["Wins", s.wins], ["Losses", s.losses], ["Draws", s.draws], ["Goals", s.goals], ["Assists", s.assists]].map(([k, v]) => (
+                <div key={k} className="rounded-2xl bg-white/60 py-3">
+                  <dd className="text-lg font-semibold">{v}</dd>
+                  <dt className="text-[11px] text-slate-400">{k}</dt>
+                </div>
+              ))}
+            </dl>
+            {games.length > 1 && <ul className="space-y-2 text-sm">{games.slice(1).map((g) => renderGame(g))}</ul>}
+          </div>
+        )}
       </Card>
 
-      {/* Payment history */}
+      {/* Payment history: the two most recent transactions; the rest is under the arrow */}
       <Card title="Payment history">
-        <ul className="divide-y divide-white/70 text-sm">
-          {bookings.filter((b) => b.payment !== "Pay at venue").map((b) => (
-            <li key={b.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-              <span><span className="block font-medium">{b.date}</span><span className="font-mono text-[11px] text-slate-400">{b.id}</span></span>
-              <span className="text-right"><span className="block font-medium">{rs(b.amount)}</span><span className={`text-[11px] ${b.payment === "Refunded" ? "text-rose-500" : "text-emerald-600"}`}>{b.payment}</span></span>
-            </li>
-          ))}
-        </ul>
+        {payments.length === 0 ? (
+          <p className="py-6 text-center text-sm text-slate-400">No payments yet.</p>
+        ) : (
+          <ul className="divide-y divide-white/70 text-sm">{payments.slice(0, 2).map((b) => renderPayment(b))}</ul>
+        )}
+        {payments.length > 2 && (
+          <>
+            <MoreBar id="more-payments" open={openPay} onToggle={() => setOpenPay((o) => !o)} label={`All transactions (${payments.length})`} pdfLabel="Download payment history as PDF" onPdf={() => exportPdf("payments")} busy={pdfBusy === "payments"} />
+            {openPay && <ul id="more-payments" className="mt-3 divide-y divide-white/70 text-sm">{payments.slice(2).map((b) => renderPayment(b))}</ul>}
+          </>
+        )}
       </Card>
 
       </>)}
