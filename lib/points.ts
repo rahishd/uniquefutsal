@@ -11,8 +11,6 @@ import { priceFor, type Period } from "@/lib/booking";
 export const RS_PER_POINT = 100;
 export const GAMES_PER_FREE = 10; // 10 games of a shift earn 1 free game of that shift
 export const POINTS_CAPTAIN_WIN = 5; // challenge games: ONLY the winning captain earns, and only 5
-export const GOODS_STEP_RS = 100; // every full Rs. 100 of extra goods...
-export const POINTS_PER_GOODS_STEP = 5; // ...earns 5 points
 export const MEMBERSHIP_3M_POINTS = 30; // buying or renewing the 3-month membership
 
 // Points one regular game earns: Rs. 1,250 -> 12 (never rounded up).
@@ -26,7 +24,7 @@ export function freeGameCost(priceRs: number) {
 }
 
 export function pointsForGoods(amountRs: number) {
-  return Math.floor(Math.max(0, amountRs) / GOODS_STEP_RS) * POINTS_PER_GOODS_STEP;
+  return pointsForGame(amountRs); // goods use the same rate as games
 }
 
 export const SHIFTS: { period: Period; hour: number; label: string; hours: string }[] = [
@@ -106,7 +104,7 @@ export function summarize(ledger: PointsEntry[]): PointsSummary {
 
 /* ---------- store (browser storage for now) ---------- */
 
-const KEY = "uf-points-v2";
+const KEY = "uf-points-v3";
 let cache: PointsState | null = null;
 const listeners = new Set<() => void>();
 

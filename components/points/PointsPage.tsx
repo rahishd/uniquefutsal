@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Gift, Star, Trophy, ShoppingBag, Gamepad2, UserRound, ChevronDown, Crown, Check } from "lucide-react";
 import { useSession, signInDemo } from "@/lib/session";
 import {
-  GAMES_PER_FREE, GOODS_STEP_RS, MEMBERSHIP_3M_POINTS, POINTS_CAPTAIN_WIN, POINTS_PER_GOODS_STEP, RS_PER_POINT, SHIFTS,
+  GAMES_PER_FREE, MEMBERSHIP_3M_POINTS, POINTS_CAPTAIN_WIN, RS_PER_POINT, SHIFTS,
   claimFreeGame, shiftInfo, usePoints, type PointsKind,
 } from "@/lib/points";
 import { formatRs, type Period } from "@/lib/booking";
@@ -126,7 +126,7 @@ export default function PointsPage() {
           <li className="flex gap-3"><Gift size={20} className="mt-0.5 shrink-0 text-orange-500" /><span><b>{GAMES_PER_FREE} games = 1 free game</b> in any shift you have enough points for.</span></li>
           <li className="flex gap-3"><Trophy size={20} className="mt-0.5 shrink-0 text-amber-600" /><span>Challenge games: only the <b>winning captain</b> earns <b>{POINTS_CAPTAIN_WIN} points</b>.</span></li>
           <li className="flex gap-3"><Crown size={20} className="mt-0.5 shrink-0 text-violet-600" /><span>Buy or renew the <b>3-month membership</b> and earn <b>{MEMBERSHIP_3M_POINTS} points</b>.</span></li>
-          <li className="flex gap-3"><ShoppingBag size={20} className="mt-0.5 shrink-0 text-sky-600" /><span>Extra goods: every <b>Rs. {GOODS_STEP_RS}</b> earns <b>{POINTS_PER_GOODS_STEP} points</b>.</span></li>
+          <li className="flex gap-3"><ShoppingBag size={20} className="mt-0.5 shrink-0 text-sky-600" /><span>Extra goods: same rate, every <b>Rs. {RS_PER_POINT}</b> = <b>1 point</b>.</span></li>
         </ul>
       </section>
 
