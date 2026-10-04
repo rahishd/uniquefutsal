@@ -7,7 +7,7 @@ import { MAX_ADVANCE_DAYS, dateKey, formatHour, formatRs, parseKey } from "@/lib
 import { addNotice, scheduleReminder } from "@/lib/notifications";
 import { METHOD_LABEL, isOnline, remarksFor, type PayMethod } from "@/lib/payment";
 import { signInDemo, useSession } from "@/lib/session";
-import { CONSOLES, MAX_HOURS, PLANS, createGzBooking, getGzSlots, planOf, priceFor, type GzConfirmation } from "@/lib/gamezone";
+import { CONSOLES, GAMES, MAX_HOURS, PLANS, createGzBooking, getGzSlots, planOf, priceFor, type GzConfirmation } from "@/lib/gamezone";
 import PaymentMethodPicker from "@/components/payment/PaymentMethodPicker";
 import PaymentQr from "@/components/payment/PaymentQr";
 
@@ -33,7 +33,7 @@ function Steps({ step }: { step: number }) {
 function notify(c: GzConfirmation) {
   const r = c.request;
   const when = `${longDate(r.dateKey)} · ${formatHour(r.hour)} – ${formatHour(r.hour + r.hours)}`;
-  addNotice({ id: `booking-${c.id}`, type: "gamezone", title: "Gamezone booked", body: `PS5 · ${planOf(r.players).label} · ${when}. ID ${c.id}.`, href: "/gamezone" });
+  addNotice({ id: `booking-${c.id}`, type: "gamezone", title: "Gamezone booked", body: `PS5 · ${r.game} · ${planOf(r.players).label} · ${when}. ID ${c.id}.`, href: "/gamezone" });
   addNotice({
     id: `payment-${c.id}`,
     type: "payment",
@@ -62,6 +62,7 @@ export default function GamezoneFlow() {
   const [hours, setHours] = useState(1);
   const [selHour, setSelHour] = useState<number | null>(null);
   const [selConsole, setSelConsole] = useState<string | null>(null);
+  const [selGame, setSelGame] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [method, setMethod] = useState<PayMethod>("esewa");
@@ -78,23 +79,23 @@ export default function GamezoneFlow() {
     return { key: dateKey(d), d };
   });
   const activeDate = selDate && days.some((d) => d.key === selDate) ? selDate : today;
-  const slots = getGzSlots(activeDate, now, hours);
-  const slot = slots.find((s) => s.hour === selHour);
-  const consoleId = slot ? (selConsole && slot.freeConsoles.includes(selConsole) ? selConsole : slot.freeConsoles[0]) : null;
+  const consoleId = selConsole ?? CONSOLES[0].id;
+  const slots = getGzSlots(activeDate, now, hours, consoleId);
+  const slot = slots.includes(selHour ?? -1) ? { hour: selHour as number } : undefined;
   const plan = planOf(players);
   const total = priceFor(players, hours);
   const registered = session.registered;
   const effMethod: PayMethod = !registered && method === "venue" ? "esewa" : method;
   const phoneOk = /^9\d{9}$/.test(phone);
-  const canPay = Boolean(slot && consoleId && (registered || (name.trim().length >= 2 && phoneOk)));
+  const canPay = Boolean(slot && selGame && (registered || (name.trim().length >= 2 && phoneOk)));
 
   async function confirm() {
-    if (!slot || !consoleId || !canPay) return;
+    if (!slot || !selGame || !canPay) return;
     setSubmitting(true);
     setError(null);
     try {
       const res = await createGzBooking({
-        dateKey: activeDate, hour: slot.hour, hours, players, consoleId, method: effMethod,
+        dateKey: activeDate, hour: slot.hour, hours, players, game: selGame, consoleId, method: effMethod,
         name: session && session.registered ? session.name : name.trim(),
         phone: session && session.registered ? session.phone : phone,
         guest: !registered,
@@ -157,6 +158,7 @@ export default function GamezoneFlow() {
             ["Date", longDate(r.dateKey)],
             ["Time", `${formatHour(r.hour)} – ${formatHour(r.hour + r.hours)} (${r.hours} hr)`],
             ["Console", CONSOLES.find((c) => c.id === r.consoleId)?.name ?? ""],
+            ["Game", r.game],
             ["Players", planOf(r.players).label],
             ["Payment", paid ? `Paid via ${METHOD_LABEL[r.method]}` : venue ? "Pay at venue" : "Awaiting payment"],
           ].map(([k, v]) => (
@@ -171,7 +173,7 @@ export default function GamezoneFlow() {
   }
 
   /* ---------- review & pay ---------- */
-  if (step === 1 && slot && consoleId) {
+  if (step === 1 && slot && selGame) {
     return (
       <div className="space-y-5">
         <Steps step={1} />
@@ -182,14 +184,8 @@ export default function GamezoneFlow() {
           <dl className="mt-3 space-y-2 text-sm">
             <div className="flex justify-between"><dt className="text-slate-400">Date</dt><dd className="font-medium">{longDate(activeDate)}</dd></div>
             <div className="flex justify-between"><dt className="text-slate-400">Time</dt><dd className="font-medium">{formatHour(slot.hour)} – {formatHour(slot.hour + hours)}</dd></div>
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-slate-400">Console</dt>
-              <dd className="flex gap-2">
-                {CONSOLES.filter((c) => slot.freeConsoles.includes(c.id)).map((c) => (
-                  <button key={c.id} type="button" aria-pressed={consoleId === c.id} onClick={() => setSelConsole(c.id)} className={`rounded-full px-3 py-1 text-xs font-medium ${consoleId === c.id ? "glass-active text-white" : "bg-white/60 text-slate-600"}`}>{c.name}</button>
-                ))}
-              </dd>
-            </div>
+            <div className="flex justify-between"><dt className="text-slate-400">Console</dt><dd className="font-medium">{CONSOLES.find((c) => c.id === consoleId)?.name}</dd></div>
+            <div className="flex justify-between"><dt className="text-slate-400">Game</dt><dd className="font-medium">{selGame}</dd></div>
             <div className="flex justify-between"><dt className="text-slate-400">Players</dt><dd className="font-medium">{plan.label}</dd></div>
             <div className="flex justify-between"><dt className="text-slate-400">Rate</dt><dd>{formatRs(plan.each)} × {players} {players === 1 ? "player" : "players"} × {hours} hr</dd></div>
             <div className="flex justify-between border-t border-white/60 pt-3 text-base"><dt className="font-medium">Total</dt><dd className="font-semibold">{formatRs(total)}</dd></div>
@@ -263,6 +259,35 @@ export default function GamezoneFlow() {
         </div>
       </section>
 
+      <section aria-label="Console">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Console</h2>
+        <div role="radiogroup" aria-label="Console" className="grid grid-cols-2 gap-3">
+          {CONSOLES.map((c) => {
+            const on = consoleId === c.id;
+            return (
+              <button key={c.id} type="button" role="radio" aria-checked={on} onClick={() => { setSelConsole(c.id); setSelHour(null); }} className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-medium transition ${on ? "glass-active text-white" : "glass"}`}>
+                <Gamepad2 size={18} /> {c.name}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-[11px] text-slate-400">Each console has its own free times. Switch consoles to see different slots.</p>
+      </section>
+
+      <section aria-label="Game">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Choose your game</h2>
+        <div role="radiogroup" aria-label="Game" className="grid grid-cols-2 gap-3">
+          {GAMES.map((g) => {
+            const on = selGame === g;
+            return (
+              <button key={g} type="button" role="radio" aria-checked={on} onClick={() => setSelGame(g)} className={`rounded-2xl px-3 py-3 text-sm font-medium transition ${on ? "glass-active text-white" : "glass"}`}>
+                {g}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       <section aria-label="Select date">
         <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2">
           {days.map(({ key, d }, i) => {
@@ -284,12 +309,12 @@ export default function GamezoneFlow() {
           <p className="glass rounded-2xl px-4 py-6 text-center text-sm text-slate-500">No {hours}-hour sessions free on this date. Try fewer hours or another day.</p>
         ) : (
           <div className="grid grid-cols-3 gap-3">
-            {slots.map((s) => {
-              const on = s.hour === selHour;
+            {slots.map((hr) => {
+              const on = hr === selHour;
               return (
-                <button key={s.hour} type="button" aria-pressed={on} onClick={() => { setSelHour(s.hour); setSelConsole(null); }} className={`rounded-2xl px-2 py-3 text-center transition ${on ? "glass-active text-white" : "glass"}`}>
-                  <span className="block text-sm font-medium">{formatHour(s.hour)}</span>
-                  <span className={`text-[11px] ${on ? "text-white/70" : "text-emerald-600"}`}>to {formatHour(s.hour + hours)}</span>
+                <button key={hr} type="button" aria-pressed={on} onClick={() => setSelHour(hr)} className={`rounded-2xl px-2 py-3 text-center transition ${on ? "glass-active text-white" : "glass"}`}>
+                  <span className="block text-sm font-medium">{formatHour(hr)}</span>
+                  <span className={`text-[11px] ${on ? "text-white/70" : "text-emerald-600"}`}>to {formatHour(hr + hours)}</span>
                 </button>
               );
             })}
@@ -297,8 +322,8 @@ export default function GamezoneFlow() {
         )}
       </section>
 
-      <button type="button" disabled={!slot} onClick={() => setStep(1)} className="glass-btn flex w-full items-center justify-center rounded-full py-4 text-base font-semibold text-white disabled:opacity-50">
-        {slot ? `Continue · ${hours} hr · ${formatRs(total)}` : "Select a start time to continue"}
+      <button type="button" disabled={!slot || !selGame} onClick={() => setStep(1)} className="glass-btn flex w-full items-center justify-center rounded-full py-4 text-base font-semibold text-white disabled:opacity-50">
+        {!selGame ? "Choose a game to continue" : slot ? `Continue · ${hours} hr · ${formatRs(total)}` : "Select a start time to continue"}
       </button>
     </div>
   );

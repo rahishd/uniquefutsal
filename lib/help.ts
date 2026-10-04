@@ -40,6 +40,8 @@ export const helpTopics: HelpTopic[] = [
     points: [
       "Open Gamezone in Popular. Choose how many are playing: Solo Rs. 300 an hour, 2 players Rs. 200 each, 4 players Rs. 150 each.",
       "Pick how many hours (up to 4). The price grows with the hours: rate × players × hours.",
+      "Choose PS5 Station 1 or 2. Each console has its own free times, so the start times change when you switch.",
+      "Choose your game: GTA 5, Forza Horizon, Red Dead Redemption or FIFA 26.",
       "Choose a day and a start time, then pay the same way as a game booking (eSewa, Fonepay or at the venue).",
       "Guests pay online in full. Signed-in customers can also pay at the venue.",
     ],
