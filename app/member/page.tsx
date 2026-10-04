@@ -1,6 +1,5 @@
-import { Users } from "lucide-react";
-import PlaceholderPage from "@/components/PlaceholderPage";
+import MembershipPage from "@/components/membership/MembershipPage";
 
 export default function MemberPage() {
-  return <PlaceholderPage icon={Users} title="Membership" note="Plans and purchase are coming soon (FRD sections 25-27)." />;
+  return <MembershipPage />;
 }
