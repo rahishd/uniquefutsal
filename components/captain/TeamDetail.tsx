@@ -32,7 +32,6 @@ function Detail({ id, myTeam }: { id: string; myTeam: Team }) {
   const me = team.id === myTeam.id;
   const ranked = rankTeams(allTeams(state)).find((r) => r.team.id === team.id);
   const s = team.stats;
-  const sorted = [...team.members].sort((a, b) => b.stats.goals - a.stats.goals || b.stats.assists - a.stats.assists);
 
   return (
     <div className="space-y-5">
@@ -60,38 +59,6 @@ function Detail({ id, myTeam }: { id: string; myTeam: Team }) {
           </span>
         </div>
         <p className="mt-3 text-xs text-slate-400">Stats include only results confirmed by both captains.</p>
-      </section>
-
-      <section className="glass rounded-3xl p-5" aria-label="Player stats">
-        <h2 className="mb-3 text-base font-medium">Player stats</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="text-[11px] uppercase tracking-wider text-slate-400">
-                <th className="pb-2 font-semibold">Player</th>
-                <th className="pb-2 text-center font-semibold">Pos</th>
-                <th className="pb-2 text-center font-semibold">GP</th>
-                <th className="pb-2 text-center font-semibold">G</th>
-                <th className="pb-2 text-center font-semibold">A</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((m) => (
-                <tr key={m.id} className="border-t border-white/70">
-                  <td className="py-2.5 font-medium">
-                    {m.name}
-                    {m.id === team.captainId && <span className="ml-1.5 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-[#0c0b5d]">C</span>}
-                  </td>
-                  <td className="py-2.5 text-center text-slate-500">{m.position}</td>
-                  <td className="py-2.5 text-center text-slate-500">{m.stats.games}</td>
-                  <td className="py-2.5 text-center font-semibold">{m.stats.goals}</td>
-                  <td className="py-2.5 text-center text-slate-500">{m.stats.assists}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="mt-2 text-[11px] text-slate-400">GP games played · G goals · A assists</p>
       </section>
 
       {!me && (

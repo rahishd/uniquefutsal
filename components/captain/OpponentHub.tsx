@@ -114,7 +114,7 @@ function Hub({ team }: { team: Team }) {
                   </div>
                   <div className="mt-3 flex gap-2">
                     <Link href={mine ? "/team" : `/opponent/team/${t.id}`} className="flex flex-1 items-center justify-center gap-1 rounded-full bg-white/70 py-2.5 text-xs font-medium text-brand">
-                      {mine ? "Manage team" : "View player stats"} <ChevronRight size={14} />
+                      {mine ? "Manage team" : "View team stats"} <ChevronRight size={14} />
                     </Link>
                     {!mine && <button type="button" onClick={() => setTarget(t)} className="glass-btn flex-1 rounded-full py-2.5 text-xs font-semibold text-white">Challenge</button>}
                   </div>
@@ -131,7 +131,7 @@ function Hub({ team }: { team: Team }) {
           <Group title="Received" empty="No challenges waiting for you." items={incoming}>
             {(c) => (
               <ChallengeCard key={c.id} c={c} name={nameOf(c.teamId)}>
-                <Link href={`/opponent/team/${c.teamId}`} className="block text-xs font-medium text-brand">See all of their players&apos; stats →</Link>
+                <Link href={`/opponent/team/${c.teamId}`} className="block text-xs font-medium text-brand">See their team stats →</Link>
                 <div className="mt-3 flex gap-2">
                   <button type="button" onClick={() => answerChallenge(c.id, false)} className="flex flex-1 items-center justify-center gap-1 rounded-full bg-white/70 py-2.5 text-sm font-medium text-slate-600"><X size={15} /> Decline</button>
                   <button type="button" onClick={() => answerChallenge(c.id, true)} className="glass-btn flex flex-1 items-center justify-center gap-1 rounded-full py-2.5 text-sm font-semibold text-white"><Check size={15} /> Accept</button>

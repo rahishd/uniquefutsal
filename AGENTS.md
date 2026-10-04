@@ -50,12 +50,12 @@ What your server must provide (replace the demo code in `lib/payment.ts`, `lib/b
 
 # Captain mode, teams, challenges and ratings
 
-Code: `lib/teams.ts` (data, store, 5-star rating) and `components/captain/*`. Pages: `/opponent` (teams leaderboard, challenges, results), `/opponent/team/[id]` (another team's full player stats), `/team` (roster). Profile has a Player/Captain switch; Captain mode shows a gold (C) on the avatar. All of it is DEMO data in localStorage; none of it works across real users until the backend exists.
+Code: `lib/teams.ts` (data, store, 5-star rating) and `components/captain/*`. Pages: `/opponent` (teams leaderboard, challenges, results), `/opponent/team/[id]` (another team's stats: rating, rank, record, form), `/team` (roster). Profile has a Player/Captain switch; Captain mode shows a gold (C) on the avatar. All of it is DEMO data in localStorage; none of it works across real users until the backend exists.
 
 Rules the app follows (the SERVER must enforce all of them):
 - Any registered player can switch to Captain mode and create a team. Guests cannot.
 - A team has at most 12 members (captain included). Members are registered players added by mobile number; a player can be in only one team. The captain cannot be removed.
-- Only a captain (Captain mode, team of at least 5) can challenge another team. The challenged captain is notified and can see every player's stats before answering.
+- Only a captain (Captain mode, team of at least 5) can challenge another team. The challenged captain is notified and can see the challenger's team stats (rating, rank, record, form) before answering. Individual player stats of other teams are deliberately not shown.
 - After a game, the WINNING captain (either side after a draw) uploads the score and each own player's goals and assists (goals must add up to the team score). The OTHER captain approves or disputes. Only approved results change team records, player stats and ratings. Disputed results change nothing and need an admin (not built yet).
 - Challenge acceptance must create the court booking inside a transaction so two games cannot take the same slot (FRD section 17).
 
