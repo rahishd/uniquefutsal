@@ -37,7 +37,7 @@ export default function HomeScreen() {
       {/* Header: user info left, notifications right */}
       <header className="flex items-center justify-between">
         <Link href="/profile" className="flex items-center gap-3">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-brand text-lg font-semibold text-white ring-2 ring-white shadow-md">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#2a2a9c] to-brand text-lg font-semibold text-white ring-2 ring-white shadow-md">
             {userName.slice(0, 1).toUpperCase()}
           </span>
           <span>
@@ -79,9 +79,9 @@ export default function HomeScreen() {
       </div>
 
       {/* Promo banner */}
-      <section className="relative mt-6 overflow-hidden rounded-3xl bg-gradient-to-br from-sky-200 via-sky-100 to-blue-200 p-5 shadow-[0_10px_30px_rgba(60,120,200,0.18)]">
+      <section className="relative mt-6 overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c0b5d] via-[#16167f] to-[#2a2aa8] p-5 text-white shadow-[0_10px_30px_rgba(12,11,93,0.35)]">
         <div className="relative z-10 max-w-[62%]">
-          <p className="text-xs font-medium text-orange-500">Up to 25% off today</p>
+          <p className="text-xs font-medium text-orange-300">Up to 25% off today</p>
           <h2 className="mt-1 text-xl font-medium leading-snug">Exclusive deals on your next game</h2>
           <Link href="/book" className="glass-btn mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium text-white">
             <CalendarDays size={16} /> Book now
