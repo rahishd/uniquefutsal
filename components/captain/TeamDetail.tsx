@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Swords } from "lucide-react";
 import CaptainGate from "@/components/captain/CaptainGate";
 import ChallengeSheet from "@/components/captain/ChallengeSheet";
 import Stars from "@/components/captain/Stars";
-import { allTeams, getOtherTeam, rankTeams, useTeams, type FormResult, type Team } from "@/lib/teams";
+import { errorText } from "@/lib/api";
+import { fetchTeam, type FormResult, type MyTeam, type TeamDetail as TeamData } from "@/lib/teams";
 
 const FORM_STYLE: Record<FormResult, string> = {
   W: "bg-emerald-500 text-white",
@@ -14,24 +15,34 @@ const FORM_STYLE: Record<FormResult, string> = {
   L: "bg-rose-500 text-white",
 };
 
-function Detail({ id, myTeam }: { id: string; myTeam: Team }) {
-  const state = useTeams();
+// Another team's stats (team stats only: there are no individual player stats anywhere).
+function Detail({ id, myTeam }: { id: string; myTeam: MyTeam }) {
   const [open, setOpen] = useState(false);
-  if (!state) return null;
+  const [loaded, setLoaded] = useState<{ id: string; team: TeamData | null; error: string | null } | null>(null);
 
-  const team = id === myTeam.id ? myTeam : getOtherTeam(state, id);
+  useEffect(() => {
+    let off = false;
+    fetchTeam(id)
+      .then((team) => !off && setLoaded({ id, team, error: null }))
+      .catch((e) => !off && setLoaded({ id, team: null, error: errorText(e) }));
+    return () => {
+      off = true;
+    };
+  }, [id]);
+
+  if (!loaded || loaded.id !== id) return <div className="h-64 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
+  const team = loaded.team;
   if (!team) {
     return (
       <div className="py-16 text-center">
-        <p className="font-medium">Team not found</p>
+        <p className="font-medium">{loaded.error ?? "Team not found"}</p>
         <Link href="/opponent" className="mt-3 inline-block text-sm text-brand">Back to opponents</Link>
       </div>
     );
   }
 
   const me = team.id === myTeam.id;
-  const ranked = rankTeams(allTeams(state)).find((r) => r.team.id === team.id);
-  const s = team.stats;
+  const s = { ...team.record, gf: team.goalsFor, ga: team.goalsAgainst, form: team.form };
 
   return (
     <div className="space-y-5">
@@ -39,13 +50,13 @@ function Detail({ id, myTeam }: { id: string; myTeam: Team }) {
 
       <header>
         <h1 className="text-2xl font-semibold">{team.name}</h1>
-        <p className="text-sm text-slate-500">{team.area} · {team.members.length} players</p>
+        <p className="text-sm text-slate-500">{team.area} · {team.players} players</p>
       </header>
 
       <section className="glass rounded-3xl p-5">
         <div className="flex items-center justify-between">
-          <Stars rating={ranked?.rating ?? null} size={20} />
-          {ranked?.rank && <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">Rank #{ranked.rank}</span>}
+          <Stars rating={team.rating} size={20} />
+          {team.rank && <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">Rank #{team.rank}</span>}
         </div>
         <dl className="mt-4 grid grid-cols-4 gap-2 text-center">
           {[["Played", s.played], ["Won", s.wins], ["Drawn", s.draws], ["Lost", s.losses]].map(([k, v]) => (

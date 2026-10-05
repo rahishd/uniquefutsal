@@ -1,27 +1,28 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { CalendarPlus, Check, Gift, ChevronLeft, Loader2, Tag, X } from "lucide-react";
-import { addNotice, scheduleReminder } from "@/lib/notifications";
+import { CalendarPlus, Check, ChevronLeft, Gift, Loader2, Tag, X } from "lucide-react";
 import PaymentMethodPicker from "@/components/payment/PaymentMethodPicker";
-import { signInDemo, useSession } from "@/lib/session";
-import { fmtPts, pointsForGame, spendVoucher, useVouchers } from "@/lib/points";
 import PaymentQr from "@/components/payment/PaymentQr";
-import { METHOD_LABEL, isOnline, remarksFor } from "@/lib/payment";
+import { errorText } from "@/lib/api";
+import { fmtPts } from "@/lib/points";
+import { loyaltyStore } from "@/lib/loyalty";
+import { METHOD_LABEL, isOnline, type PayMethod } from "@/lib/payment";
+import { openSignIn, useSession } from "@/lib/session";
 import {
   MAX_ADVANCE_DAYS,
-  COURTS,
-  createBooking,
+  checkoutBooking,
   dateKey,
+  fetchQuote,
+  fetchSlots,
   formatHour,
   formatRs,
-  getSlots,
+  myBookingsStore,
   parseKey,
-  validatePromo,
-  type BookingConfirmation,
-  type PaymentMethod,
-  type PromoResult,
+  type Booking,
+  type CheckoutResult,
+  type Quote,
   type Slot,
 } from "@/lib/booking";
 
@@ -37,20 +38,21 @@ function longDate(key: string) {
   return parseKey(key).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
-function downloadIcs(c: BookingConfirmation) {
-  const d = parseKey(c.request.dateKey);
-  const fmt = (h: number) =>
-    `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}T${String(h).padStart(2, "0")}0000`;
+const hourOf = (t: string) => parseInt(t.split(":")[0], 10);
+
+function downloadIcs(b: Booking) {
+  const d = parseKey(b.date);
+  const fmt = (h: number) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}T${String(h).padStart(2, "0")}0000`;
   const ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Unique Futsal//Booking//EN",
     "BEGIN:VEVENT",
-    `UID:${c.id}@uniquefutsal`,
+    `UID:${b.id}@uniquefutsal`,
     `DTSTAMP:${fmt(0)}`,
-    `DTSTART:${fmt(c.request.hour)}`,
-    `DTEND:${fmt(c.request.hour + 1)}`,
-    `SUMMARY:Futsal at Unique Futsal (${c.id})`,
+    `DTSTART:${fmt(hourOf(b.startTime))}`,
+    `DTEND:${fmt(hourOf(b.startTime) + b.duration)}`,
+    `SUMMARY:Futsal at Unique Futsal (${b.id})`,
     "LOCATION:Unique Futsal\\, Manigram Tilottama-05\\, Rupandehi",
     "END:VEVENT",
     "END:VCALENDAR",
@@ -58,31 +60,9 @@ function downloadIcs(c: BookingConfirmation) {
   const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${c.id}.ics`;
+  a.download = `${b.id}.ics`;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-// Notices for a new booking, plus the 1-hour reminder before kick-off.
-// "Payment received" is raised only when the server has reported the order as paid.
-function notifyBooking(c: BookingConfirmation) {
-  const when = `${longDate(c.request.dateKey)} · ${formatHour(c.request.hour)} – ${formatHour(c.request.hour + 1)}`;
-  addNotice({ id: `booking-${c.id}`, type: "booking", title: "Booking confirmed", body: `${when}. ID ${c.id}.`, href: "/profile" });
-  addNotice({
-    id: `payment-${c.id}`,
-    type: "payment",
-    title: c.paymentStatus === "paid" ? "Payment received" : c.paymentStatus === "pay_at_venue" ? "Pay at the venue" : "Payment pending",
-    body:
-      c.paymentStatus === "paid"
-        ? `${formatRs(c.total)} received for booking ${c.id}.`
-        : c.paymentStatus === "pay_at_venue"
-          ? `Please pay ${formatRs(c.total)} when you arrive.`
-          : `${formatRs(c.total)} is awaiting payment confirmation for ${c.id}.`,
-    href: "/profile",
-  });
-  const start = parseKey(c.request.dateKey);
-  start.setHours(c.request.hour, 0, 0, 0);
-  scheduleReminder(c.id, start.getTime(), COURTS.find((x) => x.id === c.request.courtId)?.name);
 }
 
 function Steps({ step }: { step: number }) {
@@ -99,128 +79,163 @@ function Steps({ step }: { step: number }) {
   );
 }
 
+// Free slots for a date, from the server. `version` re-asks (for example after a slot was just taken).
+function useSlots(date: string, version: number) {
+  const [state, setState] = useState<{ key: string; slots: Slot[]; error: string | null } | null>(null);
+  const key = `${date}|${version}`;
+  useEffect(() => {
+    let off = false;
+    fetchSlots(date)
+      .then((slots) => !off && setState({ key, slots, error: null }))
+      .catch((e) => !off && setState({ key, slots: [], error: errorText(e) }));
+    return () => {
+      off = true;
+    };
+  }, [date, key]);
+  const ready = state?.key === key;
+  return { slots: ready ? state!.slots : null, error: ready ? state!.error : null };
+}
+
 export default function BookingFlow({ initialDate, initialHour }: { initialDate?: string; initialHour?: number }) {
   const tick = useSyncExternalStore(noop, nowKey, () => "");
   const now = useMemo(() => (tick ? new Date() : null), [tick]);
+  const session = useSession();
+  const loyalty = loyaltyStore.use().data ?? null;
 
   const [step, setStep] = useState<0 | 1 | 2>(0);
   const [selDate, setSelDate] = useState<string | null>(initialDate ?? null);
   const [selHour, setSelHour] = useState<number | null>(initialHour ?? null);
-  const [selCourt, setSelCourt] = useState<string | null>(null);
+  const [version, setVersion] = useState(0);
   const [promoInput, setPromoInput] = useState("");
-  const [promo, setPromo] = useState<PromoResult | null>(null);
+  const [appliedCode, setAppliedCode] = useState("");
+  const [quote, setQuote] = useState<{ key: string; q: Quote | null; error: string | null } | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [method, setMethod] = useState<PaymentMethod>("esewa");
+  const [method, setMethod] = useState<PayMethod>("esewa");
+  const [useFree, setUseFree] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<BookingConfirmation | null>(null);
-  const [qr, setQr] = useState<{ booking: BookingConfirmation; heldAt: number } | null>(null);
-  const session = useSession();
-  const vouchers = useVouchers(); // free games claimed on the Loyalty Points page
-  const [useFree, setUseFree] = useState(false);
-  const [freeId, setFreeId] = useState<string | null>(null);
+  const [done, setDone] = useState<Booking | null>(null);
+  const [freeBooking, setFreeBooking] = useState(false);
+  const [qr, setQr] = useState<CheckoutResult | null>(null);
 
-  if (!now || !session) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
-
-  const today = dateKey(now);
-  const days = Array.from({ length: MAX_ADVANCE_DAYS + 1 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
-    return { key: dateKey(d), d };
-  });
+  const today = now ? dateKey(now) : "";
+  const days = now
+    ? Array.from({ length: MAX_ADVANCE_DAYS + 1 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+        return { key: dateKey(d), d };
+      })
+    : [];
   // A pre-selected date (e.g. from Quick Rebook) is only honoured inside the booking window.
   const wanted = selDate ?? today;
   const activeDate = days.some((d) => d.key === wanted) ? wanted : today;
-  const slots = getSlots(activeDate, now);
-  const slot: Slot | undefined = slots.find((s) => s.hour === selHour && s.status !== "booked" && s.status !== "past");
-  const court = selCourt ?? slot?.freeCourts[0] ?? null;
-  const openSlots = slots.filter((s) => s.status === "available" || s.status === "almost");
+  const { slots, error: slotsError } = useSlots(activeDate || "1970-01-01", version);
+  const slot = slots?.find((s) => s.hour === selHour);
+
+  const registered = Boolean(session?.registered);
+  const voucher = slot && registered ? loyalty?.vouchers.find((v) => v.period === slot.period) : undefined;
+  const free = Boolean(voucher) && useFree;
+  const promoCode = !free && appliedCode ? appliedCode : undefined;
+
+  // The server prices the slot (promo and voucher included). Asked again when the slot, code or voucher changes.
+  const quoteKey = slot ? `${activeDate}|${slot.startTime}|${promoCode ?? ""}|${free ? voucher?.id : ""}` : "";
+  useEffect(() => {
+    if (!slot || !quoteKey) return;
+    let off = false;
+    fetchQuote({ date: activeDate, startTime: slot.startTime, promoCode, voucherId: free ? voucher?.id : undefined })
+      .then((q) => !off && setQuote({ key: quoteKey, q, error: null }))
+      .catch((e) => !off && setQuote({ key: quoteKey, q: null, error: errorText(e) }));
+    return () => {
+      off = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quoteKey]);
+  const q = quote?.key === quoteKey ? quote.q : null;
+  const promo = q?.promo ?? null;
+
+  if (!now || !session) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
+
   const base = slot?.price ?? 0;
-  const discount = promo?.ok ? promo.discount : 0;
-  // A free-game voucher covers a regular booking in full (it never applies to challenge games).
-  const registeredNow = session.registered;
-  const voucher = slot ? vouchers.find((v) => v.period === slot.period) : undefined;
-  const free = registeredNow && useFree && Boolean(voucher);
-  const total = free ? 0 : Math.max(0, base - discount);
+  const total = q ? q.total : base;
   const phoneOk = /^9\d{9}$/.test(phone);
   // Registered customers are recognised automatically. Only guests type their details,
   // and guests must pay in full online (no "pay at venue").
-  const registered = session.registered;
-  const effMethod: PaymentMethod = free ? "venue" : !registered && method === "venue" ? "esewa" : method;
-  const custName = session.registered ? session.name : name.trim();
-  const custPhone = session.registered ? session.phone : phone;
-  const canPay = Boolean(slot && court && (registered || (name.trim().length >= 2 && phoneOk)));
+  const effMethod: PayMethod = free ? "venue" : !registered && method === "venue" ? "esewa" : method;
+  const canPay = Boolean(slot && q && (registered || (name.trim().length >= 2 && phoneOk)));
+  const openSlots = slots ?? [];
 
   function pickDate(k: string) {
     setSelDate(k);
     setSelHour(null);
-    setSelCourt(null);
-    setPromo(null);
+    setAppliedCode("");
+    setPromoInput("");
+    setError(null);
   }
 
   function pickSlot(s: Slot) {
-    if (s.status === "booked" || s.status === "past") return;
     setSelHour(s.hour);
-    setSelCourt(s.freeCourts[0]);
-    setPromo(null);
-  }
-
-  function applyPromo() {
-    if (selHour === null) return;
-    setPromo(validatePromo(promoInput, { dateKey: activeDate, hour: selHour, base, today }));
+    setAppliedCode("");
+    setPromoInput("");
+    setError(null);
   }
 
   async function confirm() {
-    if (!canPay || selHour === null || !court) return;
+    if (!canPay || !slot) return;
     setSubmitting(true);
     setError(null);
     try {
-      const res = await createBooking(
-        { dateKey: activeDate, hour: selHour, courtId: court, promoCode: promo?.ok ? promo.code : undefined, method: effMethod, name: custName, phone: custPhone, guest: !registered },
-        { base, discount, total },
-      );
-      if (free) {
-        // Nothing to pay: the voucher covers it. The server must verify and spend the voucher itself.
-        if (!slot || !spendVoucher(slot.period, res.id)) throw new Error("no voucher");
-        const paid = { ...res, paymentStatus: "paid" as const };
-        setFreeId(paid.id);
-        notifyBooking(paid);
-        setDone(paid);
-        setStep(2);
-      } else if (isOnline(res.request.method)) {
-        // The booking is held; the customer pays with the QR and the screen detects the payment.
-        setQr({ booking: res, heldAt: res.createdAt });
+      const res = await checkoutBooking({
+        date: activeDate,
+        startTime: slot.startTime,
+        method: effMethod,
+        promoCode: promo?.ok ? promo.code : undefined,
+        voucherId: free ? voucher?.id : undefined,
+        guest: registered ? undefined : { name: name.trim(), phone },
+      });
+      if (registered) {
+        void myBookingsStore.refresh();
+        void loyaltyStore.refresh();
+      }
+      if (res.payment && isOnline(effMethod)) {
+        // The slot is held; the customer pays with the QR and the screen detects the payment.
+        setQr(res);
       } else {
-        notifyBooking(res);
-        setDone(res);
+        setFreeBooking(free);
+        setDone(res.booking);
         setStep(2);
       }
-    } catch {
-      setError("Sorry, we couldn't complete your booking. Please try again.");
+    } catch (e) {
+      setError(errorText(e));
+      setVersion((v) => v + 1); // the slot may have just been taken: refresh the list
     } finally {
       setSubmitting(false);
     }
   }
 
   /* ---------- Step 2b: pay with the QR (eSewa / Fonepay) ---------- */
-  if (qr && !done && isOnline(qr.booking.request.method)) {
+  if (qr && qr.payment && !done) {
+    const pay = qr.payment;
     return (
       <div className="space-y-5">
         <Steps step={1} />
         <PaymentQr
-          method={qr.booking.request.method}
-          orderId={qr.booking.id}
-          amount={qr.booking.total}
-          remarks={remarksFor("game", qr.booking.id)}
-          heldAt={qr.heldAt}
-          onBack={() => setQr(null)}
+          method={pay.method}
+          orderId={pay.orderCode}
+          amount={pay.amount}
+          remarks={pay.remarks}
+          payload={pay.qrPayload}
+          expiresAt={pay.expiresAt}
+          guestPhone={registered ? undefined : phone}
+          onBack={() => {
+            setQr(null);
+            setVersion((v) => v + 1);
+          }}
           onPaid={() => {
             // Called automatically when the server reports this booking as paid.
-            const paid = { ...qr.booking, paymentStatus: "paid" as const };
-            notifyBooking(paid);
-            setDone(paid);
+            setDone({ ...qr.booking, paymentStatus: "completed", status: "confirmed" });
             setQr(null);
             setStep(2);
+            if (registered) void myBookingsStore.refresh();
           }}
         />
       </div>
@@ -229,9 +244,8 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
 
   /* ---------- Step 3: confirmation ---------- */
   if (step === 2 && done) {
-    const court = COURTS.find((c) => c.id === done.request.courtId)?.name;
-    const venue = done.paymentStatus === "pay_at_venue";
-    const paid = done.paymentStatus === "paid";
+    const venue = done.paymentMethod === "venue" && done.paymentStatus !== "completed";
+    const paid = done.paymentStatus === "completed";
     return (
       <div className="space-y-5">
         <Steps step={2} />
@@ -249,10 +263,9 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
 
         <dl className="glass space-y-3 rounded-3xl p-5 text-sm">
           {[
-            ["Date", longDate(done.request.dateKey)],
-            ["Time", `${formatHour(done.request.hour)} – ${formatHour(done.request.hour + 1)}`],
-            ["Court", court ?? ""],
-            ["Payment", paid ? (done.id === freeId ? "Free game (loyalty points)" : `Paid via ${METHOD_LABEL[done.request.method]}`) : venue ? "Pay at venue" : "Awaiting payment confirmation"],
+            ["Date", longDate(done.date)],
+            ["Time", `${formatHour(hourOf(done.startTime))} – ${formatHour(hourOf(done.startTime) + done.duration)}`],
+            ["Payment", freeBooking ? "Free game voucher" : paid ? `Paid via ${METHOD_LABEL[(done.paymentMethod === "full" ? "esewa" : done.paymentMethod) as PayMethod] ?? "online"}` : venue ? "Pay at venue" : "Awaiting payment confirmation"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4">
               <dt className="text-slate-400">{k}</dt>
@@ -261,27 +274,22 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           ))}
           <div className="flex justify-between border-t border-white/60 pt-3 text-base">
             <dt className="font-medium">Total</dt>
-            <dd className="font-semibold">{formatRs(done.total)}</dd>
+            <dd className="font-semibold">{formatRs(done.totalPrice)}</dd>
           </div>
         </dl>
-
-        <p className="rounded-2xl bg-amber-400/15 px-4 py-3 text-xs text-amber-700">
-          Demo mode: this booking was not saved and no payment was taken. Real bookings need the backend API.
-        </p>
 
         <button type="button" onClick={() => downloadIcs(done)} className="glass flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-medium text-brand">
           <CalendarPlus size={18} /> Add to calendar
         </button>
-        <Link href="/profile" className="glass-btn block rounded-full py-3.5 text-center text-sm font-medium text-white">
-          View my bookings
+        <Link href={registered ? "/profile" : "/"} className="glass-btn block rounded-full py-3.5 text-center text-sm font-medium text-white">
+          {registered ? "View my bookings" : "Back to home"}
         </Link>
       </div>
     );
   }
 
   /* ---------- Step 2: review & pay ---------- */
-  if (step === 1 && slot && court) {
-    const courtName = COURTS.find((c) => c.id === court)?.name;
+  if (step === 1 && slot) {
     return (
       <div className="space-y-5">
         <Steps step={1} />
@@ -294,32 +302,17 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           <dl className="mt-3 space-y-2 text-sm">
             <div className="flex justify-between"><dt className="text-slate-400">Date</dt><dd className="font-medium">{longDate(activeDate)}</dd></div>
             <div className="flex justify-between"><dt className="text-slate-400">Time</dt><dd className="font-medium">{formatHour(slot.hour)} – {formatHour(slot.hour + 1)}</dd></div>
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-slate-400">Court</dt>
-              <dd className="flex gap-2">
-                {COURTS.filter((c) => slot.freeCourts.includes(c.id)).map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setSelCourt(c.id)}
-                    aria-pressed={court === c.id}
-                    className={`rounded-full px-3 py-1 text-xs font-medium ${court === c.id ? "glass-active text-white" : "bg-white/60 text-slate-600"}`}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </dd>
-            </div>
-            <div className="flex justify-between"><dt className="text-slate-400">Base price</dt><dd>{formatRs(base)}</dd></div>
-            {discount > 0 && promo?.ok && (
-              <div className="flex justify-between text-emerald-600"><dt>Promo {promo.code}</dt><dd>− {formatRs(discount)}</dd></div>
+            <div className="flex justify-between"><dt className="text-slate-400">Base price</dt><dd>{formatRs(q ? q.basePrice : base)}</dd></div>
+            {q && q.discount > 0 && (
+              <div className="flex justify-between text-emerald-600"><dt>{free ? "Free game voucher" : `Promo ${promo?.code ?? ""}`}</dt><dd>− {formatRs(q.discount)}</dd></div>
             )}
             <div className="flex justify-between border-t border-white/60 pt-3 text-base"><dt className="font-medium">Total</dt><dd className="font-semibold">{formatRs(total)}</dd></div>
           </dl>
-          <p className="mt-2 text-[11px] text-slate-400">{courtName} · final price is confirmed by the server.</p>
-          {registered && !free && total > 0 && (
-            <p className="mt-3 rounded-2xl bg-amber-400/15 px-3 py-2 text-xs text-amber-700">You&apos;ll earn {fmtPts(pointsForGame(total))} loyalty points after this game.</p>
+          <p className="mt-2 text-[11px] text-slate-400">The final price is set by the server.</p>
+          {registered && !free && q && q.earnPoints > 0 && (
+            <p className="mt-3 rounded-2xl bg-amber-400/15 px-3 py-2 text-xs text-amber-700">You&apos;ll earn {fmtPts(q.earnPoints)} loyalty points after this game.</p>
           )}
+          {quote?.key === quoteKey && quote.error && <p role="alert" className="mt-3 rounded-2xl bg-rose-500/10 px-3 py-2 text-xs text-rose-600">{quote.error}</p>}
         </section>
 
         {registered && voucher && (
@@ -330,30 +323,32 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
             className={`flex w-full items-center justify-between gap-3 rounded-3xl p-4 text-left ${free ? "glass-active text-white" : "glass"}`}
           >
             <span className="flex items-center gap-2 text-sm font-medium"><Gift size={18} className={free ? "text-orange-300" : "text-orange-500"} /> Use a free game voucher</span>
-            <span className={`text-xs ${free ? "text-white/70" : "text-slate-400"}`}>{slot?.period} shift · {free ? "Applied" : "Tap to apply"}</span>
+            <span className={`text-xs ${free ? "text-white/70" : "text-slate-400"}`}>{slot.period} shift · {free ? "Applied" : "Tap to apply"}</span>
           </button>
         )}
 
-        {!free && <section className="glass rounded-3xl p-5">
-          <label htmlFor="promo" className="flex items-center gap-2 text-sm font-medium"><Tag size={16} className="text-brand" /> Promo code</label>
-          <div className="mt-3 flex gap-2">
-            <input
-              id="promo"
-              value={promoInput}
-              onChange={(e) => { setPromoInput(e.target.value); setPromo(null); }}
-              placeholder="e.g. DASHAIN83"
-              autoCapitalize="characters"
-              className="min-w-0 flex-1 rounded-2xl bg-white/70 px-4 py-3 text-sm uppercase outline-none ring-1 ring-white/80 focus:ring-brand"
-            />
-            <button type="button" onClick={applyPromo} className="rounded-2xl bg-brand px-5 text-sm font-medium text-white">Apply</button>
-          </div>
-          {promo && (
-            <p role="status" className={`mt-2 flex items-center gap-1 text-xs ${promo.ok ? "text-emerald-600" : "text-rose-500"}`}>
-              {promo.ok ? <Check size={14} /> : <X size={14} />}
-              {promo.ok ? `Promo applied: ${promo.label} (− ${formatRs(promo.discount)})` : promo.message}
-            </p>
-          )}
-        </section>}
+        {!free && (
+          <section className="glass rounded-3xl p-5">
+            <label htmlFor="promo" className="flex items-center gap-2 text-sm font-medium"><Tag size={16} className="text-brand" /> Promo code</label>
+            <div className="mt-3 flex gap-2">
+              <input
+                id="promo"
+                value={promoInput}
+                onChange={(e) => { setPromoInput(e.target.value); setAppliedCode(""); }}
+                placeholder="e.g. DASHAIN83"
+                autoCapitalize="characters"
+                className="min-w-0 flex-1 rounded-2xl bg-white/70 px-4 py-3 text-sm uppercase outline-none ring-1 ring-white/80 focus:ring-brand"
+              />
+              <button type="button" onClick={() => setAppliedCode(promoInput.trim())} className="rounded-2xl bg-brand px-5 text-sm font-medium text-white">Apply</button>
+            </div>
+            {appliedCode && promo && (
+              <p role="status" className={`mt-2 flex items-center gap-1 text-xs ${promo.ok ? "text-emerald-600" : "text-rose-500"}`}>
+                {promo.ok ? <Check size={14} /> : <X size={14} />}
+                {promo.ok ? `Promo applied: ${promo.label} (− ${formatRs(q?.discount ?? 0)})` : promo.message}
+              </p>
+            )}
+          </section>
+        )}
 
         {session.registered ? (
           <p className="glass flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm">
@@ -364,7 +359,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           <section className="glass space-y-3 rounded-3xl p-5">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-medium">Guest details</h2>
-              <button type="button" onClick={signInDemo} className="text-xs font-medium text-brand">Have an account? Sign in</button>
+              <button type="button" onClick={openSignIn} className="text-xs font-medium text-brand">Have an account? Sign in</button>
             </div>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" aria-label="Full name" autoComplete="name" className="w-full rounded-2xl bg-white/70 px-4 py-3 text-sm outline-none ring-1 ring-white/80 focus:ring-brand" />
             <div>
@@ -397,7 +392,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
       <header>
         <h1 className="text-2xl font-semibold">Book a court</h1>
         <p className="text-sm text-slate-500">Pick a date and a one-hour slot. Bookings open up to {MAX_ADVANCE_DAYS} days in advance.</p>
-        {initialHour !== undefined && selHour === initialHour && !slot && (
+        {initialHour !== undefined && selHour === initialHour && slots && !slot && (
           <p role="status" className="mt-2 rounded-xl bg-amber-400/15 px-3 py-2 text-xs text-amber-700">Your usual slot isn&apos;t available on this date. Please pick another time.</p>
         )}
       </header>
@@ -424,8 +419,13 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
       </section>
 
       <section aria-label="Select time slot" className="space-y-5">
-        {/* Only bookable slots are listed: booked and past ones are hidden. */}
-        {openSlots.length === 0 ? (
+        {slots === null ? (
+          <div className="space-y-3" aria-label="Loading slots">
+            {[0, 1, 2].map((i) => <div key={i} className="h-16 animate-pulse rounded-2xl bg-white/40" />)}
+          </div>
+        ) : slotsError ? (
+          <p role="alert" className="glass rounded-2xl px-4 py-6 text-center text-sm text-rose-600">{slotsError}</p>
+        ) : openSlots.length === 0 ? (
           <p className="glass rounded-2xl px-4 py-6 text-center text-sm text-slate-500">
             No slots available on this date. Please pick another day.
           </p>
@@ -445,8 +445,8 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
                       className={`rounded-2xl px-3 py-3 text-left transition ${active ? "glass-active text-white" : "glass"}`}
                     >
                       <span className="block text-sm font-medium">{formatHour(s.hour)}</span>
-                      <span className={`text-[11px] ${active ? "text-white/70" : s.status === "almost" ? "text-orange-500" : "text-emerald-600"}`}>
-                        {s.status === "almost" ? "Almost full" : "Available"} · {formatRs(s.price)}
+                      <span className={`text-[11px] ${active ? "text-white/70" : "text-emerald-600"}`}>
+                        Available · {formatRs(s.price)}
                       </span>
                     </button>
                   );

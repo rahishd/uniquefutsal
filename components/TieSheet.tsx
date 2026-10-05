@@ -1,7 +1,7 @@
 import { Radio } from "lucide-react";
-import type { TieMatch, TieRound } from "@/lib/sample-data";
+import { matchTime, type TieMatch, type TieRound } from "@/lib/tournament";
 
-function Row({ name, score, winner }: { name: string | null; score?: number; winner: boolean }) {
+function Row({ name, score, winner }: { name: string | null; score?: number | null; winner: boolean }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className={`truncate text-sm ${name ? (winner ? "font-semibold" : "text-slate-600") : "italic text-slate-400"}`}>
@@ -26,7 +26,7 @@ function MatchCard({ m }: { m: TieMatch }) {
         <Row name={m.away} score={m.awayScore} winner={awayWins} />
       </div>
       <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
-        <span>{m.note && m.status !== "live" ? m.note : m.time ?? m.venue ?? ""}</span>
+        <span>{m.note && m.status !== "live" ? m.note : matchTime(m) || m.venue || ""}</span>
         {m.status === "live" && (
           <span className="flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 font-medium text-rose-500">
             <Radio size={11} /> Live {m.note}
@@ -44,7 +44,7 @@ export default function TieSheet({ rounds }: { rounds: TieRound[] }) {
     <div className="-mx-5 overflow-x-auto px-5 pb-2" aria-label="Tie-sheet">
       <div className="flex gap-6">
         {rounds.map((round) => (
-          <section key={round.name} className="flex shrink-0 flex-col">
+          <section key={round.id} className="flex shrink-0 flex-col">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">{round.name}</h3>
             <div className="flex flex-1 flex-col justify-around gap-3">
               {round.matches.map((m) => (

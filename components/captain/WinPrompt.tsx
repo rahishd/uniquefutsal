@@ -4,28 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trophy, X } from "lucide-react";
 import { useSession } from "@/lib/session";
-import { getOtherTeam, useTeams } from "@/lib/teams";
+import { markPromptShown, useTeams } from "@/lib/teams";
 
-const KEY = "uf-winprompt-v1"; // { [challengeId]: true } once the captain has seen the popup
-
-function seen(): Record<string, true> {
-  try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "{}") as Record<string, true>;
-  } catch {
-    return {};
-  }
-}
-
-function markSeen(id: string) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify({ ...seen(), [id]: true }));
-  } catch {
-    // storage blocked: it may show again on the next page load
-  }
-}
-
-// Shown to a captain once the venue has confirmed payment for their challenge game. In production
-// BOTH captains get it, each on their own phone, when the admin approves the payment.
+// Shown to a captain once the venue has confirmed payment for their challenge game. BOTH captains get it, each on
+// their own phone. The server remembers who has already seen it (once per game per captain) and only lists games
+// that still have no score.
 export default function WinPrompt() {
   const router = useRouter();
   const session = useSession();
@@ -36,15 +19,7 @@ export default function WinPrompt() {
   const isCaptain = Boolean(session?.registered && state?.mode === "captain" && state.team);
   const game =
     isCaptain && state
-      ? state.challenges.find(
-          (c) =>
-            c.status === "accepted" &&
-            c.venuePaidAt &&
-            !dismissed.includes(c.id) &&
-            !seen()[c.id] &&
-            // nothing to ask once a score is already uploaded or confirmed
-            !state.results.some((r) => r.challengeId === c.id && r.status !== "disputed"),
-        )
+      ? state.challenges.find((c) => state.prompts.some((p) => p.challengeId === c.id) && !dismissed.includes(c.id) && c.status === "accepted")
       : undefined;
 
   useEffect(() => {
@@ -57,11 +32,11 @@ export default function WinPrompt() {
   }, [game?.id]);
 
   if (!game || !state) return null;
-  const opponent = getOtherTeam(state, game.teamId)?.name ?? "your opponent";
+  const opponent = game.team.name;
 
   function close() {
     if (!game) return;
-    markSeen(game.id);
+    void markPromptShown(game.id);
     setDismissed((d) => [...d, game.id]);
   }
 

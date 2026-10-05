@@ -3,32 +3,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, Copy, Crown, Gamepad2 } from "lucide-react";
-import { daysBetween, fmtDay, promos, statusOf, useToday, type Promo, type PromoStatus } from "@/lib/promos";
+import { fmtDay, promosStore, type Promo } from "@/lib/promos";
 
-const TABS: { id: PromoStatus; label: string }[] = [
+type Tab = "active" | "expired";
+const TABS: { id: Tab; label: string }[] = [
   { id: "active", label: "Active" },
-  { id: "upcoming", label: "Upcoming" },
   { id: "expired", label: "Expired" },
 ];
 
-const EMPTY: Record<PromoStatus, string> = {
-  active: "No active offers right now. Check back soon.",
-  upcoming: "No upcoming offers yet.",
-  expired: "No expired offers.",
-};
-
-function when(p: Promo, status: PromoStatus, today: string) {
-  if (status === "upcoming") return { text: `Starts ${fmtDay(p.from)}`, soon: false };
-  if (status === "expired") return { text: `Ended ${fmtDay(p.until)}`, soon: false };
-  const left = daysBetween(today, p.until);
-  if (left === 0) return { text: "Ends today", soon: true };
-  if (left <= 5) return { text: `Ends in ${left} ${left === 1 ? "day" : "days"}`, soon: true };
+function when(p: Promo) {
+  if (p.status === "expired") return { text: p.until ? `Ended ${fmtDay(p.until)}` : "Ended", soon: false };
+  if (p.daysLeft === null || !p.until) return { text: "No end date", soon: false };
+  if (p.daysLeft <= 0) return { text: "Ends today", soon: true };
+  if (p.daysLeft <= 5) return { text: `Ends in ${p.daysLeft} ${p.daysLeft === 1 ? "day" : "days"}`, soon: true };
   return { text: `Valid until ${fmtDay(p.until)}`, soon: false };
 }
 
 export default function PromosPage() {
-  const today = useToday();
-  const [tab, setTab] = useState<PromoStatus>("active");
+  const store = promosStore.use();
+  const [tab, setTab] = useState<Tab>("active");
   const [copied, setCopied] = useState<string | null>(null);
 
   async function copy(code: string) {
@@ -41,47 +34,38 @@ export default function PromosPage() {
     }
   }
 
-  if (!today) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
+  if (store.status === "error") return <p role="alert" className="glass rounded-3xl px-4 py-10 text-center text-sm text-rose-600">{store.error}</p>;
+  if (!store.data) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
 
-  const counts = { active: 0, upcoming: 0, expired: 0 };
-  for (const p of promos) counts[statusOf(p, today)]++;
-  const list = promos
-    .filter((p) => statusOf(p, today) === tab)
-    .sort((a, b) => (tab === "expired" ? b.until.localeCompare(a.until) : tab === "upcoming" ? a.from.localeCompare(b.from) : a.until.localeCompare(b.until)));
+  const all = store.data;
+  const counts = { active: all.filter((p) => p.status === "active").length, expired: all.filter((p) => p.status === "expired").length };
+  const list = all.filter((p) => p.status === tab);
 
   return (
     <div className="space-y-5 pb-4">
       <header>
         <h1 className="text-2xl font-semibold">Promos</h1>
-        <p className="text-sm text-slate-500">Copy a code and enter it when you book or buy a membership.</p>
+        <p className="text-sm text-slate-500">Copy a code and enter it when you book.</p>
       </header>
 
-      <div role="tablist" aria-label="Promo status" className="glass grid grid-cols-3 rounded-full p-1 text-sm">
+      <div role="tablist" aria-label="Promo status" className="glass grid grid-cols-2 rounded-full p-1 text-sm">
         {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
-            className={`rounded-full py-2 font-medium ${tab === t.id ? "glass-active text-white" : "text-slate-500"}`}
-          >
+          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className={`rounded-full py-2 font-medium ${tab === t.id ? "glass-active text-white" : "text-slate-500"}`}>
             {t.label} <span className={tab === t.id ? "text-white/70" : "text-slate-400"}>({counts[t.id]})</span>
           </button>
         ))}
       </div>
 
       {list.length === 0 ? (
-        <p className="glass rounded-3xl px-4 py-10 text-center text-sm text-slate-500">{EMPTY[tab]}</p>
+        <p className="glass rounded-3xl px-4 py-10 text-center text-sm text-slate-500">{tab === "active" ? "No active offers right now. Check back soon." : "No expired offers."}</p>
       ) : (
         <ul className="space-y-4" role="tabpanel">
           {list.map((p) => {
-            const status = statusOf(p, today);
-            const w = when(p, status, today);
-            const live = status === "active";
+            const w = when(p);
+            const live = p.status === "active";
             const Icon = p.kind === "membership" ? Crown : Gamepad2;
             return (
-              <li key={p.id} className={`glass rounded-3xl p-5 ${live ? "" : "opacity-70"}`}>
+              <li key={p.code} className={`glass rounded-3xl p-5 ${live ? "" : "opacity-70"}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand"><Icon size={18} /></span>
@@ -108,7 +92,7 @@ export default function PromosPage() {
 
                 {live && (
                   <Link href={p.kind === "membership" ? "/member" : "/book"} className="glass-btn mt-4 block rounded-full py-3 text-center text-sm font-medium text-white">
-                    {p.kind === "membership" ? "View membership plans" : "Book a game"}
+                    {p.kind === "membership" ? "View membership" : "Book a game"}
                   </Link>
                 )}
               </li>

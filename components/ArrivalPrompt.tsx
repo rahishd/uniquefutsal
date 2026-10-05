@@ -2,17 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ChevronsRight, Loader2, MapPin } from "lucide-react";
-import { ARRIVAL_GRACE_MS, ARRIVAL_LEAD_MS, confirmComing, loadArrival, snoozeArrival } from "@/lib/arrival";
-import { loadReminders, type ReminderEntry } from "@/lib/notifications";
+import { ARRIVAL_GRACE_MS, ARRIVAL_LEAD_MS, confirmComing, loadArrival, snoozeArrival, useArrivalTargets, type ArrivalTarget } from "@/lib/arrival";
+import { useSession } from "@/lib/session";
 import { usePrefs } from "@/lib/prefs";
 
 const HANDLE = 64; // px, slider thumb size
 const THRESHOLD = 0.88; // fraction of the track that counts as "slid all the way"
 
-function pickDue(): ReminderEntry | null {
+function pickDue(targets: ArrivalTarget[]): ArrivalTarget | null {
   const now = Date.now();
   const arrival = loadArrival();
-  const due = loadReminders()
+  const due = targets
     .filter((r) => {
       if (arrival[r.id]?.coming) return false;
       if ((arrival[r.id]?.snoozeUntil ?? 0) > now) return false;
@@ -31,7 +31,9 @@ function countdown(startsAt: number, now: number) {
 
 export default function ArrivalPrompt() {
   const { popup } = usePrefs(); // Profile > Settings > Pop-up reminder
-  const [entry, setEntry] = useState<ReminderEntry | null>(null);
+  const session = useSession();
+  const targets = useArrivalTargets();
+  const [entry, setEntry] = useState<ArrivalTarget | null>(null);
   const visible = Boolean(entry) && popup;
   const [now, setNow] = useState(0);
   const [sending, setSending] = useState(false);
@@ -46,24 +48,23 @@ export default function ArrivalPrompt() {
   const trackRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Check every 15s and when the tab becomes visible or a booking is added.
+  // Check every 15s and when the tab becomes visible or the bookings change.
   useEffect(() => {
+    if (!session?.registered) return;
     const check = () => {
       setNow(Date.now());
       // Never swap out a prompt that is on screen; only the customer's own actions close it.
-      setEntry((cur) => cur ?? pickDue());
+      setEntry((cur) => cur ?? pickDue(targets));
     };
     const first = setTimeout(check, 0);
     const timer = setInterval(check, 15000);
-    window.addEventListener("uf-reminders-changed", check);
     document.addEventListener("visibilitychange", check);
     return () => {
       clearTimeout(first);
       clearInterval(timer);
-      window.removeEventListener("uf-reminders-changed", check);
       document.removeEventListener("visibilitychange", check);
     };
-  }, []);
+  }, [targets, session?.registered]);
 
   // Modal behaviour: lock page scroll, move focus in, keep Tab inside.
   useEffect(() => {
@@ -101,11 +102,11 @@ export default function ArrivalPrompt() {
     setSending(true);
     setError(null);
     try {
-      await confirmComing(entry.id);
+      await confirmComing(entry);
       navigator.vibrate?.(60);
       setSent(true);
-    } catch {
-      setError("We couldn't alert the venue. Please try again.");
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : "We couldn't alert the venue. Please try again.");
       setDrag(0);
     } finally {
       setSending(false);
@@ -186,9 +187,6 @@ export default function ArrivalPrompt() {
           </span>
           <h1 id="arrival-title" className="mt-6 text-3xl font-semibold">You&apos;re confirmed!</h1>
           <p className="mt-2 max-w-xs text-white/70">The venue knows you&apos;re on your way. See you on the pitch.</p>
-          <p className="mt-6 rounded-2xl bg-amber-400/15 px-4 py-3 text-xs text-amber-200">
-            Demo mode: no real alert was sent yet. The venue alert needs the backend and admin panel.
-          </p>
           <button type="button" onClick={done} className="glass-btn mt-8 rounded-full px-10 py-4 text-base font-semibold text-white">Done</button>
         </div>
       ) : (

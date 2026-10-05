@@ -1,9 +1,8 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { BarChart3, CalendarDays, ChevronRight, CircleHelp, Crown, Gamepad2, Star, Swords, Tag, Trophy } from "lucide-react";
-import { getServerSnapshot, getSnapshot, markReadByTypes, subscribe, type NoticeType } from "@/lib/notifications";
+import { markReadByTypes, noticesStore, type NoticeType } from "@/lib/notifications";
 import { useSession } from "@/lib/session";
 import { pendingActions, useTeams } from "@/lib/teams";
 
@@ -30,8 +29,10 @@ const TILES: Tile[] = [
   { label: "Help", href: "/help", icon: CircleHelp, tone: "text-sky-500" },
 ];
 
+const NO_UNREAD: Partial<Record<NoticeType, number>> = {};
+
 export default function PopularGrid() {
-  const notices = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const unread = noticesStore.use().data?.unreadByType ?? NO_UNREAD;
   const teams = useTeams();
   const session = useSession();
 
@@ -41,7 +42,7 @@ export default function PopularGrid() {
       return session?.registered && teams?.mode === "captain" ? pendingActions(teams) : 0;
     }
     if (!t.types) return 0;
-    return notices.filter((n) => !n.read && t.types!.includes(n.type)).length;
+    return t.types.reduce((sum, ty) => sum + (unread[ty] ?? 0), 0);
   }
 
   return (

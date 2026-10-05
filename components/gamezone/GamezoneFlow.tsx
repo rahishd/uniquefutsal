@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Check, ChevronLeft, Gamepad2, Loader2, Minus, Plus } from "lucide-react";
 import { MAX_ADVANCE_DAYS, dateKey, formatHour, formatRs, parseKey } from "@/lib/booking";
-import { addNotice, scheduleReminder } from "@/lib/notifications";
-import { METHOD_LABEL, isOnline, remarksFor, type PayMethod } from "@/lib/payment";
-import { signInDemo, useSession } from "@/lib/session";
-import { CONSOLES, GAMES, MAX_HOURS, PLANS, createGzBooking, getGzSlots, planOf, priceFor, type GzConfirmation } from "@/lib/gamezone";
+import { errorText } from "@/lib/api";
+import { METHOD_LABEL, isOnline, type PayMethod } from "@/lib/payment";
+import { openSignIn, useSession } from "@/lib/session";
+import { bookGamezone, catalogStore, estimate, fetchGzSlots, myGzStore, type Catalog, type GzBooking, type GzCheckout } from "@/lib/gamezone";
 import PaymentMethodPicker from "@/components/payment/PaymentMethodPicker";
 import PaymentQr from "@/components/payment/PaymentQr";
 
@@ -30,28 +30,32 @@ function Steps({ step }: { step: number }) {
   );
 }
 
-function notify(c: GzConfirmation) {
-  const r = c.request;
-  const when = `${longDate(r.dateKey)} · ${formatHour(r.hour)} – ${formatHour(r.hour + r.hours)}`;
-  addNotice({ id: `booking-${c.id}`, type: "gamezone", title: "Gamezone booked", body: `PS5 · ${r.game} · ${planOf(r.players).label} · ${when}. ID ${c.id}.`, href: "/gamezone" });
-  addNotice({
-    id: `payment-${c.id}`,
-    type: "payment",
-    title: c.paymentStatus === "paid" ? "Payment received" : c.paymentStatus === "pay_at_venue" ? "Pay at the venue" : "Payment pending",
-    body:
-      c.paymentStatus === "paid"
-        ? `${formatRs(c.total)} received for ${c.id}.`
-        : c.paymentStatus === "pay_at_venue"
-          ? `Please pay ${formatRs(c.total)} when you arrive.`
-          : `${formatRs(c.total)} is awaiting payment confirmation for ${c.id}.`,
-    href: "/gamezone",
-  });
-  const start = parseKey(r.dateKey);
-  start.setHours(r.hour, 0, 0, 0);
-  scheduleReminder(c.id, start.getTime(), "PS5 Gamezone");
+// Free start hours for ONE console, from the server. `version` re-asks (for example after a clash).
+function useGzSlots(date: string, hours: number, consoleId: string, version: number) {
+  const [state, setState] = useState<{ key: string; hours: number[]; error: string | null } | null>(null);
+  const key = `${date}|${hours}|${consoleId}|${version}`;
+  useEffect(() => {
+    if (!date || !consoleId) return;
+    let off = false;
+    fetchGzSlots(date, hours, consoleId)
+      .then((h) => !off && setState({ key, hours: h, error: null }))
+      .catch((e) => !off && setState({ key, hours: [], error: errorText(e) }));
+    return () => {
+      off = true;
+    };
+  }, [date, hours, consoleId, key]);
+  const ready = state?.key === key;
+  return { hours: ready ? state!.hours : null, error: ready ? state!.error : null };
 }
 
 export default function GamezoneFlow() {
+  const catalog = catalogStore.use();
+  if (catalog.status === "error") return <p role="alert" className="glass rounded-3xl px-4 py-10 text-center text-sm text-rose-600">{catalog.error}</p>;
+  if (!catalog.data) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
+  return <Flow catalog={catalog.data} />;
+}
+
+function Flow({ catalog }: { catalog: Catalog }) {
   const tick = useSyncExternalStore(noop, nowKey, () => "");
   const now = useMemo(() => (tick ? new Date() : null), [tick]);
   const session = useSession();
@@ -68,70 +72,77 @@ export default function GamezoneFlow() {
   const [method, setMethod] = useState<PayMethod>("esewa");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<GzConfirmation | null>(null);
-  const [qr, setQr] = useState<GzConfirmation | null>(null);
+  const [done, setDone] = useState<GzBooking | null>(null);
+  const [qr, setQr] = useState<GzCheckout | null>(null);
+  const [version, setVersion] = useState(0);
 
-  if (!now || !session) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
-
-  const today = dateKey(now);
-  const days = Array.from({ length: MAX_ADVANCE_DAYS + 1 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
-    return { key: dateKey(d), d };
-  });
+  const today = now ? dateKey(now) : "";
+  const days = now
+    ? Array.from({ length: MAX_ADVANCE_DAYS + 1 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+        return { key: dateKey(d), d };
+      })
+    : [];
   const activeDate = selDate && days.some((d) => d.key === selDate) ? selDate : today;
-  const consoleId = selConsole ?? CONSOLES[0].id;
-  const slots = getGzSlots(activeDate, now, hours, consoleId);
-  const slot = slots.includes(selHour ?? -1) ? { hour: selHour as number } : undefined;
-  const plan = planOf(players);
-  const total = priceFor(players, hours);
-  const registered = session.registered;
+  const consoleId = selConsole ?? catalog.consoles[0]?.id ?? "";
+  const { hours: slots, error: slotsError } = useGzSlots(activeDate, hours, consoleId, version);
+  const slot = slots && selHour !== null && slots.includes(selHour) ? { hour: selHour } : undefined;
+  const plan = catalog.plans.find((p) => p.players === players) ?? catalog.plans[0];
+  const total = estimate(plan.ratePerPersonHour, players, hours);
+  const registered = Boolean(session?.registered);
   const effMethod: PayMethod = !registered && method === "venue" ? "esewa" : method;
   const phoneOk = /^9\d{9}$/.test(phone);
   const canPay = Boolean(slot && selGame && (registered || (name.trim().length >= 2 && phoneOk)));
+
+  if (!now || !session) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
 
   async function confirm() {
     if (!slot || !selGame || !canPay) return;
     setSubmitting(true);
     setError(null);
     try {
-      const res = await createGzBooking({
-        dateKey: activeDate, hour: slot.hour, hours, players, game: selGame, consoleId, method: effMethod,
-        name: session && session.registered ? session.name : name.trim(),
-        phone: session && session.registered ? session.phone : phone,
-        guest: !registered,
+      const res = await bookGamezone({
+        date: activeDate, hour: slot.hour, hours, players, consoleId, game: selGame, method: effMethod,
+        guest: registered ? undefined : { name: name.trim(), phone },
       });
-      if (isOnline(res.request.method)) {
+      if (registered) void myGzStore.refresh();
+      if (res.payment && isOnline(effMethod)) {
         setQr(res);
       } else {
-        notify(res);
-        setDone(res);
+        setDone(res.booking);
         setStep(2);
       }
-    } catch {
-      setError("Sorry, we couldn't complete your booking. Please try again.");
+    } catch (e) {
+      setError(errorText(e));
+      setVersion((v) => v + 1); // the console may have just been taken: refresh the times
     } finally {
       setSubmitting(false);
     }
   }
 
   /* ---------- pay with QR ---------- */
-  if (qr && !done && isOnline(qr.request.method)) {
+  if (qr && qr.payment && !done) {
+    const pay = qr.payment;
     return (
       <div className="space-y-5">
         <Steps step={1} />
         <PaymentQr
-          method={qr.request.method}
-          orderId={qr.id}
-          amount={qr.total}
-          remarks={remarksFor("gamezone", qr.id)}
-          heldAt={qr.createdAt}
-          onBack={() => setQr(null)}
+          method={pay.method}
+          orderId={pay.orderCode}
+          amount={pay.amount}
+          remarks={pay.remarks}
+          payload={pay.qrPayload}
+          expiresAt={pay.expiresAt}
+          guestPhone={registered ? undefined : phone}
+          onBack={() => {
+            setQr(null);
+            setVersion((v) => v + 1);
+          }}
           onPaid={() => {
-            const paid = { ...qr, paymentStatus: "paid" as const };
-            notify(paid);
-            setDone(paid);
+            setDone({ ...qr.booking, paymentStatus: "paid" });
             setQr(null);
             setStep(2);
+            if (registered) void myGzStore.refresh();
           }}
         />
       </div>
@@ -140,7 +151,6 @@ export default function GamezoneFlow() {
 
   /* ---------- done ---------- */
   if (step === 2 && done) {
-    const r = done.request;
     const venue = done.paymentStatus === "pay_at_venue";
     const paid = done.paymentStatus === "paid";
     return (
@@ -151,22 +161,21 @@ export default function GamezoneFlow() {
           <h1 className="mt-4 text-2xl font-semibold">{paid ? "Gamezone booked!" : "Gamezone reserved!"}</h1>
           <p className="mt-1 text-sm text-slate-500">{paid ? "Payment received. See you at the console!" : "Please pay at the venue when you arrive."}</p>
           <p className="mt-4 text-xs text-slate-400">Booking ID</p>
-          <p className="font-mono text-lg font-semibold tracking-wide">{done.id}</p>
+          <p className="font-mono text-lg font-semibold tracking-wide">{done.code}</p>
         </div>
         <dl className="glass space-y-3 rounded-3xl p-5 text-sm">
           {[
-            ["Date", longDate(r.dateKey)],
-            ["Time", `${formatHour(r.hour)} – ${formatHour(r.hour + r.hours)} (${r.hours} hr)`],
-            ["Console", CONSOLES.find((c) => c.id === r.consoleId)?.name ?? ""],
-            ["Game", r.game],
-            ["Players", planOf(r.players).label],
-            ["Payment", paid ? `Paid via ${METHOD_LABEL[r.method]}` : venue ? "Pay at venue" : "Awaiting payment"],
+            ["Date", longDate(done.date)],
+            ["Time", `${formatHour(done.startHour)} – ${formatHour(done.startHour + done.hours)} (${done.hours} hr)`],
+            ["Console", done.console],
+            ["Game", done.game],
+            ["Players", catalog.plans.find((p) => p.players === done.players)?.label ?? String(done.players)],
+            ["Payment", paid ? `Paid via ${METHOD_LABEL[done.paymentMethod as PayMethod] ?? "online"}` : venue ? "Pay at venue" : "Awaiting payment"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4"><dt className="text-slate-400">{k}</dt><dd className="text-right font-medium">{v}</dd></div>
           ))}
           <div className="flex justify-between border-t border-white/60 pt-3 text-base"><dt className="font-medium">Total</dt><dd className="font-semibold">{formatRs(done.total)}</dd></div>
         </dl>
-        <p className="rounded-2xl bg-amber-400/15 px-4 py-3 text-xs text-amber-700">Demo mode: this booking was not saved and no payment was taken. Real bookings need the backend API.</p>
         <Link href="/" className="glass-btn block rounded-full py-3.5 text-center text-sm font-medium text-white">Back to home</Link>
       </div>
     );
@@ -184,13 +193,13 @@ export default function GamezoneFlow() {
           <dl className="mt-3 space-y-2 text-sm">
             <div className="flex justify-between"><dt className="text-slate-400">Date</dt><dd className="font-medium">{longDate(activeDate)}</dd></div>
             <div className="flex justify-between"><dt className="text-slate-400">Time</dt><dd className="font-medium">{formatHour(slot.hour)} – {formatHour(slot.hour + hours)}</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-400">Console</dt><dd className="font-medium">{CONSOLES.find((c) => c.id === consoleId)?.name}</dd></div>
+            <div className="flex justify-between"><dt className="text-slate-400">Console</dt><dd className="font-medium">{catalog.consoles.find((c) => c.id === consoleId)?.name}</dd></div>
             <div className="flex justify-between"><dt className="text-slate-400">Game</dt><dd className="font-medium">{selGame}</dd></div>
             <div className="flex justify-between"><dt className="text-slate-400">Players</dt><dd className="font-medium">{plan.label}</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-400">Rate</dt><dd>{formatRs(plan.each)} × {players} {players === 1 ? "player" : "players"} × {hours} hr</dd></div>
+            <div className="flex justify-between"><dt className="text-slate-400">Rate</dt><dd>{formatRs(plan.ratePerPersonHour)} × {players} {players === 1 ? "player" : "players"} × {hours} hr</dd></div>
             <div className="flex justify-between border-t border-white/60 pt-3 text-base"><dt className="font-medium">Total</dt><dd className="font-semibold">{formatRs(total)}</dd></div>
           </dl>
-          <p className="mt-2 text-[11px] text-slate-400">Final price is confirmed by the server.</p>
+          <p className="mt-2 text-[11px] text-slate-400">The final price is set by the server.</p>
         </section>
 
         {session.registered ? (
@@ -202,7 +211,7 @@ export default function GamezoneFlow() {
           <section className="glass space-y-3 rounded-3xl p-5">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-medium">Guest details</h2>
-              <button type="button" onClick={signInDemo} className="text-xs font-medium text-brand">Have an account? Sign in</button>
+              <button type="button" onClick={openSignIn} className="text-xs font-medium text-brand">Have an account? Sign in</button>
             </div>
             <input className={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" aria-label="Full name" autoComplete="name" />
             <div>
@@ -234,12 +243,12 @@ export default function GamezoneFlow() {
       <section aria-label="Players">
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Who&apos;s playing?</h2>
         <div role="radiogroup" aria-label="Number of players" className="grid grid-cols-3 gap-3">
-          {PLANS.map((p) => {
+          {catalog.plans.map((p) => {
             const on = players === p.players;
             return (
               <button key={p.players} type="button" role="radio" aria-checked={on} onClick={() => { setPlayers(p.players); setSelHour(null); }} className={`rounded-2xl px-2 py-3 text-center transition ${on ? "glass-active text-white" : "glass"}`}>
                 <span className="block text-sm font-medium">{p.label}</span>
-                <span className={`block text-lg font-semibold`}>{formatRs(p.each)}</span>
+                <span className="block text-lg font-semibold">{formatRs(p.ratePerPersonHour)}</span>
                 <span className={`text-[11px] ${on ? "text-white/70" : "text-slate-400"}`}>{p.players === 1 ? "per hour" : "each / hour"}</span>
               </button>
             );
@@ -250,19 +259,19 @@ export default function GamezoneFlow() {
       <section aria-label="Hours" className="glass flex items-center justify-between rounded-3xl px-5 py-4">
         <div>
           <p className="text-sm font-medium">How long?</p>
-          <p className="text-xs text-slate-500">Up to {MAX_HOURS} hours in one go</p>
+          <p className="text-xs text-slate-500">Up to {catalog.maxHours} hours in one go</p>
         </div>
         <div className="flex items-center gap-4">
           <button type="button" aria-label="Fewer hours" disabled={hours <= 1} onClick={() => { setHours(hours - 1); setSelHour(null); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/70 text-brand disabled:opacity-40"><Minus size={18} /></button>
           <span className="w-14 text-center text-lg font-semibold" aria-live="polite">{hours} hr</span>
-          <button type="button" aria-label="More hours" disabled={hours >= MAX_HOURS} onClick={() => { setHours(hours + 1); setSelHour(null); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/70 text-brand disabled:opacity-40"><Plus size={18} /></button>
+          <button type="button" aria-label="More hours" disabled={hours >= catalog.maxHours} onClick={() => { setHours(hours + 1); setSelHour(null); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/70 text-brand disabled:opacity-40"><Plus size={18} /></button>
         </div>
       </section>
 
       <section aria-label="Console">
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Console</h2>
         <div role="radiogroup" aria-label="Console" className="grid grid-cols-2 gap-3">
-          {CONSOLES.map((c) => {
+          {catalog.consoles.map((c) => {
             const on = consoleId === c.id;
             return (
               <button key={c.id} type="button" role="radio" aria-checked={on} onClick={() => { setSelConsole(c.id); setSelHour(null); }} className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-medium transition ${on ? "glass-active text-white" : "glass"}`}>
@@ -277,11 +286,11 @@ export default function GamezoneFlow() {
       <section aria-label="Game">
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Choose your game</h2>
         <div role="radiogroup" aria-label="Game" className="grid grid-cols-2 gap-3">
-          {GAMES.map((g) => {
-            const on = selGame === g;
+          {catalog.games.map((g) => {
+            const on = selGame === g.title;
             return (
-              <button key={g} type="button" role="radio" aria-checked={on} onClick={() => setSelGame(g)} className={`rounded-2xl px-3 py-3 text-sm font-medium transition ${on ? "glass-active text-white" : "glass"}`}>
-                {g}
+              <button key={g.id} type="button" role="radio" aria-checked={on} onClick={() => setSelGame(g.title)} className={`rounded-2xl px-3 py-3 text-sm font-medium transition ${on ? "glass-active text-white" : "glass"}`}>
+                {g.title}
               </button>
             );
           })}
@@ -305,7 +314,11 @@ export default function GamezoneFlow() {
 
       <section aria-label="Select start time">
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Start time</h2>
-        {slots.length === 0 ? (
+        {slots === null ? (
+          <div className="grid grid-cols-3 gap-3" aria-label="Loading times">{[0, 1, 2].map((i) => <div key={i} className="h-14 animate-pulse rounded-2xl bg-white/40" />)}</div>
+        ) : slotsError ? (
+          <p role="alert" className="glass rounded-2xl px-4 py-6 text-center text-sm text-rose-600">{slotsError}</p>
+        ) : slots.length === 0 ? (
           <p className="glass rounded-2xl px-4 py-6 text-center text-sm text-slate-500">No {hours}-hour sessions free on this date. Try fewer hours or another day.</p>
         ) : (
           <div className="grid grid-cols-3 gap-3">

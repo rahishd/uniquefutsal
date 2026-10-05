@@ -3,16 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { Check, ChevronLeft, Clock, Copy, Download, Loader2 } from "lucide-react";
-import {
-  DEMO_PAYMENTS,
-  METHOD_LABEL,
-  PAYMENT_POLL_MS,
-  QR_HOLD_MS,
-  demoQrPayload,
-  demoSimulatePayment,
-  fetchPaymentStatus,
-  type OnlineMethod,
-} from "@/lib/payment";
+import { METHOD_LABEL, PAYMENT_POLL_MS, fetchPaymentStatus, isTestQr, testPay, type OnlineMethod } from "@/lib/payment";
 
 const rs = (n: number) => `Rs. ${n.toLocaleString("en-IN")}`;
 
@@ -23,22 +14,26 @@ function mmss(ms: number) {
 
 interface Props {
   method: OnlineMethod;
-  orderId: string; // booking or membership ID the server is waiting to see paid
-  amount: number; // final amount after every promo code
-  remarks: string; // e.g. "Regular game - UF-20261006-31166"
-  heldAt: number; // when the QR was created (epoch ms)
+  orderId: string; // the booking / session ID the server is waiting to see paid
+  amount: number; // final amount after every promo code (decided by the server)
+  remarks: string; // e.g. "Regular game - <booking id>"
+  payload: string; // the QR content the server created
+  expiresAt: string; // when the QR (and the held slot) runs out
+  guestPhone?: string; // a guest has no account: the server checks the order against this number
   onPaid: () => void; // called automatically once the server reports the order as paid
   onBack: () => void;
 }
 
 // Shows the QR for the exact amount, then watches for the payment. The customer never has to
 // confirm anything: the screen moves on by itself when the server reports "paid".
-export default function PaymentQr({ method, orderId, amount, remarks, heldAt, onPaid, onBack }: Props) {
+export default function PaymentQr({ method, orderId, amount, remarks, payload, expiresAt, guestPhone, onPaid, onBack }: Props) {
   const label = METHOD_LABEL[method];
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reported = useRef(false);
   const onPaidRef = useRef(onPaid); // always call the latest callback without restarting the polling
-  const [left, setLeft] = useState(QR_HOLD_MS);
+  const [left, setLeft] = useState(() => Math.max(0, new Date(expiresAt).getTime() - Date.now()));
+  const [serverExpired, setServerExpired] = useState(false);
+  const [testBusy, setTestBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -46,16 +41,16 @@ export default function PaymentQr({ method, orderId, amount, remarks, heldAt, on
   });
 
   useEffect(() => {
-    const tick = () => setLeft(heldAt + QR_HOLD_MS - Date.now());
+    const tick = () => setLeft(new Date(expiresAt).getTime() - Date.now());
     const first = setTimeout(tick, 0);
     const t = setInterval(tick, 1000);
     return () => {
       clearTimeout(first);
       clearInterval(t);
     };
-  }, [heldAt]);
+  }, [expiresAt]);
 
-  const expired = left <= 0;
+  const expired = left <= 0 || serverExpired;
 
   // Ask the server whether the order is paid, every few seconds and whenever the customer
   // comes back to this tab (it may have been paused while they were in their payment app).
@@ -64,10 +59,13 @@ export default function PaymentQr({ method, orderId, amount, remarks, heldAt, on
     let cancelled = false;
     const check = async () => {
       if (reported.current) return;
-      const status = await fetchPaymentStatus(orderId);
-      if (!cancelled && status === "paid" && !reported.current) {
+      const status = await fetchPaymentStatus(orderId, guestPhone);
+      if (cancelled) return;
+      if (status === "paid" && !reported.current) {
         reported.current = true;
         onPaidRef.current();
+      } else if (status === "expired") {
+        setServerExpired(true); // the server released the slot
       }
     };
     const t = setInterval(check, PAYMENT_POLL_MS);
@@ -79,7 +77,7 @@ export default function PaymentQr({ method, orderId, amount, remarks, heldAt, on
       clearInterval(t);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [expired, orderId]);
+  }, [expired, orderId, guestPhone]);
 
   function save() {
     const url = canvasRef.current?.toDataURL("image/png");
@@ -118,7 +116,7 @@ export default function PaymentQr({ method, orderId, amount, remarks, heldAt, on
         <div className="mx-auto mt-4 w-fit rounded-2xl bg-white p-3 shadow-inner ring-1 ring-slate-100" style={expired ? { opacity: 0.25 } : undefined}>
           <QRCodeCanvas
             ref={canvasRef}
-            value={demoQrPayload({ method, amount, remarks })}
+            value={payload}
             size={216}
             level="M"
             marginSize={2}
@@ -173,14 +171,27 @@ export default function PaymentQr({ method, orderId, amount, remarks, heldAt, on
         </ol>
       </section>
 
-      {DEMO_PAYMENTS && (
+      {isTestQr(payload) && (
         <div className="rounded-2xl bg-amber-400/15 px-4 py-3 text-xs text-amber-700">
           <p>
-            Demo mode: this QR is a placeholder and can&apos;t take a real payment. In production your server learns about the payment from {label} and this screen updates by itself.
+            Test mode: the server is using its test payment gateway, so this QR can&apos;t take a real payment. With the real gateway the server learns about your payment from {label} and this screen updates by itself.
           </p>
           {!expired && (
-            <button type="button" onClick={() => demoSimulatePayment(orderId)} className="mt-2 rounded-full bg-amber-500 px-4 py-2 text-xs font-semibold text-white">
-              Demo: simulate payment received
+            <button
+              type="button"
+              disabled={testBusy}
+              onClick={async () => {
+                setTestBusy(true);
+                try {
+                  await testPay(orderId);
+                } catch {
+                  // not available outside test mode
+                }
+                setTestBusy(false);
+              }}
+              className="mt-2 rounded-full bg-amber-500 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
+            >
+              Test: simulate payment received
             </button>
           )}
         </div>

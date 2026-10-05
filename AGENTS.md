@@ -14,7 +14,8 @@ Mobile-first customer PWA (Next.js App Router, TypeScript, Tailwind 4). Spec: th
 
 - Commands: `npm run dev`, `npm run build`, `npm run lint`.
 - Data lives in a separate backend/database. Never point development at production data or commit secrets (`.env*` is git-ignored).
-- Placeholder data is in `lib/sample-data.ts`; replace with real API calls as endpoints become available.
+- The app is CONNECTED to the backend; the demo/sample data libraries are gone. `lib/api.ts` is the fetch wrapper (Bearer token, auto refresh, `ApiError`), base URL from `NEXT_PUBLIC_API_URL` in `.env.local` (default `http://localhost:5000/api`). `lib/auth-token.ts` keeps tokens, `lib/session.ts` is the real login (phone + password at `/login`, no OTP), and `lib/remote-store.ts` is the polling store used by `lib/booking.ts`, `payment.ts`, `points.ts`/`loyalty.ts`, `promos.ts`, `notifications.ts`, `teams.ts`, `gamezone.ts`, `profile.ts`, `tournament.ts`. Older sections below that mention demo data or localStorage describe behaviour that now lives on the server.
+- Local run: start the backend local DB and API (see the backend README), then `npm run dev`. Payments use the backend's TEST gateway (a "simulate payment" button) until the real eSewa/Fonepay keys exist. Membership online sign-up is "coming soon" until the membership model is decided.
 - Keep price, promo, loyalty and payment-status logic on the server, never trust the browser.
 - Put new FRDs in `FRD/`.
 

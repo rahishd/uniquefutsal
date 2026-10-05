@@ -6,9 +6,7 @@ import FooterGate from "@/components/FooterGate";
 import CompanyHeader from "@/components/CompanyHeader";
 import SwRegister from "@/components/SwRegister";
 import InstallPrompt from "@/components/InstallPrompt";
-import ReminderScheduler from "@/components/ReminderScheduler";
 import ArrivalPrompt from "@/components/ArrivalPrompt";
-import ExpiryPrompt from "@/components/ExpiryPrompt";
 import WinPrompt from "@/components/captain/WinPrompt";
 
 const poppins = Poppins({ variable: "--font-poppins", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
@@ -36,9 +34,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <BottomNav />
         <SwRegister />
         <InstallPrompt />
-        <ReminderScheduler />
         <ArrivalPrompt />
-        <ExpiryPrompt />
         <WinPrompt />
       </body>
     </html>

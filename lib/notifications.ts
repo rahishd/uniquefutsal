@@ -1,8 +1,10 @@
-// Customer notifications: in-app centre + 1-hour game reminders.
-//
-// Storage is the browser's localStorage, so this works without a backend. A real
-// deployment also needs the server to create challenge/payment/booking notices and to send
-// Web Push for when the app is closed (the service worker already handles `push` events).
+// The customer's notice centre, from the server (GET /notifications). The server creates every notice (booking,
+// payment, reminder, challenge, points...) so the app only shows them, marks them read, and clears them.
+// While the app is open it checks every 30 seconds and shows a phone alert for new ones (if allowed).
+// Reaching a closed app needs server-sent Web Push, which is not built yet.
+
+import { api } from "@/lib/api";
+import { createRemoteStore } from "@/lib/remote-store";
 
 export type NoticeType = "challenge" | "payment" | "booking" | "reminder" | "membership" | "match" | "promo" | "points" | "tournament" | "gamezone";
 
@@ -16,101 +18,71 @@ export interface Notice {
   href?: string;
 }
 
-const KEY = "uf-notifications-v1";
-const REMINDERS_KEY = "uf-reminders-v1";
-const MAX_KEPT = 50;
-export const REMINDER_LEAD_MS = 60 * 60 * 1000; // 1 hour before kick-off
-
-// DEMO: sample notices so the centre isn't empty on first run. Remove once the
-// backend creates real ones (challenges, payments, bookings).
-const SEED_DEMO = true;
-
-function seed(): Notice[] {
-  if (!SEED_DEMO) return [];
-  const now = Date.now();
-  return [
-    { id: "seed-payment", type: "payment", title: "Payment received", body: "Rs. 1,215 received for booking UF-20261010-00125.", at: now - 3 * 3600_000, read: false, href: "/profile" },
-    { id: "seed-booking", type: "booking", title: "Booking confirmed", body: "Sat, 10 Oct · 7:00 PM – 8:00 PM · Court 1.", at: now - 3 * 3600_000 - 60_000, read: true, href: "/profile" },
-  ];
+interface Notices {
+  items: Notice[];
+  unreadByType: Partial<Record<NoticeType, number>>;
 }
 
-/* ---------- external store (works with useSyncExternalStore) ---------- */
+interface Payload {
+  items: (Omit<Notice, "at" | "href"> & { at: string; href: string | null })[];
+  unreadByType: Notices["unreadByType"];
+}
 
-const EMPTY: Notice[] = [];
-let cache: Notice[] | null = null;
-const listeners = new Set<() => void>();
+const EMPTY: Notices = { items: [], unreadByType: {} };
+let known: Set<string> | null = null; // ids already seen, so only NEW notices raise a phone alert
 
-function load(): Notice[] {
-  if (cache) return cache;
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      cache = JSON.parse(raw) as Notice[];
-    } else {
-      cache = seed();
-      localStorage.setItem(KEY, JSON.stringify(cache));
+export const noticesStore = createRemoteStore<Notices>(
+  async () => {
+    const r = await api<Payload>("/notifications", { query: { limit: 50 } });
+    const items: Notice[] = r.items.map((i) => ({ ...i, at: new Date(i.at).getTime(), href: i.href ?? undefined }));
+    if (known) {
+      for (const n of items) if (!n.read && !known.has(n.id)) void showSystemNotification(n.title, n.body, n.href);
     }
-  } catch {
-    cache = seed(); // storage blocked: keep in memory for this session
-  }
-  return cache;
-}
+    known = new Set(items.map((n) => n.id));
+    return { items, unreadByType: r.unreadByType };
+  },
+  { pollMs: 30000, signedOut: EMPTY },
+);
 
-function commit(next: Notice[]) {
-  cache = next.slice(0, MAX_KEPT);
+export const unreadCount = (n: Notices) => n.items.filter((x) => !x.read).length;
+
+export async function markRead(id: string) {
+  noticesStore.patch((d) => ({ ...d, items: d.items.map((n) => (n.id === id ? { ...n, read: true } : n)) }));
   try {
-    localStorage.setItem(KEY, JSON.stringify(cache));
-  } catch {
-    // storage blocked or full: state still lives in memory
+    await api(`/notifications/${encodeURIComponent(id)}/read`, { method: "POST" });
+  } finally {
+    void noticesStore.refresh();
   }
-  listeners.forEach((l) => l());
 }
 
-export function subscribe(listener: () => void) {
-  listeners.add(listener);
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === KEY) {
-      cache = null; // another tab changed it: reload
-      listener();
-    }
-  };
-  window.addEventListener("storage", onStorage);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener("storage", onStorage);
-  };
+// Used by the Popular tiles on Home: opening a tile clears its unread messages.
+export async function markReadByTypes(types: NoticeType[]) {
+  const d = noticesStore.get().data;
+  if (!d?.items.some((n) => !n.read && types.includes(n.type))) return;
+  noticesStore.patch((x) => ({ ...x, items: x.items.map((n) => (!n.read && types.includes(n.type) ? { ...n, read: true } : n)), unreadByType: {} }));
+  try {
+    await api("/notifications/read", { method: "POST", body: { types } });
+  } finally {
+    void noticesStore.refresh();
+  }
 }
 
-export const getSnapshot = () => load();
-export const getServerSnapshot = () => EMPTY;
-
-/* ---------- actions ---------- */
-
-export function addNotice(n: Omit<Notice, "id" | "at" | "read"> & { id?: string }) {
-  const list = load();
-  const id = n.id ?? `${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  if (list.some((x) => x.id === id)) return; // idempotent: the same event is never added twice
-  commit([{ ...n, id, at: Date.now(), read: false }, ...list]);
-  void showSystemNotification(n.title, n.body, n.href);
+export async function markAllRead() {
+  noticesStore.patch((d) => ({ items: d.items.map((n) => ({ ...n, read: true })), unreadByType: {} }));
+  try {
+    await api("/notifications/read", { method: "POST", body: {} });
+  } finally {
+    void noticesStore.refresh();
+  }
 }
 
-export function markRead(id: string) {
-  commit(load().map((n) => (n.id === id ? { ...n, read: true } : n)));
-}
-
-// Used by the Popular tiles on the home screen: opening a tile clears its unread messages.
-export function markReadByTypes(types: NoticeType[]) {
-  const list = load();
-  if (!list.some((n) => !n.read && types.includes(n.type))) return;
-  commit(list.map((n) => (!n.read && types.includes(n.type) ? { ...n, read: true } : n)));
-}
-
-export function markAllRead() {
-  commit(load().map((n) => ({ ...n, read: true })));
-}
-
-export function clearAll() {
-  commit([]);
+export async function clearAll() {
+  noticesStore.patch(() => EMPTY);
+  try {
+    await api("/notifications", { method: "DELETE" });
+  } finally {
+    void noticesStore.refresh();
+  }
 }
 
 /* ---------- system (phone/desktop) notifications ---------- */
@@ -134,53 +106,4 @@ async function showSystemNotification(title: string, body: string, href?: string
   } catch {
     // some browsers only allow notifications through the service worker: ignore
   }
-}
-
-/* ---------- 1-hour game reminders ---------- */
-
-export interface ReminderEntry {
-  id: string; // booking id
-  startsAt: number; // epoch ms
-  done: boolean;
-  label?: string; // e.g. "Court 1", shown on the check-in screen
-}
-
-export function loadReminders(): ReminderEntry[] {
-  try {
-    return JSON.parse(localStorage.getItem(REMINDERS_KEY) ?? "[]") as ReminderEntry[];
-  } catch {
-    return [];
-  }
-}
-
-function saveReminders(list: ReminderEntry[]) {
-  try {
-    localStorage.setItem(REMINDERS_KEY, JSON.stringify(list));
-  } catch {
-    // ignore
-  }
-}
-
-// Called when a booking is created. startsAt is the local kick-off time.
-export function scheduleReminder(bookingId: string, startsAt: number, label?: string) {
-  const list = loadReminders().filter((r) => r.id !== bookingId);
-  list.push({ id: bookingId, startsAt, done: false, label });
-  saveReminders(list.filter((r) => r.startsAt > Date.now() - 24 * 3600_000));
-  window.dispatchEvent(new Event("uf-reminders-changed"));
-}
-
-export function markReminderDone(bookingId: string) {
-  saveReminders(loadReminders().map((r) => (r.id === bookingId ? { ...r, done: true } : r)));
-}
-
-export function fireReminder(r: ReminderEntry) {
-  const time = new Date(r.startsAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  addNotice({
-    id: `reminder-${r.id}`,
-    type: "reminder",
-    title: "Your game starts in 1 hour",
-    body: `Kick-off at ${time}. Booking ${r.id}. Time to get ready!`,
-    href: "/profile",
-  });
-  markReminderDone(r.id);
 }

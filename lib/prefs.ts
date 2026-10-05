@@ -1,58 +1,40 @@
-// Customer preferences from Profile > Settings, saved in this browser.
-//
-// DEMO IMPLEMENTATION. In production these belong to the customer's account on the server so they
-// follow the customer to every device.
+// Customer preferences from Profile > Settings, saved on the customer's account (GET/PUT /me/preferences),
+// so they follow the customer to every device.
 
-import { useSyncExternalStore } from "react";
+import { api } from "@/lib/api";
+import { createRemoteStore } from "@/lib/remote-store";
 
 export interface Prefs {
   reminders: boolean; // booking reminder messages (SMS)
   promos: boolean; // offers and tournament news
   popup: boolean; // full-screen "I'm coming" slider 1 hour before a game
+  language: string; // en | ne
 }
 
-export const DEFAULT_PREFS: Prefs = { reminders: true, promos: true, popup: true };
+export const DEFAULT_PREFS: Prefs = { reminders: true, promos: true, popup: true, language: "en" };
 
-const KEY = "uf-prefs-v1";
-let cache: Prefs | null = null;
-const listeners = new Set<() => void>();
-
-function load(): Prefs {
-  if (cache) return cache;
-  try {
-    const raw = localStorage.getItem(KEY);
-    cache = raw ? { ...DEFAULT_PREFS, ...(JSON.parse(raw) as Partial<Prefs>) } : DEFAULT_PREFS;
-  } catch {
-    cache = DEFAULT_PREFS;
-  }
-  return cache;
+interface ApiPrefs {
+  smsReminders: boolean;
+  promoNotifications: boolean;
+  popupReminder: boolean;
+  language: string;
 }
 
-export function setPref<K extends keyof Prefs>(key: K, value: Prefs[K]) {
-  cache = { ...load(), [key]: value };
-  try {
-    localStorage.setItem(KEY, JSON.stringify(cache));
-  } catch {
-    // storage blocked: the choice lasts for this visit only
-  }
-  listeners.forEach((l) => l());
-}
+const fromApi = (p: ApiPrefs): Prefs => ({ reminders: p.smsReminders, promos: p.promoNotifications, popup: p.popupReminder, language: p.language });
+const toApi = (k: keyof Prefs, v: boolean | string) =>
+  ({ reminders: { smsReminders: v }, promos: { promoNotifications: v }, popup: { popupReminder: v }, language: { language: v } })[k];
 
-function subscribe(l: () => void) {
-  listeners.add(l);
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === KEY) {
-      cache = null;
-      l();
-    }
-  };
-  window.addEventListener("storage", onStorage);
-  return () => {
-    listeners.delete(l);
-    window.removeEventListener("storage", onStorage);
-  };
-}
+export const prefsStore = createRemoteStore<Prefs>(async () => fromApi(await api<ApiPrefs>("/me/preferences")), { signedOut: DEFAULT_PREFS });
 
 export function usePrefs(): Prefs {
-  return useSyncExternalStore(subscribe, load, () => DEFAULT_PREFS);
+  return prefsStore.use().data ?? DEFAULT_PREFS;
+}
+
+export async function setPref<K extends keyof Prefs>(key: K, value: Prefs[K]) {
+  prefsStore.patch((p) => ({ ...p, [key]: value }));
+  try {
+    await api("/me/preferences", { method: "PUT", body: toApi(key, value) });
+  } catch {
+    void prefsStore.refresh(); // the save failed: show what the server really has
+  }
 }

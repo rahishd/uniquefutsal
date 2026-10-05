@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ChevronRight, Swords, Users } from "lucide-react";
 import Stars from "@/components/captain/Stars";
-import { MAX_TEAM_SIZE, allTeams, pendingActions, rankTeams, setMode, useTeams } from "@/lib/teams";
+import { MAX_TEAM_SIZE, pendingActions, setMode, useTeams } from "@/lib/teams";
 
 // Switch between the Player profile and the Captain profile (any registered player can be a captain).
 export function ModeToggle() {
@@ -17,7 +17,7 @@ export function ModeToggle() {
           type="button"
           role="radio"
           aria-checked={(m === "captain") === captain}
-          onClick={() => setMode(m)}
+          onClick={() => void setMode(m)}
           className={`flex items-center justify-center gap-2 rounded-full py-2.5 ${(m === "captain") === captain ? "glass-active text-white" : "text-slate-500"}`}
         >
           {m === "captain" && <span aria-hidden className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[9px] font-bold text-[#0c0b5d]">C</span>}
@@ -45,9 +45,8 @@ export function CaptainSummary() {
   }
 
   const team = state.team;
-  const ranked = rankTeams(allTeams(state)).find((r) => r.team.id === team.id);
   const todo = pendingActions(state);
-  const s = team.stats;
+  const s = team.record;
 
   return (
     <section aria-label="Captain profile" className="space-y-4">
@@ -55,11 +54,11 @@ export function CaptainSummary() {
         <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">Captain</p>
         <h2 className="mt-1 text-xl font-semibold">{team.name}</h2>
         <div className="mt-3 flex items-center justify-between">
-          <span className="rounded-2xl bg-white px-3 py-1.5"><Stars rating={ranked?.rating ?? null} size={16} /></span>
-          {ranked?.rank && <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Rank #{ranked.rank}</span>}
+          <span className="rounded-2xl bg-white px-3 py-1.5"><Stars rating={team.rating} size={16} /></span>
+          {team.rank && <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Rank #{team.rank}</span>}
         </div>
         <dl className="mt-4 grid grid-cols-4 gap-2 text-center">
-          {[["Played", s.played], ["Won", s.wins], ["Lost", s.losses], ["Players", `${team.members.length}/${MAX_TEAM_SIZE}`]].map(([k, v]) => (
+          {[["Played", s.played], ["Won", s.wins], ["Lost", s.losses], ["Players", `${team.players}/${MAX_TEAM_SIZE}`]].map(([k, v]) => (
             <div key={k} className="rounded-2xl bg-white/10 py-2.5"><dd className="text-lg font-semibold">{v}</dd><dt className="text-[11px] text-white/60">{k}</dt></div>
           ))}
         </dl>

@@ -2,30 +2,39 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Gift, Star, Trophy, ShoppingBag, Gamepad2, UserRound, ChevronDown, Crown, Check, Clock, TriangleAlert } from "lucide-react";
-import { useSession, signInDemo } from "@/lib/session";
-import {
-  GAMES_PER_FREE, GAME_POINTS_MONTHS, MEMBERSHIP_POINTS, POINTS_CAPTAIN_WIN, RS_PER_POINT, SHIFTS,
-  claimFreeGame, fmtPts, shiftInfo, usePoints, type PointsEntry, type PointsKind,
-} from "@/lib/points";
-import { formatRs, type Period } from "@/lib/booking";
+import { Gift, Star, Trophy, ShoppingBag, Gamepad2, UserRound, ChevronDown, Crown, Check, Clock, TriangleAlert, Loader2 } from "lucide-react";
+import { useSession, openSignIn } from "@/lib/session";
+import { errorText } from "@/lib/api";
+import { GAMES_PER_FREE, GAME_POINTS_MONTHS, MEMBERSHIP_POINTS, POINTS_CAPTAIN_WIN, RS_PER_POINT, SHIFT_HOURS, fmtPts } from "@/lib/points";
+import { claimFreeGame, loyaltyStore, progressPct, type LoyaltyRow, type Period } from "@/lib/loyalty";
+import { formatRs } from "@/lib/booking";
 import { fmtDay } from "@/lib/promos";
 
-const KIND: Record<PointsKind, { icon: typeof Star; tone: string }> = {
+const KIND: Record<LoyaltyRow["kind"], { icon: typeof Star; tone: string }> = {
   game: { icon: Gamepad2, tone: "bg-emerald-400/20 text-emerald-600" },
-  "captain-win": { icon: Trophy, tone: "bg-amber-400/25 text-amber-600" },
+  captain_win: { icon: Trophy, tone: "bg-amber-400/25 text-amber-600" },
   goods: { icon: ShoppingBag, tone: "bg-sky-400/20 text-sky-600" },
   membership: { icon: Crown, tone: "bg-violet-400/20 text-violet-600" },
-  "free-game": { icon: Gift, tone: "bg-orange-400/20 text-orange-600" },
+  free_game: { icon: Gift, tone: "bg-orange-400/20 text-orange-600" },
 };
 
 const SHOWN = 4;
 
+function Validity({ row }: { row: LoyaltyRow }) {
+  if (row.status === "used") return <p className="text-[11px] text-slate-400">Used</p>;
+  if (row.status === "expired") return <p className="text-[11px] font-medium text-rose-500">Expired {row.expiresOn ? fmtDay(row.expiresOn) : ""}</p>;
+  if (row.status === "never") return <p className="text-[11px] text-emerald-600">Never expires</p>;
+  if (row.status === "valid" && row.expiresOn) return <p className="text-[11px] text-slate-400">Valid until {fmtDay(row.expiresOn)}</p>;
+  return null;
+}
+
 export default function PointsPage() {
   const session = useSession();
+  const store = loyaltyStore.use();
   const [all, setAll] = useState(false);
-  const { ledger, vouchers, summary: sum } = usePoints();
   const [confirming, setConfirming] = useState<Period | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!session) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
   if (!session.registered) {
@@ -34,12 +43,35 @@ export default function PointsPage() {
         <span className="glass flex h-20 w-20 items-center justify-center rounded-3xl text-brand"><UserRound size={34} /></span>
         <h1 className="mt-6 text-2xl font-semibold">Loyalty points</h1>
         <p className="mt-2 max-w-xs text-sm text-slate-500">Sign in to collect points on every game and turn {GAMES_PER_FREE} games into a free one.</p>
-        <button type="button" onClick={signInDemo} className="glass-btn mt-6 rounded-full px-8 py-3.5 text-sm font-semibold text-white">Sign in (demo)</button>
+        <button type="button" onClick={openSignIn} className="glass-btn mt-6 rounded-full px-8 py-3.5 text-sm font-semibold text-white">Sign in</button>
       </div>
     );
   }
 
-  const rows = all ? ledger : ledger.slice(0, SHOWN);
+  const loy = store.data ?? null;
+  if (!loy) {
+    return store.status === "error" ? (
+      <p role="alert" className="glass rounded-3xl px-4 py-10 text-center text-sm text-rose-600">{store.error}</p>
+    ) : (
+      <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />
+    );
+  }
+
+  const rows = all ? loy.rows : loy.rows.slice(0, SHOWN);
+  const pct = progressPct(loy);
+
+  async function claim(period: Period) {
+    setBusy(true);
+    setError(null);
+    try {
+      await claimFreeGame(period);
+      setConfirming(null);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-5 pb-4">
@@ -49,29 +81,29 @@ export default function PointsPage() {
       <section className="rounded-3xl bg-gradient-to-br from-[#0c0b5d] to-[#2a2aa8] p-5 text-white shadow-lg" aria-label="Your points balance">
         <p className="text-xs uppercase tracking-wide text-white/60">Remaining points</p>
         <div className="mt-1 flex items-end justify-between">
-          <p className="flex items-center gap-2 text-5xl font-semibold"><Star className="fill-amber-400 text-amber-400" size={34} /> {fmtPts(sum.remaining)}</p>
-          {sum.toNext === 0 && <p className="rounded-full bg-orange-400/25 px-3 py-1 text-xs font-medium text-orange-100">Free game unlocked</p>}
+          <p className="flex items-center gap-2 text-5xl font-semibold"><Star className="fill-amber-400 text-amber-400" size={34} /> {fmtPts(loy.remaining)}</p>
+          {loy.toNext === 0 && <p className="rounded-full bg-orange-400/25 px-3 py-1 text-xs font-medium text-orange-100">Free game unlocked</p>}
         </div>
-        <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-valuenow={sum.progressPct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to a free game">
-          <div className="h-full rounded-full bg-gradient-to-r from-amber-300 to-orange-400" style={{ width: `${sum.progressPct}%` }} />
+        <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to a free game">
+          <div className="h-full rounded-full bg-gradient-to-r from-amber-300 to-orange-400" style={{ width: `${pct}%` }} />
         </div>
         <p className="mt-2 text-xs text-white/70">
-          {sum.toNext === 0 ? "You have enough points to claim a free game below." : `${fmtPts(sum.toNext)} more points to unlock a free game`}
+          {loy.toNext === 0 ? "You have enough points to claim a free game below." : `${fmtPts(loy.toNext)} more points to unlock a free game`}
         </p>
-        {sum.expiringSoon && (
+        {loy.expiringSoon && (
           <p role="status" className="mt-4 flex items-start gap-2 rounded-2xl bg-amber-400/20 px-3 py-2.5 text-xs text-amber-100">
             <TriangleAlert size={16} className="mt-0.5 shrink-0" />
-            {fmtPts(sum.expiringSoon.points)} points expire on {fmtDay(sum.expiringSoon.key)}. Claim a free game before then.
+            {fmtPts(loy.expiringSoon.points)} points expire on {fmtDay(loy.expiringSoon.date)}. Claim a free game before then.
           </p>
         )}
       </section>
 
       {/* Claim a free game */}
       <section className="glass rounded-3xl p-5" aria-label="Claim a free game">
-        {vouchers.length > 0 && (
+        {loy.vouchers.length > 0 && (
           <div className="mb-4 rounded-2xl bg-emerald-400/15 p-4">
             <p className="flex items-center gap-2 text-sm font-medium text-emerald-700">
-              <Check size={16} /> Ready: {vouchers.map((v) => `${v.period} game`).join(", ")}
+              <Check size={16} /> Ready: {loy.vouchers.map((v) => `${v.period} game`).join(", ")}
             </p>
             <p className="mt-1 text-xs text-slate-500">Choose a slot in that shift and tap &ldquo;Use a free game voucher&rdquo; when you book.</p>
             <Link href="/book" className="glass-btn mt-3 inline-flex rounded-full px-5 py-2.5 text-sm font-medium text-white">Book my free game</Link>
@@ -79,30 +111,26 @@ export default function PointsPage() {
         )}
         <h2 className="text-base font-semibold">Claim a free game</h2>
         <p className="mt-1 text-xs text-slate-500">Pick any shift you have enough points for. It books one regular game and can&apos;t be used to host a challenge.</p>
+        {error && <p role="alert" className="mt-3 rounded-2xl bg-rose-500/10 px-3 py-2 text-xs text-rose-600">{error}</p>}
         <ul className="mt-4 space-y-2">
-          {SHIFTS.map((s) => {
-            const info = shiftInfo(s.period);
-            const enough = sum.remaining >= info.cost;
+          {loy.shifts.map((s) => {
             const sure = confirming === s.period;
             return (
               <li key={s.period} className="flex items-center gap-3 rounded-2xl bg-white/60 p-3">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{info.label} <span className="text-xs font-normal text-slate-400">{info.hours}</span></p>
-                  <p className="text-xs text-slate-500">{formatRs(info.price)} game · costs <b>{fmtPts(info.cost)}</b> points</p>
+                  <p className="text-sm font-medium">{s.period} <span className="text-xs font-normal text-slate-400">{SHIFT_HOURS[s.period]}</span></p>
+                  <p className="text-xs text-slate-500">{formatRs(s.price)} game · costs <b>{fmtPts(s.cost)}</b> points</p>
                 </div>
                 {sure ? (
                   <div className="flex gap-1.5">
-                    <button type="button" onClick={() => { claimFreeGame(s.period); setConfirming(null); }} className="glass-btn rounded-full px-4 py-2 text-xs font-semibold text-white">Use {fmtPts(info.cost)}</button>
+                    <button type="button" disabled={busy} onClick={() => claim(s.period)} className="glass-btn flex items-center gap-1 rounded-full px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">
+                      {busy && <Loader2 size={12} className="animate-spin" />} Use {fmtPts(s.cost)}
+                    </button>
                     <button type="button" onClick={() => setConfirming(null)} aria-label="Cancel" className="rounded-full bg-white/80 px-3 py-2 text-xs text-slate-500">No</button>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    disabled={!enough}
-                    onClick={() => setConfirming(s.period)}
-                    className="glass-btn rounded-full px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
-                  >
-                    {enough ? "Claim" : `Need ${fmtPts(info.cost - sum.remaining)} more`}
+                  <button type="button" disabled={!s.canClaim} onClick={() => { setError(null); setConfirming(s.period); }} className="glass-btn rounded-full px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">
+                    {s.canClaim ? "Claim" : `Need ${fmtPts(s.cost - loy.remaining)} more`}
                   </button>
                 )}
               </li>
@@ -115,13 +143,13 @@ export default function PointsPage() {
       <section className="grid grid-cols-2 gap-3" aria-label="Claimed and remaining">
         <div className="glass rounded-3xl p-4">
           <p className="text-xs text-slate-500">Claimed</p>
-          <p className="mt-1 text-2xl font-semibold">{fmtPts(sum.claimed)}</p>
-          <p className="text-xs text-slate-400">{sum.freeGamesClaimed} free {sum.freeGamesClaimed === 1 ? "game" : "games"} used</p>
+          <p className="mt-1 text-2xl font-semibold">{fmtPts(loy.claimed)}</p>
+          <p className="text-xs text-slate-400">points used for free games</p>
         </div>
         <div className="glass rounded-3xl p-4">
           <p className="text-xs text-slate-500">Remaining</p>
-          <p className="mt-1 text-2xl font-semibold text-accent">{fmtPts(sum.remaining)}</p>
-          <p className="text-xs text-slate-400">of {fmtPts(sum.earned)} earned{sum.expired > 0 ? ` · ${fmtPts(sum.expired)} expired` : ""}</p>
+          <p className="mt-1 text-2xl font-semibold text-accent">{fmtPts(loy.remaining)}</p>
+          <p className="text-xs text-slate-400">of {fmtPts(loy.earned)} earned{loy.expired > 0 ? ` · ${fmtPts(loy.expired)} expired` : ""}</p>
         </div>
       </section>
 
@@ -129,8 +157,8 @@ export default function PointsPage() {
       <section className="glass rounded-3xl p-5">
         <h2 className="text-base font-semibold">How it works</h2>
         <ul className="mt-3 space-y-3 text-sm">
-          <li className="flex gap-3"><Gamepad2 size={20} className="mt-0.5 shrink-0 text-emerald-600" /><span>Every game earns <b>price ÷ {RS_PER_POINT}</b> points. {SHIFTS.map((s) => `${s.label} ${formatRs(shiftInfo(s.period).price)} = ${fmtPts(shiftInfo(s.period).perGame)}`).join(" · ")}.</span></li>
-          <li className="flex gap-3"><Gift size={20} className="mt-0.5 shrink-0 text-orange-500" /><span><b>{GAMES_PER_FREE} games = 1 free game</b> in any shift you have the points for: {SHIFTS.map((s) => `${s.label} ${fmtPts(shiftInfo(s.period).cost)}`).join(" · ")}.</span></li>
+          <li className="flex gap-3"><Gamepad2 size={20} className="mt-0.5 shrink-0 text-emerald-600" /><span>Every game earns <b>price ÷ {RS_PER_POINT}</b> points. A Rs. 1,250 game earns 12.5.</span></li>
+          <li className="flex gap-3"><Gift size={20} className="mt-0.5 shrink-0 text-orange-500" /><span><b>{GAMES_PER_FREE} games = 1 free game</b> in any shift you have the points for: {loy.shifts.map((s) => `${s.period} ${fmtPts(s.cost)}`).join(" · ")}.</span></li>
           <li className="flex gap-3"><ShoppingBag size={20} className="mt-0.5 shrink-0 text-sky-600" /><span>Extra goods: every <b>Rs. {RS_PER_POINT}</b> spent = <b>1 point</b>. Rs. 10,000 = 100 points.</span></li>
           <li className="flex gap-3"><Crown size={20} className="mt-0.5 shrink-0 text-violet-600" /><span>Membership purchase or renewal: <b>3 months = {MEMBERSHIP_POINTS.quarterly} points</b>, <b>6 months = {MEMBERSHIP_POINTS.half} points</b>.</span></li>
           <li className="flex gap-3"><Trophy size={20} className="mt-0.5 shrink-0 text-amber-600" /><span>Challenge games: only the <b>winning captain</b> earns <b>{POINTS_CAPTAIN_WIN} points</b>.</span></li>
@@ -142,9 +170,9 @@ export default function PointsPage() {
         <h2 className="flex items-center gap-2 text-base font-semibold"><Clock size={18} className="text-brand" /> When points expire</h2>
         <ul className="mt-3 divide-y divide-white/70 text-sm">
           {[
-            { label: "Game points", rule: `${GAME_POINTS_MONTHS} months from the game`, b: sum.byType.games },
-            { label: "Extra goods", rule: "1 year from purchase", b: sum.byType.goods },
-            { label: "Membership", rule: "Never expire", b: sum.byType.membership },
+            { label: "Game points", rule: `${GAME_POINTS_MONTHS} months from the game`, b: loy.byType.games },
+            { label: "Extra goods", rule: "1 year from purchase", b: loy.byType.goods },
+            { label: "Membership", rule: "Never expire", b: loy.byType.membership },
           ].map((r) => (
             <li key={r.label} className="flex items-center justify-between gap-3 py-2.5">
               <div>
@@ -166,26 +194,30 @@ export default function PointsPage() {
       {/* History */}
       <section className="glass rounded-3xl p-5">
         <h2 className="text-base font-semibold">Points history</h2>
-        <ul className="mt-3 space-y-3">
-          {rows.map((e) => {
-            const k = KIND[e.kind];
-            const Icon = k.icon;
-            return (
-              <li key={e.id} className="flex items-center gap-3">
-                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${k.tone}`}><Icon size={18} /></span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{e.title}</p>
-                  <p className="truncate text-xs text-slate-400">{e.detail} · {e.date}</p>
-                  {e.points > 0 && <Validity e={e} lot={sum.lotById[e.id]} />}
-                </div>
-                <p className={`text-sm font-semibold ${e.points > 0 ? "text-emerald-600" : "text-orange-600"}`}>{e.points > 0 ? "+" : "−"}{fmtPts(Math.abs(e.points))}</p>
-              </li>
-            );
-          })}
-        </ul>
-        {ledger.length > SHOWN && (
+        {loy.rows.length === 0 ? (
+          <p className="py-6 text-center text-sm text-slate-400">No points yet. Play a game to start earning.</p>
+        ) : (
+          <ul className="mt-3 space-y-3">
+            {rows.map((e) => {
+              const k = KIND[e.kind] ?? KIND.game;
+              const Icon = k.icon;
+              return (
+                <li key={e.id} className="flex items-center gap-3">
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${k.tone}`}><Icon size={18} /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{e.detail}</p>
+                    <p className="truncate text-xs text-slate-400">{fmtDay(e.earnedOn)}</p>
+                    {e.points > 0 && <Validity row={e} />}
+                  </div>
+                  <p className={`text-sm font-semibold ${e.points > 0 ? "text-emerald-600" : "text-orange-600"}`}>{e.points > 0 ? "+" : "−"}{fmtPts(Math.abs(e.points))}</p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {loy.rows.length > SHOWN && (
           <button type="button" onClick={() => setAll((v) => !v)} aria-expanded={all} className="mt-4 flex w-full items-center justify-center gap-1 rounded-2xl bg-white/60 py-2.5 text-sm font-medium text-brand">
-            {all ? "Show less" : `Show all (${ledger.length})`} <ChevronDown size={16} className={all ? "rotate-180" : ""} />
+            {all ? "Show less" : `Show all (${loy.rows.length})`} <ChevronDown size={16} className={all ? "rotate-180" : ""} />
           </button>
         )}
       </section>
@@ -206,11 +238,4 @@ export default function PointsPage() {
       </p>
     </div>
   );
-}
-
-function Validity({ e, lot }: { e: PointsEntry; lot?: { left: number; expired: boolean; expiresKey: string | null } }) {
-  if (!lot || lot.left <= 0) return <p className="text-[11px] text-slate-400">Used</p>;
-  if (lot.expired) return <p className="text-[11px] font-medium text-rose-500">Expired {fmtDay(lot.expiresKey as string)}</p>;
-  if (e.expiresKey === null) return <p className="text-[11px] text-emerald-600">Never expires</p>;
-  return <p className="text-[11px] text-slate-400">Valid until {fmtDay(lot.expiresKey as string)}</p>;
 }

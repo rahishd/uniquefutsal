@@ -1,37 +1,24 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ArrowRight, Zap } from "lucide-react";
-import { formatHour, formatRs, parseKey } from "@/lib/booking";
-import { detectUsualSlot, findRebookTarget } from "@/lib/rebook";
-import { sampleBookingHistory } from "@/lib/sample-profile";
+import { formatHour, formatRs, parseKey, rebookStore } from "@/lib/booking";
 import { useSession } from "@/lib/session";
 
-const noop = () => () => {};
-const minuteKey = () => String(Math.floor(Date.now() / 60000));
-
+// "Book again": the server works out the customer's usual weekday + hour from their last games and the next
+// date it is open (GET /bookings/me/rebook). It returns nothing for a new customer or when the slot is taken.
 export default function QuickRebook() {
-  const tick = useSyncExternalStore(noop, minuteKey, () => "");
   const session = useSession();
+  const view = rebookStore.use().data ?? null;
 
-  const view = useMemo(() => {
-    if (!tick) return null;
-    const usual = detectUsualSlot(sampleBookingHistory); // TODO: real booking history from the API
-    if (!usual) return null; // new customer: no habit yet, so no card
-    const now = new Date();
-    return { usual, target: findRebookTarget(usual, now) };
-  }, [tick]);
-
-  // Only offer "Book again" when the usual slot is actually open.
-  // Guests have no booking history, so there is no usual slot to offer.
-  if (!session?.registered || !view || !view.target.available) return null;
+  // Only offer "Book again" when the usual slot is actually open. Guests have no booking history.
+  if (!session?.registered || !view || !view.target.available || !view.target.date) return null;
   const { usual, target } = view;
 
-  const day = parseKey(target.dateKey);
+  const day = parseKey(target.date!);
   const weekday = day.toLocaleDateString("en-US", { weekday: "long" });
   const nextDate = day.toLocaleDateString("en-US", { day: "numeric", month: "short" });
-  const href = `/book?date=${target.dateKey}&hour=${usual.hour}`;
+  const href = `/book?date=${target.date}&hour=${usual.hour}`;
 
   return (
     <section aria-label="Quick rebook" className="glass mt-6 rounded-3xl p-5">
@@ -46,7 +33,7 @@ export default function QuickRebook() {
             {formatHour(usual.hour)} – {formatHour(usual.hour + 1)}
           </p>
         </div>
-        <p className="text-xl font-semibold">{formatRs(target.price)}</p>
+        <p className="text-xl font-semibold">{formatRs(target.price ?? 0)}</p>
       </div>
 
       <p className="mt-2 text-xs text-slate-400">

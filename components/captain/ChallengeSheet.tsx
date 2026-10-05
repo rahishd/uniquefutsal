@@ -2,17 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
-import { MAX_ADVANCE_DAYS, OPEN_HOUR, CLOSE_HOUR, dateKey, formatHour, formatRs, parseKey, priceFor } from "@/lib/booking";
-import { LOSER_SHARES, sendChallenge, shareLabel, splitPreview, type ChallengeType, type LoserShare, type Team } from "@/lib/teams";
+import { MAX_ADVANCE_DAYS, dateKey, fetchSlots, formatHour, formatRs, parseKey, type Slot } from "@/lib/booking";
+import { errorText } from "@/lib/api";
+import { LOSER_SHARES, sendChallenge, shareLabel, splitPreview, type ChallengeType, type LoserShare } from "@/lib/teams";
 
 const field = "w-full rounded-2xl bg-white/70 px-4 py-3 text-sm outline-none ring-1 ring-white/80 focus:ring-brand";
 
 // Bottom sheet where a captain challenges another team.
-export default function ChallengeSheet({ target, onClose }: { target: Team; onClose: () => void }) {
+export default function ChallengeSheet({ target, onClose }: { target: { id: string; name: string }; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [type, setType] = useState<ChallengeType>("match");
   const [date, setDate] = useState<string | null>(null);
-  const [hour, setHour] = useState(19);
+  const [hour, setHour] = useState<number | null>(null);
+  const [slotState, setSlotState] = useState<{ date: string; slots: Slot[]; error: string | null } | null>(null);
+  const [busy, setBusy] = useState(false);
   const [loserPct, setLoserPct] = useState<LoserShare | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -38,13 +41,35 @@ export default function ChallengeSheet({ target, onClose }: { target: Team; onCl
   });
   const chosenDate = date ?? days[1];
 
-  function submit(e: React.FormEvent) {
+  // Only free court times are offered (from the server), with their price.
+  useEffect(() => {
+    let off = false;
+    fetchSlots(chosenDate)
+      .then((slots) => !off && setSlotState({ date: chosenDate, slots, error: null }))
+      .catch((e) => !off && setSlotState({ date: chosenDate, slots: [], error: errorText(e) }));
+    return () => {
+      off = true;
+    };
+  }, [chosenDate]);
+  const slots = slotState?.date === chosenDate ? slotState.slots : null;
+  const slotsError = slotState?.date === chosenDate ? slotState.error : null;
+  const picked = slots?.find((x) => x.hour === hour);
+  const price = picked?.price ?? 0;
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!picked) {
+      setError("Choose a time for the game.");
+      return;
+    }
     if (!loserPct) {
       setError("Choose who pays for the court: the losing team pays 70%, 60% or all of it.");
       return;
     }
-    const res = sendChallenge({ teamId: target.id, type, date: chosenDate, hour, loserPct, message });
+    setBusy(true);
+    setError(null);
+    const res = await sendChallenge({ teamId: target.id, type, date: chosenDate, hour: picked.hour, loserPct, message: message.trim() || undefined });
+    setBusy(false);
     if (res.ok) setSent(true);
     else setError(res.error);
   }
@@ -85,7 +110,7 @@ export default function ChallengeSheet({ target, onClose }: { target: Team; onCl
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="ch-date" className="text-xs text-slate-500">Date</label>
-                <select id="ch-date" value={chosenDate} onChange={(e) => setDate(e.target.value)} className={field}>
+                <select id="ch-date" value={chosenDate} onChange={(e) => { setDate(e.target.value); setHour(null); }} className={field}>
                   {days.map((k, i) => (
                     <option key={k} value={k}>
                       {i === 0 ? "Today" : parseKey(k).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })}
@@ -95,9 +120,10 @@ export default function ChallengeSheet({ target, onClose }: { target: Team; onCl
               </div>
               <div>
                 <label htmlFor="ch-hour" className="text-xs text-slate-500">Time</label>
-                <select id="ch-hour" value={hour} onChange={(e) => setHour(Number(e.target.value))} className={field}>
-                  {Array.from({ length: CLOSE_HOUR - OPEN_HOUR }, (_, i) => OPEN_HOUR + i).map((h) => (
-                    <option key={h} value={h}>{formatHour(h)}</option>
+                <select id="ch-hour" value={hour ?? ""} onChange={(e) => setHour(e.target.value === "" ? null : Number(e.target.value))} className={field} disabled={!slots || slots.length === 0}>
+                  <option value="">{slots === null ? "Loading…" : slots.length === 0 ? "No free times" : "Choose a time"}</option>
+                  {(slots ?? []).map((x) => (
+                    <option key={x.hour} value={x.hour}>{formatHour(x.hour)}</option>
                   ))}
                 </select>
               </div>
@@ -107,7 +133,7 @@ export default function ChallengeSheet({ target, onClose }: { target: Team; onCl
               <legend className="text-xs text-slate-500">Who pays for the court? <span className="text-rose-500">*</span></legend>
               <div role="radiogroup" aria-label="Who pays for the court" className="mt-2 space-y-2">
                 {LOSER_SHARES.map((pct) => {
-                  const p = splitPreview(priceFor(hour), pct);
+                  const p = splitPreview(price, pct);
                   const on = loserPct === pct;
                   return (
                     <button
@@ -132,7 +158,7 @@ export default function ChallengeSheet({ target, onClose }: { target: Team; onCl
                 })}
               </div>
               <p className="mt-2 text-xs text-slate-400">
-                Based on {formatRs(priceFor(hour))} for the court at {formatHour(hour)}. Paid at the venue after the game. No online payment is needed. A draw is split equally.
+                {picked ? `Based on ${formatRs(price)} for the court at ${formatHour(picked.hour)}.` : "Choose a time to see the amounts."} Paid at the venue after the game. No online payment is needed. A draw is split equally.
               </p>
             </fieldset>
 
@@ -142,9 +168,10 @@ export default function ChallengeSheet({ target, onClose }: { target: Team; onCl
               <p className="mt-1 text-right text-[11px] text-slate-400">{message.length}/140</p>
             </div>
 
+            {slotsError && <p role="alert" className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-600">{slotsError}</p>}
             <p className="text-xs text-slate-400">The court is booked only after the other captain accepts, so two games can never take the same slot.</p>
             {error && <p role="alert" className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-600">{error}</p>}
-            <button type="submit" className="glass-btn w-full rounded-full py-3.5 text-sm font-semibold text-white">Send challenge</button>
+            <button type="submit" disabled={busy} className="glass-btn w-full rounded-full py-3.5 text-sm font-semibold text-white disabled:opacity-60">{busy ? "Sending…" : "Send challenge"}</button>
           </form>
         )}
       </div>

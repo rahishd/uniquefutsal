@@ -1,9 +1,11 @@
-// Shared payment helpers for bookings and membership.
+// Payment helpers shared by court bookings and Gamezone.
 //
-// DEMO IMPLEMENTATION. A real eSewa or Fonepay QR can only be created by YOUR server with your
-// merchant account (it returns a one-off QR for an exact amount and reference). The browser must
-// never build a payable QR or decide that a payment succeeded; the server confirms payments from
-// the gateway callback (FRD sections 10, 33, 35).
+// The server creates the order and the QR (for the exact amount, with the remarks that link the payment to
+// the order) and is the only one that can mark an order paid: from the gateway, from staff at the venue, or
+// (only while the backend runs its local test gateway) from the test button below. The browser just shows the
+// QR and asks the server for the status every few seconds.
+
+import { api } from "@/lib/api";
 
 export type PayMethod = "esewa" | "fonepay" | "venue";
 export type OnlineMethod = Exclude<PayMethod, "venue">;
@@ -18,56 +20,34 @@ export const METHOD_LABEL: Record<PayMethod, string> = { esewa: "eSewa", fonepay
 
 export const isOnline = (m: PayMethod): m is OnlineMethod => m !== "venue";
 
-// How long a QR (and the slot or order behind it) stays valid.
-export const QR_HOLD_MS = 10 * 60 * 1000;
-
-export type PaymentPurpose = "game" | "gamezone" | "renew" | "purchase";
-
-const PURPOSE_LABEL: Record<PaymentPurpose, string> = {
-  game: "Regular game",
-  gamezone: "Gamezone PS5",
-  renew: "Membership renew",
-  purchase: "Membership purchase",
-};
-
-// The remark the customer's payment carries, so the payment can be matched to the right order.
-export function remarksFor(purpose: PaymentPurpose, reference: string) {
-  return `${PURPOSE_LABEL[purpose]} - ${reference}`;
-}
-
-// DEMO payload. The real one is the QR string returned by the gateway through your server.
-export function demoQrPayload(p: { method: OnlineMethod; amount: number; remarks: string }) {
-  return `UF-DEMO|${p.method}|NPR ${p.amount}|${p.remarks}`;
-}
-
-/* ---------- automatic payment detection ---------- */
-
-export type PaymentStatus = "pending" | "paid";
-
 // How often the open QR screen asks the server whether the order has been paid.
 export const PAYMENT_POLL_MS = 3000;
 
-// Demo mode: there is no gateway yet, so a demo button stands in for it. Turn off in production.
-export const DEMO_PAYMENTS = true;
-const demoKey = (orderId: string) => `uf-demo-paid-${orderId}`;
+// What the server returns when it creates a QR order.
+export interface PaymentOrder {
+  orderCode: string;
+  method: OnlineMethod;
+  amount: number;
+  remarks: string;
+  qrPayload: string;
+  expiresAt: string; // ISO time the QR (and the held slot) runs out
+}
 
-// DEMO: reads a local flag that the demo button sets.
-// PRODUCTION: replace the body with `GET /api/payments/:orderId/status`. The server sets "paid" only
-// after eSewa/Fonepay confirm the payment (gateway callback, or the gateway's status-check API).
-// The browser must never decide that a payment succeeded.
-export async function fetchPaymentStatus(orderId: string): Promise<PaymentStatus> {
+export type PaymentStatus = "pending" | "paid" | "expired";
+
+// A guest has no account, so the server matches the order to the phone number they gave.
+export async function fetchPaymentStatus(orderCode: string, guestPhone?: string): Promise<PaymentStatus> {
   try {
-    return localStorage.getItem(demoKey(orderId)) === "1" ? "paid" : "pending";
+    const r = await api<{ status: string }>(`/payments/${encodeURIComponent(orderCode)}/status`, { query: { phone: guestPhone } });
+    return r.status === "paid" ? "paid" : r.status === "expired" ? "expired" : "pending";
   } catch {
-    return "pending";
+    return "pending"; // a network blip: keep waiting, the next check tries again
   }
 }
 
-// DEMO ONLY: pretends the gateway told the server the payment arrived.
-export function demoSimulatePayment(orderId: string) {
-  try {
-    localStorage.setItem(demoKey(orderId), "1");
-  } catch {
-    // storage blocked
-  }
+// Only works while the backend uses its TEST gateway (never in production): pretends the gateway reported the payment.
+export async function testPay(orderCode: string) {
+  await api(`/payments/${encodeURIComponent(orderCode)}/test-pay`, { method: "POST" });
 }
+
+export const isTestQr = (payload: string) => payload.startsWith("UF-TEST|");

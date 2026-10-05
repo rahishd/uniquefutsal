@@ -1,17 +1,15 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { AlarmClock, Bell, BellRing, CalendarCheck, CreditCard, Crown, Gamepad2, Star, Swords, Tag, Trophy, X } from "lucide-react";
 import {
   clearAll,
-  getServerSnapshot,
-  getSnapshot,
   markAllRead,
   markRead,
   notificationSupport,
   requestSystemPermission,
-  subscribe,
+  noticesStore,
   type Notice,
   type NoticeType,
 } from "@/lib/notifications";
@@ -39,8 +37,10 @@ function ago(ms: number) {
   return rtf.format(Math.round(diff / 86400), "day");
 }
 
+const NONE: Notice[] = []; // a stable empty list while the first load runs
+
 export default function NotificationBell() {
-  const notices = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const notices = noticesStore.use().data?.items ?? NONE;
   const unread = notices.filter((n) => !n.read).length;
 
   const [open, setOpen] = useState(false);

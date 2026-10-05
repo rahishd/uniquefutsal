@@ -3,29 +3,40 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ShieldCheck, UserRound } from "lucide-react";
-import { signInDemo, useSession } from "@/lib/session";
-import { createTeam, setMode, useTeams, type Team } from "@/lib/teams";
+import { openSignIn, useSession } from "@/lib/session";
+import { createTeam, setMode, useTeams, type MyTeam } from "@/lib/teams";
 
 // Everything captain-only sits behind this: registered account, Captain mode on, and a team.
-export default function CaptainGate({ children }: { children: (team: Team) => React.ReactNode }) {
+export default function CaptainGate({ children }: { children: (team: MyTeam) => React.ReactNode }) {
   const session = useSession();
   const state = useTeams();
   const [teamName, setTeamName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  if (!session || !state) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
+  async function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
+    setBusy(true);
+    setError(null);
+    const r = await fn();
+    if (!r.ok) setError(r.error ?? "Something went wrong");
+    setBusy(false);
+  }
+
+  if (!session || state === undefined) return <div className="h-96 animate-pulse rounded-3xl bg-white/40" aria-label="Loading" />;
 
   if (!session.registered) {
     return (
       <Notice icon={<UserRound size={34} />} title="Sign in to use Captain mode" text="Captains are registered players. Sign in, then switch to your Captain profile.">
-        <button type="button" onClick={signInDemo} className="glass-btn rounded-full px-8 py-3.5 text-sm font-semibold text-white">Sign in (demo)</button>
+        <button type="button" onClick={openSignIn} className="glass-btn rounded-full px-8 py-3.5 text-sm font-semibold text-white">Sign in</button>
       </Notice>
     );
   }
 
-  if (state.mode !== "captain") {
+  if (!state || state.mode !== "captain") {
     return (
       <Notice icon={<ShieldCheck size={34} />} title="Captain mode is off" text="Only a captain can build a team and challenge opponents. Any registered player can switch to Captain mode.">
-        <button type="button" onClick={() => setMode("captain")} className="glass-btn rounded-full px-8 py-3.5 text-sm font-semibold text-white">Switch to Captain mode</button>
+        <button type="button" disabled={busy} onClick={() => run(() => setMode("captain"))} className="glass-btn rounded-full px-8 py-3.5 text-sm font-semibold text-white disabled:opacity-60">Switch to Captain mode</button>
+        {error && <p role="alert" className="mt-3 text-sm text-rose-600">{error}</p>}
         <Link href="/profile" className="mt-3 text-sm font-medium text-brand">Back to profile</Link>
       </Notice>
     );
@@ -43,14 +54,14 @@ export default function CaptainGate({ children }: { children: (team: Team) => Re
           className="glass space-y-4 rounded-3xl p-5"
           onSubmit={(e) => {
             e.preventDefault();
-            if (ok) createTeam(teamName, { id: session.id, name: session.name, phone: session.phone });
+            if (ok) void run(() => createTeam(teamName.trim()));
           }}
         >
           <label htmlFor="team-name" className="text-sm font-medium">Team name</label>
           <input id="team-name" value={teamName} onChange={(e) => setTeamName(e.target.value.slice(0, 30))} placeholder="e.g. Tilottama Strikers" className="w-full rounded-2xl bg-white/70 px-4 py-3 text-sm outline-none ring-1 ring-white/80 focus:ring-brand" />
-          <button type="submit" disabled={!ok} className="glass-btn w-full rounded-full py-3.5 text-sm font-semibold text-white disabled:opacity-50">Create team</button>
+          {error && <p role="alert" className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-600">{error}</p>}
+          <button type="submit" disabled={!ok || busy} className="glass-btn w-full rounded-full py-3.5 text-sm font-semibold text-white disabled:opacity-50">Create team</button>
         </form>
-        <p className="rounded-2xl bg-amber-400/15 px-4 py-3 text-xs text-amber-700">Demo mode: creating a team also adds sample opponent activity (a challenge, a game to report and a result to approve) so you can try the whole flow.</p>
       </div>
     );
   }
