@@ -116,3 +116,7 @@ Gamezone update: the customer chooses the console first (PS5 Station 1 or 2) and
 # Company header and footer
 
 `components/CompanyHeader.tsx` (rendered in `app/layout.tsx`) is the pinned top bar on EVERY page: the logo (`public/logo.jpg`, shown as a small tile zoomed on the player) and "UNIQUE FUTSAL". It is sticky, so it never scrolls away. On Home the greeting ("Hello Player" with the bell) sits just below it. The footer on Home no longer repeats the logo, description and rating (name, blurb and rating in `lib/site.ts` are now unused); it keeps Contact us, Follow us and the map.
+
+# Backend goes with every feature
+
+The backend lives in the sibling folder `uniquefutsal-backend` (its own git repo; see its `README.md` and `docs/API.md`). **Whenever a customer-facing feature is added or changed here, add or update the matching backend in the same piece of work**: an additive, idempotent migration, the service and routes with the rules enforced on the server, tests, and a row in `docs/API.md`. Never point development at production data; use the local database only.
