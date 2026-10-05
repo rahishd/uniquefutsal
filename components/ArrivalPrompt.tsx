@@ -200,7 +200,7 @@ export default function ArrivalPrompt() {
               <p className="mt-1 flex items-center justify-center gap-1.5 text-white/70">
                 <MapPin size={14} /> Unique Futsal{entry.label ? ` · ${entry.label}` : ""}
               </p>
-              <p className="mt-1 font-mono text-xs text-white/50">{entry.id}</p>
+              <p className="mt-1 font-mono text-xs text-white/50">{entry.code ?? entry.id}</p>
             </div>
           </div>
 

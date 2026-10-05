@@ -1,0 +1,28 @@
+node_modules/
+dist/
+build/
+coverage/
+# secrets and local config
+.env
+.env.*
+!.env.example
+# customer data must never be committed
+uploads/
+scratch/
+scratch-*.ts
+check-*.js
+check-*.bat
+*.pdf
+*.sql.gz
+*.dump
+backups/
+# misc
+.DS_Store
+*.log
+logs/
+.vscode
+.idea
+*.swp
+.local-pg/
+.local-db.log
+.server.log

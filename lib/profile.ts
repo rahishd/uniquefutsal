@@ -36,9 +36,26 @@ export interface PaymentItem {
   kind: "game" | "gamezone";
   date: string;
   time: string;
+  code: string; // short booking code to show
   amount: number;
   method: string;
   status: string;
 }
 
 export const paymentsStore = createRemoteStore<PaymentItem[]>(() => api<PaymentItem[]>("/me/payments"), { signedOut: [] });
+
+export interface GameplayGame {
+  id: string;
+  code: string;
+  date: string;
+  time: string;
+  goals: number | null; // null = never recorded (older games)
+  assists: number | null;
+}
+export interface Gameplay {
+  totals: { games: number; goals: number; assists: number; withStats: number };
+  games: GameplayGame[];
+}
+
+// Games played with goals and assists (staff record them for new games; older games have none).
+export const gameplayStore = createRemoteStore<Gameplay | null>(() => api<Gameplay>("/me/gameplay"), { signedOut: null });

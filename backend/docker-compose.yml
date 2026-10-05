@@ -1,0 +1,15 @@
+# Local, throw-away database for development and tests. Contains fake data only.
+services:
+  db:
+    image: postgres:16
+    container_name: unique-dev-db
+    environment:
+      POSTGRES_USER: unique
+      POSTGRES_PASSWORD: unique_dev_pw
+      POSTGRES_DB: unique_dev
+    ports:
+      - "5439:5432"
+    volumes:
+      - unique_dev_data:/var/lib/postgresql/data
+volumes:
+  unique_dev_data:

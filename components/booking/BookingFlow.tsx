@@ -52,7 +52,7 @@ function downloadIcs(b: Booking) {
     `DTSTAMP:${fmt(0)}`,
     `DTSTART:${fmt(hourOf(b.startTime))}`,
     `DTEND:${fmt(hourOf(b.startTime) + b.duration)}`,
-    `SUMMARY:Futsal at Unique Futsal (${b.id})`,
+    `SUMMARY:Futsal at Unique Futsal (${b.code ?? b.id})`,
     "LOCATION:Unique Futsal\\, Manigram Tilottama-05\\, Rupandehi",
     "END:VEVENT",
     "END:VCALENDAR",
@@ -258,7 +258,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
             {paid ? "Payment received. See you on the pitch!" : venue ? "Please pay at the venue when you arrive." : "Your slot is held until payment is verified."}
           </p>
           <p className="mt-4 text-xs text-slate-400">Booking ID</p>
-          <p className="font-mono text-lg font-semibold tracking-wide">{done.id}</p>
+          <p className="font-mono text-lg font-semibold tracking-wide">{done.code ?? done.id}</p>
         </div>
 
         <dl className="glass space-y-3 rounded-3xl p-5 text-sm">

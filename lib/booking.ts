@@ -72,6 +72,7 @@ export function fetchQuote(p: { date: string; startTime: string; promoCode?: str
 export interface Booking {
   id: string;
   date: string;
+  code?: string; // short code the customer sees, e.g. UF-7K3QX9 (id is the long internal key)
   startTime: string;
   endTime: string;
   duration: number;

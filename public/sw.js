@@ -53,7 +53,7 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-// Web Push (sent by the server once the backend supports it): show the alert and
+// Web Push (sent by the backend, see lib/push.ts): show the alert and
 // open the right page when it is tapped.
 self.addEventListener("push", (event) => {
   let data = {};
@@ -67,6 +67,7 @@ self.addEventListener("push", (event) => {
       body: data.body || "",
       icon: "/icons/192",
       badge: "/icons/192",
+      tag: data.tag || undefined,
       data: { href: data.href || "/" },
     }),
   );

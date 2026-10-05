@@ -10,17 +10,20 @@ import { useTeams } from "@/lib/teams";
 import { setPref, usePrefs } from "@/lib/prefs";
 import { fmtPts } from "@/lib/points";
 import { loyaltyStore, progressPct } from "@/lib/loyalty";
-import { POSITIONS, paymentsStore, profileStore, saveProfile, type PaymentItem } from "@/lib/profile";
+import { POSITIONS, gameplayStore, paymentsStore, profileStore, saveProfile, type PaymentItem } from "@/lib/profile";
 import { cancelBooking, formatHour, myBookingsStore, parseKey, startsAtMs, type Booking } from "@/lib/booking";
 import { cancelGz, myGzStore, type GzBooking } from "@/lib/gamezone";
 import ProfileAvatar from "@/components/captain/ProfileAvatar";
 import { CaptainSummary, ModeToggle } from "@/components/captain/CaptainProfile";
+import AccountSecurity from "@/components/profile/AccountSecurity";
+import { myMembershipStore } from "@/lib/membership";
 
 const rs = (n: number) => `Rs. ${n.toLocaleString("en-IN")}`;
 
 // One row in "My bookings": a court booking or a Gamezone session.
 interface Item {
   id: string;
+  code: string; // short booking code shown to the customer
   kind: "game" | "gamezone";
   dateKey: string;
   date: string;
@@ -41,6 +44,7 @@ function courtItem(b: Booking, now: number): Item {
   const paid = b.paymentStatus === "completed";
   return {
     id: b.id,
+    code: b.code ?? b.id,
     kind: "game",
     dateKey: b.date,
     date: dayLabel(b.date),
@@ -59,6 +63,7 @@ function gzItem(g: GzBooking, now: number): Item {
   const active = g.status === "confirmed";
   return {
     id: g.code,
+    code: g.code,
     kind: "gamezone",
     dateKey: g.date,
     date: dayLabel(g.date),
@@ -141,6 +146,9 @@ function RegisteredProfile() {
   const sessions = myGzStore.use().data;
   const paymentsData = paymentsStore.use().data;
   const loy = loyaltyStore.use().data ?? null;
+  const gameplay = gameplayStore.use().data ?? null;
+  const membership = myMembershipStore.use().data?.current ?? null;
+  const statsById = new Map((gameplay?.games ?? []).map((g) => [g.id, g]));
   const prefs = usePrefs();
 
   const [editing, setEditing] = useState(false);
@@ -216,7 +224,7 @@ function RegisteredProfile() {
           title: "My bookings",
           lines: [who],
           columns: [{ header: "Date", width: 95 }, { header: "Time", width: 105 }, { header: "What", width: 90 }, { header: "Booking ID", width: 85 }, { header: "Amount", width: 55 }, { header: "Payment", width: 45 }, { header: "Status", width: 40 }],
-          rows: [...upcomingList, ...pastList].map((b) => [b.date, b.time, b.what, b.id, rs(b.amount), b.payment, b.status]),
+          rows: [...upcomingList, ...pastList].map((b) => [b.date, b.time, b.what, b.code, rs(b.amount), b.payment, b.status]),
         });
       } else if (kind === "games") {
         await downloadPdf({
@@ -224,7 +232,7 @@ function RegisteredProfile() {
           title: "Games played",
           lines: [who, `Played ${played.length}`],
           columns: [{ header: "Date", width: 120 }, { header: "Time", width: 130 }, { header: "What", width: 170 }, { header: "Booking ID", width: 95 }],
-          rows: played.map((b) => [b.date, b.time, b.what, b.id]),
+          rows: played.map((b) => [b.date, b.time, b.what, b.code]),
         });
       } else {
         await downloadPdf({
@@ -232,7 +240,7 @@ function RegisteredProfile() {
           title: "Payment history",
           lines: [who],
           columns: [{ header: "Date", width: 95 }, { header: "Booking ID", width: 180 }, { header: "Amount", width: 95 }, { header: "Status", width: 90 }],
-          rows: payments.map((p) => [dayLabel(p.date), p.id, rs(p.amount), p.status]),
+          rows: payments.map((p) => [dayLabel(p.date), p.code, rs(p.amount), p.status]),
         });
       }
     } finally {
@@ -252,13 +260,13 @@ function RegisteredProfile() {
           <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${b.status === "Cancelled" ? "bg-rose-500/10 text-rose-500" : b.status === "Completed" ? "bg-slate-200 text-slate-500" : "bg-emerald-500/10 text-emerald-600"}`}>{b.status}</span>
         </div>
         <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
-          <span className="font-mono">{b.id}</span>
+          <span className="font-mono">{b.code}</span>
           <span>{rs(b.amount)} · {b.payment}</span>
         </div>
         {b.upcoming && (
           cancelId === b.id ? (
             <div className="mt-3 rounded-xl bg-rose-500/10 p-3 text-xs text-rose-700">
-              <p>Cancelling may be subject to the cancellation policy. The refund amount is confirmed by the venue.</p>
+              <p>Cancelling is free. If you already paid online, the venue returns the full amount to you.</p>
               {cancelError && <p role="alert" className="mt-2 font-medium">{cancelError}</p>}
               <div className="mt-2 flex gap-2">
                 <button type="button" onClick={() => { setCancelId(null); setCancelError(null); }} className="flex-1 rounded-full bg-white py-2 font-medium">Keep booking</button>
@@ -279,6 +287,9 @@ function RegisteredProfile() {
         {tag && <span className="mb-0.5 block text-[11px] font-semibold uppercase tracking-wider text-brand">{tag}</span>}
         <span className="block font-medium">{b.date}</span>
         <span className="text-xs text-slate-500">{b.time} · {b.what}</span>
+        {statsById.get(b.id)?.goals != null && (
+          <span className="mt-1 block text-xs font-medium text-brand">Goals {statsById.get(b.id)?.goals} · Assists {statsById.get(b.id)?.assists}</span>
+        )}
       </li>
     );
   }
@@ -286,7 +297,7 @@ function RegisteredProfile() {
   function renderPayment(p: PaymentItem) {
     return (
       <li key={p.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-        <span><span className="block font-medium">{dayLabel(p.date)}</span><span className="font-mono text-[11px] text-slate-400">{p.id}</span></span>
+        <span><span className="block font-medium">{dayLabel(p.date)}</span><span className="font-mono text-[11px] text-slate-400">{p.code}</span></span>
         <span className="text-right"><span className="block font-medium">{rs(p.amount)}</span><span className="text-[11px] text-emerald-600">{p.status}</span></span>
       </li>
     );
@@ -354,8 +365,12 @@ function RegisteredProfile() {
       {/* Membership */}
       <section className="rounded-3xl bg-gradient-to-br from-[#0c0b5d] via-[#16167f] to-[#2a2aa8] p-5 text-white shadow-[0_10px_30px_rgba(12,11,93,0.35)]">
         <p className="flex items-center gap-2 text-sm text-white/70"><Crown size={16} /> Membership</p>
-        <p className="mt-1 text-sm text-white/80">Memberships are arranged at the venue for now. Online sign-up is coming soon.</p>
-        <Link href="/member" className="glass-btn mt-4 inline-flex rounded-full px-5 py-2.5 text-sm font-medium text-white">Ask about membership</Link>
+        <p className="mt-1 text-sm text-white/80">
+          {membership
+            ? `${membership.plan}: ${membership.status === "active" ? `active until ${new Date(membership.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : "waiting for your payment at the venue"}.`
+            : "Member pricing on your fixed hour. Use the account you already have, no new sign-up."}
+        </p>
+        <Link href="/member" className="glass-btn mt-4 inline-flex rounded-full px-5 py-2.5 text-sm font-medium text-white">{membership ? "View membership" : "Get a membership"}</Link>
       </section>
 
       {/* Loyalty */}
@@ -392,6 +407,12 @@ function RegisteredProfile() {
 
       {/* Games played: the most recent; earlier games are under the arrow */}
       <Card title="Games played" action={<Trophy size={18} className="text-amber-500" />}>
+        {gameplay && gameplay.totals.withStats > 0 && (
+          <dl className="mb-3 grid grid-cols-2 gap-3 text-center">
+            <div className="rounded-2xl bg-white/60 py-3"><dd className="text-lg font-semibold">{gameplay.totals.goals}</dd><dt className="text-[11px] text-slate-400">Goals</dt></div>
+            <div className="rounded-2xl bg-white/60 py-3"><dd className="text-lg font-semibold">{gameplay.totals.assists}</dd><dt className="text-[11px] text-slate-400">Assists</dt></div>
+          </dl>
+        )}
         {played[0] ? <ul className="text-sm">{renderGame(played[0], "Last game")}</ul> : <p className="py-6 text-center text-sm text-slate-400">No games yet.</p>}
         {played.length > 0 && (
           <>
@@ -407,7 +428,7 @@ function RegisteredProfile() {
             )}
           </>
         )}
-        <p className="mt-3 text-[11px] text-slate-400">Team results from challenge games are on the Opponent page (Captain mode).</p>
+        <p className="mt-3 text-[11px] text-slate-400">Goals and assists are recorded by the venue for games played from now on. Team results from challenge games are on the Opponent page (Captain mode).</p>
       </Card>
 
       {/* Payment history: the two most recent transactions; the rest is under the arrow */}
@@ -433,6 +454,7 @@ function RegisteredProfile() {
           <li className="flex items-center justify-between gap-4"><span>Pop-up reminder<span className="block text-xs text-slate-400">Full-screen slider 1 hour before your game, to tell the venue &ldquo;I&apos;m coming&rdquo;</span></span><Switch checked={prefs.popup} onChange={(v) => setPref("popup", v)} label="Pop-up reminder, 1 hour before your game" /></li>
           <li className="flex items-center justify-between gap-4"><span>Booking reminders (SMS)<span className="block text-xs text-slate-400">1 hour before your game</span></span><Switch checked={prefs.reminders} onChange={(v) => setPref("reminders", v)} label="Booking reminders" /></li>
           <li className="flex items-center justify-between gap-4"><span>Promotional notifications<span className="block text-xs text-slate-400">Offers and tournaments</span></span><Switch checked={prefs.promos} onChange={(v) => setPref("promos", v)} label="Promotional notifications" /></li>
+          <AccountSecurity />
           <li className="flex items-center justify-between gap-4"><label htmlFor="lang">Language</label>
             <select id="lang" value={prefs.language} onChange={(e) => setPref("language", e.target.value)} className="rounded-xl bg-white/70 px-3 py-2 text-sm outline-none ring-1 ring-white/80">
               <option value="en">English</option><option value="ne">नेपाली</option>

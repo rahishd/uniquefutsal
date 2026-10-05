@@ -46,6 +46,7 @@ export function snoozeArrival(id: string) {
 
 export interface ArrivalTarget {
   id: string; // booking id or Gamezone code
+  code?: string; // short code to show
   kind: "court" | "gamezone";
   startsAt: number; // epoch ms
   label?: string; // shown on the check-in screen
@@ -59,7 +60,7 @@ export function useArrivalTargets(): ArrivalTarget[] {
     const out: ArrivalTarget[] = [];
     for (const b of courts ?? []) {
       if (b.status === "cancelled" || b.status === "completed") continue;
-      out.push({ id: b.id, kind: "court", startsAt: startsAtMs(b) });
+      out.push({ id: b.id, code: b.code, kind: "court", startsAt: startsAtMs(b) });
     }
     for (const g of gz ?? []) {
       if (g.status !== "confirmed") continue;
