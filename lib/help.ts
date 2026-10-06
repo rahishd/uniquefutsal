@@ -222,6 +222,20 @@ export const helpTopics: HelpTopic[] = [
     href: { label: "Complaints", to: "/complaints" },
   },
   {
+    id: "academy",
+    icon: "bell",
+    title: "Children's Academy",
+    summary: "Book a football class for your child, aged 10 to 14.",
+    points: [
+      "On Home, tap Children's Academy in the Popular section. The guardian needs to be signed in.",
+      "Fill in the guardian's name and number, an emergency contact, your address, then your child's name, age and health.",
+      "Pick one of the class times the venue has opened, read the Terms and Conditions and tick to accept.",
+      "You get a code like AC-7K3QX9. You can cancel from the same page until the class starts.",
+      "If the venue has to cancel a class, you are told in your notifications.",
+    ],
+    href: { label: "Children's Academy", to: "/academy" },
+  },
+  {
     id: "urgent",
     icon: "bell",
     title: "Need urgent help?",

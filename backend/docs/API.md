@@ -157,6 +157,17 @@ can be booked once.
 
 Table `Complaint` (migration `20261007000001_complaints`, additive). Notification type `complaint` added.
 
+## Children's Academy (ages 10 to 14)
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| GET | `/academy/info` | Guest | `{minAge, maxAge, perDay, terms{version,text,updatedAt}, sessions[{id,title,date,startTime,endTime,coach,capacity,seatsLeft}]}`. Only classes staff made visible, open and not yet started |
+| POST | `/academy/enroll` | User | `{guardianName, guardianPhone, emergencyPhone, address, childName, childAge (10-14), healthStatus: healthy|condition, healthNotes (required for condition), sessionId, acceptTerms: true, termsVersion}` -> enrolment with code `AC-XXXXXX`. 400 bad fields, 404 class not available, 409 started / full / duplicate child / terms changed, 429 more than 5 a day. Capacity is checked under a row lock. Re-enrolling after cancelling reuses the row |
+| GET | `/academy/mine` | User | own enrolments, newest first, with `canCancel` |
+| POST | `/academy/enrollments/:id/cancel` | User | owner only, before the class starts |
+
+Tables `AcademySession`, `AcademyEnrollment` (migration `20261010000001_children_academy`, additive). Terms live in `Settings` key `academyTerms` (`{version,text,updatedAt}`, edited from the admin portal; each edit raises the version). Notification type `academy` added. Staff manage classes, attendance and terms in the admin portal.
+
 ## VIP discount code
 
 Staff (admin portal > Customers) give one customer a VIP code such as `ADMINVIP`: `VipCode` (migration `20261009000001_vip_codes`, additive, one per customer), `type` percent or flat, `value`, `active`, `claimedAt`.

@@ -704,3 +704,50 @@ model VipCode {
 
   @@index([code])
 }
+
+// Children's Academy (ages 10 to 14). Staff publish classes; a guardian enrols a child. Terms live in Settings key "academyTerms".
+model AcademySession {
+  id          String              @id @default(cuid())
+  title       String              @default("Children's Academy class")
+  date        String // YYYY-MM-DD
+  startTime   String // HH:mm
+  endTime     String
+  capacity    Int                 @default(15)
+  coach       String?
+  visible     Boolean             @default(true) // staff decide when a class is shown to guardians
+  status      String              @default("open") // open | cancelled
+  createdBy   String
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  enrollments AcademyEnrollment[]
+
+  @@index([date, visible])
+}
+
+model AcademyEnrollment {
+  id              String         @id @default(cuid())
+  code            String         @unique // AC-XXXXXX
+  sessionId       String
+  userId          String // the guardian's account (User.phoneNumber)
+  guardianName    String
+  guardianPhone   String
+  emergencyPhone  String
+  address         String
+  childName       String
+  childKey        String // lower-case name: the same child cannot be enrolled twice in one class
+  childAge        Int
+  healthStatus    String // healthy | condition
+  healthNotes     String?
+  termsVersion    Int
+  termsAcceptedAt DateTime
+  status          String         @default("confirmed") // confirmed | cancelled | attended | no_show
+  cancelledAt     DateTime?
+  cancelledBy     String? // guardian | staff
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  session         AcademySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId, childKey])
+  @@index([userId])
+  @@index([sessionId, status])
+}
