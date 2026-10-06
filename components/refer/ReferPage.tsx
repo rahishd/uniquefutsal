@@ -101,13 +101,15 @@ export default function ReferPage() {
         <li><strong>3.</strong> The venue checks it. Once approved, both of you get the points.</li>
       </ol>
 
+      <Link href="/book" className="glass-btn flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-semibold text-white">Step 1: Book a slot for their team</Link>
+
       <form onSubmit={submit} className="glass space-y-5 rounded-3xl p-5" aria-label="New referral">
         <label className="block text-sm font-medium">The booking you made for them
           <select value={bookingCode} onChange={(e) => setBookingCode(e.target.value)} className={input} disabled={!me}>
             <option value="">{!me ? "Loading…" : eligible.length === 0 ? "No bookings available" : "Choose a booking"}</option>
             {eligible.map((b) => <option key={b.code} value={b.code}>{dayLabel(b.date)}, {clock(b.startTime)} · {b.code}</option>)}
           </select>
-          {me && eligible.length === 0 && <span className="mt-1 block text-xs font-normal text-slate-400">Only bookings from the last 30 days that were not already sent can be used.</span>}
+          {me && eligible.length === 0 && <span className="mt-1 block text-xs font-normal text-slate-400">You have no booking to send yet. Use the Book a slot button above, then come back to this page. Only bookings from the last 30 days that were not already sent can be used.</span>}
         </label>
         <label className="block text-sm font-medium">Other team&apos;s captain, mobile number
           <input value={friendPhone} onChange={(e) => setFriendPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="98XXXXXXXX" className={input} />
