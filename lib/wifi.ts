@@ -4,7 +4,8 @@ import { useSyncExternalStore } from "react";
 import { api } from "@/lib/api";
 import { createRemoteStore } from "@/lib/remote-store";
 
-export type Wifi = { visible: false } | { visible: true; ssid: string; password: string; open: boolean; qr: string };
+// locked = the venue shares Wi-Fi only with customers who are at the venue (a game, Gamezone session or membership time around now)
+export type Wifi = { visible: false } | { visible: true; locked: true; message: string } | { visible: true; locked: false; ssid: string; password: string; open: boolean; qr: string };
 
 // refreshed every minute so a switch staff turn off hides the button soon
 export const wifiStore = createRemoteStore<Wifi>(() => api<Wifi>("/wifi"), { signedOut: { visible: false }, pollMs: 60_000 });

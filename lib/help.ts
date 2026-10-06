@@ -203,7 +203,7 @@ export const helpTopics: HelpTopic[] = [
     title: "Venue Wi-Fi",
     summary: "Join the free Wi-Fi at the venue and save your mobile data.",
     points: [
-      "Signed-in customers see a Wi-Fi icon next to \"Hello\" on Home. Tap it for the network name and password, with Copy buttons.",
+      "Signed-in customers see a Wi-Fi icon next to \"Hello\" on Home. The network details open an hour before your booked game, Gamezone session or membership time, and for 30 minutes after it ends. Tap the icon to see the name and password (hidden until you tap the eye), with Copy buttons.",
       "Scan the QR code with another phone's camera, or take a screenshot of it and open it in Photos (iPhone) or Google Lens (Android): your phone then offers to join the network.",
       "An app or website cannot switch your Wi-Fi on for you, so you always confirm the join on your phone.",
       "If the icon is missing, the venue has switched the Wi-Fi sharing off.",

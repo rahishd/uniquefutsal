@@ -197,9 +197,9 @@ Table `DigitalId` (migration `20261015000001_digital_id`, additive). The admin p
 
 | Method | Path | Who | Notes |
 |---|---|---|---|
-| GET | `/wifi` | User | `{visible:false}` when staff switched it off or set no name; otherwise `{visible:true, ssid, password, open, qr}` where `qr` is the standard `WIFI:T:WPA;S:..;P:..;;` text (special characters escaped). Never cached. Guests get 401 |
+| GET | `/wifi` | User | `{visible:false}` when staff switched it off or set no name. By default (`wifiAccess` not `all`) a customer with no confirmed game, Gamezone session or active membership slot from 60 minutes before to 30 minutes after now gets `{visible:true, locked:true, message}` and NOTHING secret. Otherwise `{visible:true, locked:false, ssid, password, open, qr}` where `qr` is the standard `WIFI:T:WPA;S:..;P:..;;` text (special characters escaped). Never cached. Guests get 401 |
 
-Staff set `wifiSSID`, `wifiPassword` and `wifiVisible` (Settings keys) in the admin portal. The public `GET /settings` no longer returns the Wi-Fi name or password.
+Staff set `wifiSSID`, `wifiPassword`, `wifiVisible` and `wifiAccess` (`booked` default or `all`) (Settings keys) in the admin portal. The public `GET /settings` no longer returns the Wi-Fi name or password.
 
 ## Site content (gallery and ads)
 
