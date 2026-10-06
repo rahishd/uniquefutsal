@@ -828,3 +828,23 @@ model SiteAd {
 
   @@index([placement, active])
 }
+
+// Final bill made by staff at the counter: goods and/or games paid together (migration 20261013000001_checkouts).
+model Checkout {
+  id            String   @id @default(cuid())
+  code          String   @unique // CB-XXXXXX
+  userId        String
+  paymentMethod String // cash | online
+  goodsTotal    Int      @default(0)
+  gameTotal     Int      @default(0)
+  total         Int
+  lines         String // JSON: [{type: "game"|"goods", label, quantity, amount}]
+  bookingIds    String[] @default([])
+  goodsSaleId   String?
+  pointsGoods   Decimal  @default(0) @db.Decimal(8, 1)
+  pointsGames   Decimal  @default(0) @db.Decimal(8, 1)
+  createdBy     String
+  createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

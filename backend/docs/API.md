@@ -44,7 +44,7 @@ Times use Nepal time. Dates are `YYYY-MM-DD`. Money is whole rupees.
 | GET | `/auth/google/status` | User | `{configured, linked, email}` |
 | POST | `/auth/google/link`, `/auth/google/unlink` | User | link the Google account (`{idToken}`, verified server-side against `GOOGLE_CLIENT_ID`) used to reset a forgotten password |
 | POST | `/auth/reset-password/google` | Guest | `{phoneNumber, idToken, newPassword}`: allowed only when the Google account is the one linked to that number. 5 tries / 15 min / IP |
-| GET | `/me/payments` | User | paid games and Gamezone sessions |
+| GET | `/me/payments` | User | paid games and Gamezone sessions, and final bills made at the venue counter (`kind: "bill"`, with `lines[{type,label,quantity,amount}]` and `points`; a game paid inside a bill is not listed twice). Table `Checkout`, migration `20261013000001_checkouts`, written by the admin portal |
 
 ## Courts, bookings, payments
 

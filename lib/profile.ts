@@ -31,9 +31,19 @@ export async function saveProfile(p: { name: string; email: string; location: st
   await profileStore.refresh();
 }
 
+// One line of a final bill made at the venue counter: a game, or goods such as water.
+export interface BillLine {
+  type: "game" | "goods";
+  label: string;
+  quantity: number;
+  amount: number;
+}
+
 export interface PaymentItem {
   id: string;
-  kind: "game" | "gamezone";
+  kind: "game" | "gamezone" | "bill";
+  lines?: BillLine[]; // bills only
+  points?: number; // loyalty points earned from this bill
   date: string;
   time: string;
   code: string; // short booking code to show

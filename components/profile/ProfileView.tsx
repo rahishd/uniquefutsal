@@ -240,7 +240,7 @@ function RegisteredProfile() {
           title: "Payment history",
           lines: [who],
           columns: [{ header: "Date", width: 95 }, { header: "Booking ID", width: 180 }, { header: "Amount", width: 95 }, { header: "Status", width: 90 }],
-          rows: payments.map((p) => [dayLabel(p.date), p.code, rs(p.amount), p.status]),
+          rows: payments.map((p) => [dayLabel(p.date), p.kind === "bill" ? `${p.code} (bill)` : p.code, rs(p.amount), p.status]),
         });
       }
     } finally {
@@ -296,9 +296,15 @@ function RegisteredProfile() {
 
   function renderPayment(p: PaymentItem) {
     return (
-      <li key={p.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+      <li key={p.id} className="flex flex-wrap items-center justify-between py-3 first:pt-0 last:pb-0">
         <span><span className="block font-medium">{dayLabel(p.date)}</span><span className="font-mono text-[11px] text-slate-400">{p.code}</span></span>
         <span className="text-right"><span className="block font-medium">{rs(p.amount)}</span><span className="text-[11px] text-emerald-600">{p.status}</span></span>
+        {p.kind === "bill" && p.lines && (
+          <span className="mt-2 block w-full basis-full text-xs text-slate-500">
+            {p.lines.map((l, i) => <span key={i} className="flex justify-between"><span>{l.type === "goods" && l.quantity > 1 ? `${l.quantity} x ` : ""}{l.label}</span><span>{rs(l.amount)}</span></span>)}
+            {!!p.points && <span className="mt-1 block font-medium text-amber-600">+{p.points} loyalty points</span>}
+          </span>
+        )}
       </li>
     );
   }

@@ -190,6 +190,7 @@ export const helpTopics: HelpTopic[] = [
       "My bookings shows your next game and your last game. Tap the arrow for the rest.",
       "Games played shows your latest game. Open the arrow for earlier games. Goals and assists are recorded by the venue for games you play from now on and shown next to each game.",
       "Payment history shows your two latest payments. Open the arrow for all of them.",
+      "If you pay for goods and games together at the venue, you get one bill (CB-...) listing each item and the loyalty points you earned.",
       "Every list has a Download PDF button for the full history.",
       "Settings has switches for alerts when the app is closed, the pop-up reminder, SMS reminders and promotional messages.",
       "Link your Google account in Settings so you can reset a forgotten password yourself.",

@@ -6,6 +6,7 @@ import { authMiddleware, AuthRequest } from "../../middlewares/auth.middleware";
 import validateRequest from "../../middlewares/validate.middleware";
 import { AppError } from "../../middlewares/error.middleware";
 import { prisma } from "../../config/db";
+import { todayKey } from "../../utils/dates";
 
 const router = Router();
 router.use(authMiddleware); // everything here is about the signed-in customer only
@@ -169,11 +170,20 @@ router.get(
   "/payments",
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = req.user!.id;
-    const [bookings, gz] = await Promise.all([
+    const [bookingsAll, gz, bills] = await Promise.all([
       prisma.booking.findMany({ where: { userId: id, paymentStatus: "completed", totalPrice: { gt: 0 } }, orderBy: { date: "desc" }, take: 200 }),
       prisma.gzBooking.findMany({ where: { userId: id, paymentStatus: "paid" }, orderBy: { date: "desc" }, take: 200 }),
+      prisma.checkout.findMany({ where: { userId: id }, orderBy: { createdAt: "desc" }, take: 200 }),
     ]);
+    // A game paid inside a final bill is shown in that bill, not twice
+    const inBills = new Set(bills.flatMap((b) => b.bookingIds));
+    const bookings = bookingsAll.filter((b) => !inBills.has(b.id));
+    const billItems = bills.map((b) => ({
+      id: b.id, code: b.code, kind: "bill", date: todayKey(b.createdAt), time: "", amount: b.total, method: b.paymentMethod, status: "Paid",
+      lines: JSON.parse(b.lines) as unknown, points: Number(b.pointsGoods) + Number(b.pointsGames),
+    }));
     const items = [
+      ...billItems,
       ...bookings.map((b) => ({ id: b.id, code: b.code || "UF-" + b.id.slice(-6).toUpperCase(), kind: "game", date: b.date, time: `${b.startTime} - ${b.endTime}`, amount: b.totalPrice, method: b.paymentMethod, status: "Paid" })),
       ...gz.map((g) => ({ id: g.code, code: g.code, kind: "gamezone", date: g.date, time: `${String(g.startHour).padStart(2, "0")}:00 - ${String(g.startHour + g.hours).padStart(2, "0")}:00`, amount: g.total, method: g.paymentMethod, status: "Paid" })),
     ].sort((a, b) => b.date.localeCompare(a.date));
