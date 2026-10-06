@@ -17,7 +17,7 @@ const PHONE = /^9\d{9}$/;
 
 type Method = "fonepay" | "venue";
 
-function assertWindow(date: string) {
+export function assertWindow(date: string) {
   const today = todayKey();
   if (date < today) throw new AppError(400, "Cannot book a slot in the past");
   if (date > addDaysKey(today, MAX_ADVANCE_DAYS)) throw new AppError(400, `Bookings open only ${MAX_ADVANCE_DAYS} days in advance.`);

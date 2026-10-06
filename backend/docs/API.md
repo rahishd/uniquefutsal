@@ -177,6 +177,7 @@ A customer books a game for ANOTHER team on their own account, then files it her
 | GET | `/refer/rules` | Guest | `{enabled, referrerPoints, friendPoints, perDay}` (staff set the points in `Settings` key `referEarn`) |
 | GET | `/refer/me` | User | `{rules, referrals[] (as referrer or as friend; `points` is what the caller gets), eligibleBookings[]}` (own, not cancelled, regular, last 30 days, not already sent) |
 | POST | `/refer` | User | `{bookingCode, friendPhone, teamName}` -> referral `RF-XXXXXX`, pending. 404 booking not yours or friend not registered, 400 yourself / bad fields, 409 cancelled, too old or already referred, 403 paused, 429 over 5 a day. Friend is notified (`type: "referral"`) |
+| POST | `/refer/book` | User | `{date, startTime "HH:00", friendPhone, friendName}`: one step. Reserves the slot on the caller's account (1 hour, pay at the venue, 10-day window) and files the referral for it; if filing fails (friend not registered, over 5 a day, ...) the reservation is cancelled again and the slot freed. Same errors as `POST /refer` plus 400 for a bad date/time |
 | DELETE | `/refer/:id` | User | withdraw while pending (referrer only) |
 
 Table `Referral` (migration `20261011000001_refer_earn`, additive; one referral per booking). Notification type `referral` added.

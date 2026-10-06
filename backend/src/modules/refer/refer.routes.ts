@@ -16,4 +16,6 @@ referRouter.get("/me", authMiddleware, asyncHandler(async (req: AuthRequest, res
 
 referRouter.post("/", authMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => ok(res, "Referral sent", await referService.create(req.user!.id, req.body ?? {}), 201)));
 
+referRouter.post("/book", authMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => ok(res, "Slot booked and referral sent", await referService.bookAndRefer(req.user!.id, req.body ?? {}), 201)));
+
 referRouter.delete("/:id", authMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => ok(res, "Referral withdrawn", await referService.cancel(req.user!.id, req.params.id))));

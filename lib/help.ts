@@ -242,8 +242,9 @@ export const helpTopics: HelpTopic[] = [
     title: "Refer & Earn",
     summary: "Book a game for another team and you both earn loyalty points.",
     points: [
-      "Book a game on your own account for the other team, then open Refer & Earn in the Popular section.",
-      "Pick that booking, enter the other team's captain (they need an account in the app) and the team name.",
+      "Open Refer & Earn in the Popular section. Pick a date and a time right there, no need to go to the booking page.",
+      "Then type the other team's name and contact number (they need an account in the app) and tap Confirm booking.",
+      "The slot is booked on your account and paid at the venue.",
       "The venue checks the referral. When it is approved, both of you get the points and a notification.",
       "The number of points is set by the venue and shown on the page. Referral points last 12 months.",
       "You can withdraw a referral while it is still waiting. Each booking can be referred once.",

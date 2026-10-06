@@ -88,3 +88,50 @@ describe("refer and earn", () => {
     expect(codes).toEqual([201, 201, 201, 201, 429]);
   });
 });
+
+describe("book a slot and refer in one step", () => {
+  const slotDate = addDaysKey(todayKey(), 3);
+  const book = (phone: string, body: object) => api().post("/api/refer/book").set(bearer(tokenFor(phone))).send(body);
+  const cleanSlots = async () => {
+    const ids = (await prisma.booking.findMany({ where: { userId: A, date: slotDate }, select: { id: true } })).map((b) => b.id);
+    await prisma.bookingSlot.deleteMany({ where: { bookingId: { in: ids } } });
+    await prisma.referral.deleteMany({ where: { bookingId: { in: ids } } });
+    await prisma.booking.deleteMany({ where: { id: { in: ids } } });
+  };
+  const resetLimit = () => prisma.referral.deleteMany({ where: { referrerId: { in: [A, C] } } });
+  beforeAll(async () => { await resetLimit(); await cleanSlots(); });
+  afterAll(cleanSlots);
+
+  it("needs sign-in", async () => {
+    expect((await api().post("/api/refer/book").send({})).status).toBe(401);
+  });
+
+  it("reserves the slot on the customer's account (pay at venue) and files the referral", async () => {
+    const r = await book(A, { date: slotDate, startTime: "06:00", friendPhone: B, friendName: "Thunder FC" });
+    expect(r.status).toBe(201);
+    expect(r.body.data).toMatchObject({ status: "pending", role: "referrer", teamName: "Thunder FC" });
+    const b = await prisma.booking.findFirst({ where: { userId: A, date: slotDate, startTime: "06:00" } });
+    expect(b).toMatchObject({ paymentMethod: "venue", status: "pending" });
+    expect(r.body.data.bookingCode).toBe(b!.code);
+  });
+
+  it("the same slot cannot be taken twice", async () => {
+    expect((await book(C, { date: slotDate, startTime: "06:00", friendPhone: B, friendName: "Other FC" })).status).toBeGreaterThanOrEqual(400);
+  });
+
+  it("a bad friend number leaves no booking behind and frees the slot", async () => {
+    const r = await book(A, { date: slotDate, startTime: "07:00", friendPhone: ghost, friendName: "Ghost FC" });
+    expect(r.status).toBe(404);
+    expect((await prisma.booking.findFirst({ where: { userId: A, date: slotDate, startTime: "07:00", status: { not: "cancelled" } } }))).toBeNull();
+    expect((await book(C, { date: slotDate, startTime: "07:00", friendPhone: B, friendName: "Real FC" })).status).toBe(201);
+    const ids = (await prisma.booking.findMany({ where: { userId: C, date: slotDate }, select: { id: true } })).map((b) => b.id);
+    await prisma.bookingSlot.deleteMany({ where: { bookingId: { in: ids } } });
+    await prisma.referral.deleteMany({ where: { bookingId: { in: ids } } });
+    await prisma.booking.deleteMany({ where: { id: { in: ids } } });
+  });
+
+  it("refuses a date outside the booking window and a missing time", async () => {
+    expect((await book(A, { date: addDaysKey(todayKey(), 11), startTime: "06:00", friendPhone: B, friendName: "X Team" })).status).toBe(400);
+    expect((await book(A, { date: slotDate, friendPhone: B, friendName: "X Team" })).status).toBe(400);
+  });
+});

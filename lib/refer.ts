@@ -52,6 +52,7 @@ export const STATUS_TEXT: Record<ReferStatus, { label: string; tone: string }> =
 export const loadRules = () => api<ReferRules>("/refer/rules", { auth: "none" });
 export const loadMe = () => api<ReferMe>("/refer/me");
 export const sendReferral = (body: { bookingCode: string; friendPhone: string; teamName: string }) => api<Referral>("/refer", { method: "POST", body });
+export const bookAndRefer = (body: { date: string; startTime: string; friendPhone: string; friendName: string }) => api<Referral>("/refer/book", { method: "POST", body });
 export const withdrawReferral = (id: string) => api<{ id: string }>(`/refer/${id}`, { method: "DELETE" });
 
 export function clock(t: string) {

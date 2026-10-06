@@ -4,6 +4,8 @@ import { prisma } from "../../config/db";
 import { AppError } from "../../middlewares/error.middleware";
 import { addDaysKey, todayKey } from "../../utils/dates";
 import notificationService from "../notification/notification.service";
+import BookingService from "../booking/booking.service";
+import { assertWindow } from "../booking/booking.checkout";
 
 // Refer & Earn: a customer books a game on behalf of ANOTHER team. They file the booking here with the friend's number and
 // team name. Staff check it in the admin portal and approve it; then BOTH get loyalty points (amounts set by staff).
@@ -110,6 +112,26 @@ export class ReferService {
     });
     const names = new Map<string, string | null>([[friend.phoneNumber, friend.name], [userId, me?.name ?? null]]);
     return view(row, "referrer", names);
+  }
+
+  // One step for the customer: reserve the slot for the other team (on the customer's own account, paid at the venue) and
+  // file the referral for it. If filing fails, the reservation is cancelled again so no slot is left blocked.
+  async bookAndRefer(userId: string, input: { date?: unknown; startTime?: unknown; friendPhone?: unknown; friendName?: unknown }) {
+    const date = typeof input.date === "string" ? input.date : "";
+    const startTime = typeof input.startTime === "string" ? input.startTime : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:00$/.test(startTime)) throw new AppError(400, "Choose a date and a time.");
+    assertWindow(date);
+    const rules = await getRules();
+    if (!rules.enabled) throw new AppError(403, "Refer & Earn is paused right now.");
+    const booking = await BookingService.createBooking({ date, startTime, duration: 1, paymentMethod: "venue" }, userId);
+    try {
+      const code = (booking as { code?: string }).code;
+      return await this.create(userId, { bookingCode: code, friendPhone: input.friendPhone, teamName: input.friendName });
+    } catch (e) {
+      await prisma.booking.update({ where: { id: booking.id }, data: { status: "cancelled", cancelledAt: new Date(), notes: "REFERRAL_FAILED" } });
+      await BookingService.freeSlots(booking.id);
+      throw e;
+    }
   }
 
   async cancel(userId: string, id: string) {
