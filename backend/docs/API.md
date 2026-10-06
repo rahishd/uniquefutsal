@@ -156,3 +156,10 @@ can be booked once.
 | PATCH | `/complaints/admin/:id` | Staff | `{status?: open|in_review|resolved|closed, reply?}`; notifies the customer (`type: "complaint"`); audited |
 
 Table `Complaint` (migration `20261007000001_complaints`, additive). Notification type `complaint` added.
+
+## Promo codes switched off for one customer
+
+Staff (admin portal > Customers) can switch a promo code, or all codes (`*`), off for one customer. Stored in `CustomerPromoRule` (migration `20261008000001_customer_promo_rules`, additive; a row = blocked). Enforced on the server, and remembered until staff switch it back on:
+- `POST /bookings/quote`, `POST /promos/validate`: `promo = {ok:false, message:"This promo code is not available for your account. Please contact the venue."}` for a signed-in customer with the code switched off.
+- `POST /bookings/checkout` and `POST /membership/request`: 400 with the same message.
+- `GET /promos`: with a token, hides the codes switched off for that customer. Guests and other customers are unaffected.
