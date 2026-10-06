@@ -184,6 +184,15 @@ A customer books a game for ANOTHER team on their own account, then files it her
 
 Table `Referral` (migration `20261011000001_refer_earn`, additive; one referral per booking). Notification type `referral` added.
 
+## Digital ID (customer QR)
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| GET | `/me/digital-id` | User | `{name, phone, payload "UFID1.<random 192-bit token>", createdAt, replacedAt}`; made on first use. The QR holds only the token, no personal data; only staff in the admin portal can resolve it |
+| POST | `/me/digital-id/replace` | User | new token, the old QR stops working |
+
+Table `DigitalId` (migration `20261015000001_digital_id`, additive). The admin portal needs the same table (its `sql/014`) and the staff scan endpoints: not built yet.
+
 ## Site content (gallery and ads)
 
 Staff upload photos and ads in the admin portal (Site Content). The app reads them here; no sign-in needed. The server decides what is live (Nepal time), so a time-targeted ad appears and disappears by itself.

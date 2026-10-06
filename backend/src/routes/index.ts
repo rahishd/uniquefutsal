@@ -19,6 +19,7 @@ import { loyaltyRouter } from "../modules/loyalty";
 import { paymentRouter } from "../modules/payment";
 import { promoRouter } from "../modules/promo";
 import { profileRouter } from "../modules/profile";
+import { digitalIdRouter } from "../modules/digitalid";
 import { teamRouter, challengeRouter, resultRouter } from "../modules/team";
 import { siteRouter } from "../modules/site";
 import { complaintRouter } from "../modules/complaint";
@@ -51,6 +52,7 @@ router.use("/audit", auditRouter);
 router.use("/loyalty", loyaltyRouter);
 router.use("/payments", paymentRouter);
 router.use("/promos", promoRouter);
+router.use("/me/digital-id", digitalIdRouter); // before /me so it is matched first
 router.use("/me", profileRouter);
 router.use("/teams", teamRouter);
 router.use("/challenges", challengeRouter);

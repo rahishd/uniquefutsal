@@ -849,3 +849,12 @@ model Checkout {
 
   @@index([userId, createdAt])
 }
+
+// Digital ID: the opaque, random value inside the customer's QR code. No personal data is in it. Only staff signed in to
+// the admin portal can turn it back into a customer. The customer can replace it (the old QR then stops working).
+model DigitalId {
+  userId    String    @id
+  token     String    @unique
+  createdAt DateTime  @default(now())
+  rotatedAt DateTime?
+}
