@@ -666,3 +666,23 @@ model PlayerGameStat {
   @@unique([bookingId, userId])
   @@index([userId])
 }
+
+// Customer complaints (Popular > Complaints). Photos are URLs of compressed JPEGs; staff reply from the admin side.
+model Complaint {
+  id          String    @id @default(cuid())
+  code        String    @unique // short code the customer sees: CP-XXXXXX
+  userId      String // User.phoneNumber
+  category    String
+  message     String
+  bookingCode String?
+  photos      String[]  @default([])
+  status      String    @default("open") // open | in_review | resolved | closed
+  staffReply  String?
+  repliedBy   String?
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status, createdAt])
+}

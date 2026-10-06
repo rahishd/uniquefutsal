@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, CalendarDays, ChevronRight, CircleHelp, Crown, Gamepad2, Star, Swords, Tag, Trophy } from "lucide-react";
+import { BarChart3, CalendarDays, ChevronRight, CircleHelp, Crown, Gamepad2, MessageSquareWarning, Star, Swords, Tag, Trophy } from "lucide-react";
 import { markReadByTypes, noticesStore, type NoticeType } from "@/lib/notifications";
 import { useSession } from "@/lib/session";
 import { pendingActions, useTeams } from "@/lib/teams";
@@ -26,6 +26,7 @@ const TILES: Tile[] = [
   { label: "My stats", href: "/profile", icon: BarChart3, tone: "text-indigo-500" },
   { label: "Tournaments", href: "/tournaments", icon: Trophy, tone: "text-orange-500", types: ["tournament"] },
   { label: "Gamezone", href: "/gamezone", icon: Gamepad2, tone: "text-violet-500", types: ["gamezone"] },
+  { label: "Complaints", href: "/complaints", icon: MessageSquareWarning, tone: "text-rose-600", types: ["complaint"] },
   { label: "Help", href: "/help", icon: CircleHelp, tone: "text-sky-500" },
 ];
 

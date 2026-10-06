@@ -6,7 +6,7 @@
 import { api } from "@/lib/api";
 import { createRemoteStore } from "@/lib/remote-store";
 
-export type NoticeType = "challenge" | "payment" | "booking" | "reminder" | "membership" | "match" | "promo" | "points" | "tournament" | "gamezone";
+export type NoticeType = "challenge" | "payment" | "booking" | "reminder" | "membership" | "match" | "promo" | "points" | "tournament" | "gamezone" | "complaint";
 
 export interface Notice {
   id: string;

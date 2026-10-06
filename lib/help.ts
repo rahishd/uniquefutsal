@@ -208,6 +208,20 @@ export const helpTopics: HelpTopic[] = [
     href: { label: "Tournaments", to: "/tournaments" },
   },
   {
+    id: "complaints",
+    icon: "bell",
+    title: "Send a complaint",
+    summary: "Tell the venue about a problem, with photos if you like.",
+    points: [
+      "On Home, tap Complaints in the Popular section. You need to be signed in.",
+      "Pick what it is about, describe what happened, and add up to 3 photos if they help.",
+      "You can add your booking code so we find the game faster.",
+      "You get a reference like CP-7K3QX9. The venue's reply shows on the same page and in your notifications.",
+      "You can send up to 5 complaints a day. For something urgent, call the venue.",
+    ],
+    href: { label: "Complaints", to: "/complaints" },
+  },
+  {
     id: "urgent",
     icon: "bell",
     title: "Need urgent help?",

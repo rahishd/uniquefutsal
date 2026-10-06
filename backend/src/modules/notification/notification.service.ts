@@ -14,6 +14,7 @@ export const NOTICE_TYPES = [
   "points",
   "tournament",
   "gamezone",
+  "complaint",
 ] as const;
 export type NoticeType = (typeof NOTICE_TYPES)[number];
 

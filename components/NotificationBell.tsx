@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { AlarmClock, Bell, BellRing, CalendarCheck, CreditCard, Crown, Gamepad2, Star, Swords, Tag, Trophy, X } from "lucide-react";
+import { AlarmClock, Bell, BellRing, CalendarCheck, CreditCard, Crown, Gamepad2, MessageSquareWarning, Star, Swords, Tag, Trophy, X } from "lucide-react";
 import {
   clearAll,
   markAllRead,
@@ -25,6 +25,7 @@ const META: Record<NoticeType, { icon: typeof Bell; tone: string; label: string 
   points: { icon: Star, tone: "bg-yellow-400/20 text-yellow-600", label: "Points" },
   tournament: { icon: Trophy, tone: "bg-orange-500/10 text-orange-600", label: "Tournament" },
   gamezone: { icon: Gamepad2, tone: "bg-violet-500/10 text-violet-600", label: "Gamezone" },
+  complaint: { icon: MessageSquareWarning, tone: "bg-rose-500/10 text-rose-600", label: "Complaint" },
 };
 
 function ago(ms: number) {

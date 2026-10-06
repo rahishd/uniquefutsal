@@ -144,3 +144,15 @@ membership expiry SMS, daily report) still run.
 The developer's system has one pool of hours (no separate Court 1 / Court 2). The frontend demo showed two courts. If the
 venue really has two courts, add a `courtId` to `BookingSlot` and the checkout (a small, additive change). Until then each hour
 can be booked once.
+
+## Complaints
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| GET | `/complaints/categories` | Guest | `{categories[{id,label}], messageMin, messageMax, maxPhotos, perDay}` |
+| POST | `/complaints` | User | `{category, message (10-1500), bookingCode?, photos?: [image data URLs, max 3]}` -> complaint with code `CP-XXXXXX`. `bookingCode` must be on the caller's own account (400). 5 per 24 hours (429). Photos: JPG/PNG/WebP, 8 MB each before compression; decoded and re-encoded server-side, saved as JPEG |
+| GET | `/complaints/me` | User | own complaints, newest first, with `status`, `staffReply`, `photos` (paths under `/uploads/complaints/...` or full R2 URLs) |
+| GET | `/complaints/admin?status=&page=&limit=` | Staff | all complaints with `userId` and `customerName` |
+| PATCH | `/complaints/admin/:id` | Staff | `{status?: open|in_review|resolved|closed, reply?}`; notifies the customer (`type: "complaint"`); audited |
+
+Table `Complaint` (migration `20261007000001_complaints`, additive). Notification type `complaint` added.
