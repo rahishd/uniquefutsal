@@ -115,6 +115,8 @@ Awards are idempotent per source. Free-game bookings, guests, membership ledger 
 
 ## Membership (existing customers, no extra sign-up)
 
+Each subscription has a `memberCode` (MEM-10001...), the Membership ID shown to the member; staff create it in the admin portal when the membership is made (migration `20261014000001_member_code`, nullable and unique). Subscriptions made before this have none until staff renew or verify them. The admin portal also creates, verifies, renews, extends, suspends and cancels memberships (`suspended` and `cancelled` free the hour); the customer app keeps blocking the hour of `active` and `pending` memberships.
+
 | Method | Path | Who | Notes |
 |---|---|---|---|
 | GET | `/membership/offers` | Guest | active plans with `prices[1_month|3_months][morning|day|evening]` after the plan discount (`null` = not offered) |
