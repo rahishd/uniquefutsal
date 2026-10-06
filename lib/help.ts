@@ -285,4 +285,15 @@ export const helpTopics: HelpTopic[] = [
       "The page then opens full screen with the Unique Futsal icon.",
     ],
   },
+  {
+    id: "search",
+    icon: "book",
+    title: "Search",
+    summary: "Find a slot, offer, team, page or help topic from Home.",
+    points: [
+      "Type a day and time like \"tomorrow 7pm\" or \"friday evening\" to jump to that slot in the booking page.",
+      "Type a promo code, a team name or a feature such as \"points\" or \"membership\".",
+      "Tap the filter button beside the box to show only Slots, Offers, Teams, Pages or Help.",
+    ],
+  },
 ];

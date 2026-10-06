@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { CalendarDays, Search, SlidersHorizontal } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import HeaderInfo from "@/components/HeaderInfo";
+import HomeSearch from "@/components/HomeSearch";
 import NotificationBell from "@/components/NotificationBell";
 import UserBadge from "@/components/UserBadge";
 import QuickRebook from "@/components/QuickRebook";
@@ -23,20 +24,7 @@ export default function HomeScreen() {
 
       <HeaderInfo />
 
-      {/* Search */}
-      <div className="mt-4 flex gap-3">
-        <label className="glass flex flex-1 items-center gap-2 rounded-2xl px-4 py-3.5">
-          <input
-            type="search"
-            placeholder="Search a slot, offer or team…"
-            className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-          />
-          <Search size={20} className="text-slate-500" />
-        </label>
-        <button type="button" aria-label="Filters" className="glass flex h-[52px] w-[52px] items-center justify-center rounded-2xl text-slate-600">
-          <SlidersHorizontal size={20} />
-        </button>
-      </div>
+      <HomeSearch />
 
       <QuickRebook />
 
