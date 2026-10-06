@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Gift, Star, Trophy, ShoppingBag, Gamepad2, UserRound, ChevronDown, Crown, Check, Clock, TriangleAlert, Loader2 } from "lucide-react";
+import { Gift, Star, Trophy, ShoppingBag, Gamepad2, UserRound, ChevronDown, Crown, HeartHandshake, Check, Clock, TriangleAlert, Loader2 } from "lucide-react";
 import { useSession, openSignIn } from "@/lib/session";
 import { errorText } from "@/lib/api";
 import { GAMES_PER_FREE, GAME_POINTS_MONTHS, MEMBERSHIP_POINTS, POINTS_CAPTAIN_WIN, RS_PER_POINT, SHIFT_HOURS, fmtPts } from "@/lib/points";
@@ -16,6 +16,7 @@ const KIND: Record<LoyaltyRow["kind"], { icon: typeof Star; tone: string }> = {
   goods: { icon: ShoppingBag, tone: "bg-sky-400/20 text-sky-600" },
   membership: { icon: Crown, tone: "bg-violet-400/20 text-violet-600" },
   free_game: { icon: Gift, tone: "bg-orange-400/20 text-orange-600" },
+  referral: { icon: HeartHandshake, tone: "bg-pink-400/20 text-pink-600" },
 };
 
 const SHOWN = 4;

@@ -236,6 +236,20 @@ export const helpTopics: HelpTopic[] = [
     href: { label: "Children's Academy", to: "/academy" },
   },
   {
+    id: "refer",
+    icon: "bell",
+    title: "Refer & Earn",
+    summary: "Book a game for another team and you both earn loyalty points.",
+    points: [
+      "Book a game on your own account for the other team, then open Refer & Earn in the Popular section.",
+      "Pick that booking, enter the other team's captain (they need an account in the app) and the team name.",
+      "The venue checks the referral. When it is approved, both of you get the points and a notification.",
+      "The number of points is set by the venue and shown on the page. Referral points last 12 months.",
+      "You can withdraw a referral while it is still waiting. Each booking can be referred once.",
+    ],
+    href: { label: "Refer & Earn", to: "/refer" },
+  },
+  {
     id: "urgent",
     icon: "bell",
     title: "Need urgent help?",

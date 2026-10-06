@@ -23,6 +23,7 @@ import { teamRouter, challengeRouter, resultRouter } from "../modules/team";
 import { siteRouter } from "../modules/site";
 import { complaintRouter } from "../modules/complaint";
 import { academyRouter } from "../modules/academy";
+import { referRouter } from "../modules/refer";
 import pushService from "../modules/push/push.service";
 
 
@@ -56,6 +57,7 @@ router.use("/results", resultRouter);
 router.use("/site", siteRouter);
 router.use("/complaints", complaintRouter);
 router.use("/academy", academyRouter);
+router.use("/refer", referRouter);
 
 // Public key the app needs to subscribe this device to Web Push (empty/enabled:false when push is not configured)
 router.get("/push/public-key", (_req, res) => {

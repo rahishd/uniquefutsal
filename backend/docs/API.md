@@ -168,6 +168,19 @@ Table `Complaint` (migration `20261007000001_complaints`, additive). Notificatio
 
 Tables `AcademySession`, `AcademyEnrollment` (migration `20261010000001_children_academy`, additive). Terms live in `Settings` key `academyTerms` (`{version,text,updatedAt}`, edited from the admin portal; each edit raises the version). Notification type `academy` added. Staff manage classes, attendance and terms in the admin portal.
 
+## Refer & Earn
+
+A customer books a game for ANOTHER team on their own account, then files it here with that team's captain. Staff approve it in the admin portal, which writes the loyalty points (kind `referral`, valid 12 months) for BOTH people. The app never writes points.
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| GET | `/refer/rules` | Guest | `{enabled, referrerPoints, friendPoints, perDay}` (staff set the points in `Settings` key `referEarn`) |
+| GET | `/refer/me` | User | `{rules, referrals[] (as referrer or as friend; `points` is what the caller gets), eligibleBookings[]}` (own, not cancelled, regular, last 30 days, not already sent) |
+| POST | `/refer` | User | `{bookingCode, friendPhone, teamName}` -> referral `RF-XXXXXX`, pending. 404 booking not yours or friend not registered, 400 yourself / bad fields, 409 cancelled, too old or already referred, 403 paused, 429 over 5 a day. Friend is notified (`type: "referral"`) |
+| DELETE | `/refer/:id` | User | withdraw while pending (referrer only) |
+
+Table `Referral` (migration `20261011000001_refer_earn`, additive; one referral per booking). Notification type `referral` added.
+
 ## VIP discount code
 
 Staff (admin portal > Customers) give one customer a VIP code such as `ADMINVIP`: `VipCode` (migration `20261009000001_vip_codes`, additive, one per customer), `type` percent or flat, `value`, `active`, `claimedAt`.

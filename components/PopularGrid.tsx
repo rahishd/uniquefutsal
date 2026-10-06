@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, CalendarDays, ChevronRight, CircleHelp, Crown, Gamepad2, GraduationCap, MessageSquareWarning, Star, Swords, Tag, Trophy } from "lucide-react";
+import { BarChart3, CalendarDays, ChevronRight, CircleHelp, Crown, Gamepad2, GraduationCap, HeartHandshake, MessageSquareWarning, Star, Swords, Tag, Trophy } from "lucide-react";
 import { markReadByTypes, noticesStore, type NoticeType } from "@/lib/notifications";
 import { useSession } from "@/lib/session";
 import { pendingActions, useTeams } from "@/lib/teams";
@@ -28,6 +28,7 @@ const TILES: Tile[] = [
   { label: "Gamezone", href: "/gamezone", icon: Gamepad2, tone: "text-violet-500", types: ["gamezone"] },
   { label: "Complaints", href: "/complaints", icon: MessageSquareWarning, tone: "text-rose-600", types: ["complaint"] },
   { label: "Children's Academy", href: "/academy", icon: GraduationCap, tone: "text-teal-600", types: ["academy"] },
+  { label: "Refer & Earn", href: "/refer", icon: HeartHandshake, tone: "text-pink-600", types: ["referral"] },
   { label: "Help", href: "/help", icon: CircleHelp, tone: "text-sky-500" },
 ];
 

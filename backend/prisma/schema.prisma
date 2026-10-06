@@ -454,7 +454,7 @@ model PaymentEvent {
 model LoyaltyEntry {
   id         String   @id @default(cuid())
   userId     String
-  kind       String // game | captain_win | goods | membership | free_game
+  kind       String // game | captain_win | goods | membership | free_game | referral
   points     Decimal  @db.Decimal(8, 1) // positive = earned, negative = spent on a free game
   earnedOn   String // YYYY-MM-DD
   expiresOn  String? // last valid day; null = never expires
@@ -750,4 +750,29 @@ model AcademyEnrollment {
   @@unique([sessionId, userId, childKey])
   @@index([userId])
   @@index([sessionId, status])
+}
+
+// Refer & Earn: a customer booked a game for another team; staff approve it and both get points (migration 20261011000001_refer_earn).
+model Referral {
+  id             String    @id @default(cuid())
+  code           String    @unique // RF-XXXXXX
+  referrerId     String // the customer who booked (User.phoneNumber)
+  friendId       String // captain of the other team (User.phoneNumber)
+  teamName       String
+  bookingId      String    @unique // a booking can be referred once
+  bookingCode    String?
+  gameDate       String
+  gameTime       String
+  status         String    @default("pending") // pending | approved | rejected
+  referrerPoints Decimal   @db.Decimal(8, 1)
+  friendPoints   Decimal   @db.Decimal(8, 1)
+  staffNote      String?
+  decidedBy      String?
+  decidedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([referrerId])
+  @@index([friendId])
+  @@index([status, createdAt])
 }
