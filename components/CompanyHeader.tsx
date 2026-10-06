@@ -12,7 +12,7 @@ export default function CompanyHeader() {
         <Link
           href="/"
           aria-label={`${site.name} home`}
-          className="flex h-16 items-center gap-3 rounded-2xl bg-[#0c0b5d] px-4 shadow-[0_8px_20px_rgba(12,11,93,0.3)]"
+          className="flex min-h-16 items-center gap-3 rounded-2xl py-2 bg-[#0c0b5d] px-4 shadow-[0_8px_20px_rgba(12,11,93,0.3)]"
         >
           {/* The logo picture is white on navy; blending with "lighten" keeps only the white player on the bar. */}
           <span
@@ -25,7 +25,11 @@ export default function CompanyHeader() {
               backgroundBlendMode: "lighten",
             }}
           />
-          <span className="text-lg font-bold uppercase tracking-wide text-white">{site.name}</span>
+          <span className="min-w-0">
+            <span className="block text-lg font-bold uppercase leading-tight tracking-wide text-white">{site.name}</span>
+            <span className="block text-[10px] leading-snug text-white/75">1st Advanced tech Driven futsal In nepal</span>
+            <span className="block text-[10px] leading-snug text-white/75">Designed and Developed by: Rahish Dumre</span>
+          </span>
         </Link>
         <div className="empty:hidden mt-2"><AdStrip placement="header" /></div>
       </div>
