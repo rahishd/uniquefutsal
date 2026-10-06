@@ -34,21 +34,44 @@ body {
   -webkit-backdrop-filter: blur(18px) saturate(160%);
 }
 
+/* Glass buttons: frosted blur, a thin light border, bright top and left edges and a soft outer shadow.
+   Shadows (not extra elements) draw the edges, so nothing about a button's size or position changes. */
 .glass-btn {
   background: linear-gradient(180deg, rgba(255, 170, 90, 0.95), rgba(245, 130, 42, 0.95));
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.45);
   box-shadow:
-    0 8px 20px rgba(245, 130, 42, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+    0 8px 24px rgba(245, 130, 42, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 1px 0 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(17px);
+  -webkit-backdrop-filter: blur(17px);
 }
 
 .glass-active {
   background: linear-gradient(180deg, #2a2a9c, #0c0b5d);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow:
-    0 8px 20px rgba(12, 11, 93, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    0 8px 24px rgba(12, 11, 93, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 1px 0 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(17px);
+  -webkit-backdrop-filter: blur(17px);
+}
+
+/* Light buttons (the white pills, chips and icon buttons) */
+button[class*="bg-white/"] {
+  background-color: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 1px 0 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 0 24px 8px rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(17px) saturate(160%);
+  -webkit-backdrop-filter: blur(17px) saturate(160%);
 }
 
 @keyframes adfade {
