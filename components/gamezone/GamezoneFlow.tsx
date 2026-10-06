@@ -69,7 +69,7 @@ function Flow({ catalog }: { catalog: Catalog }) {
   const [selGame, setSelGame] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [method, setMethod] = useState<PayMethod>("esewa");
+  const [method, setMethod] = useState<PayMethod>("fonepay");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<GzBooking | null>(null);
@@ -90,7 +90,7 @@ function Flow({ catalog }: { catalog: Catalog }) {
   const plan = catalog.plans.find((p) => p.players === players) ?? catalog.plans[0];
   const total = estimate(plan.ratePerPersonHour, players, hours);
   const registered = Boolean(session?.registered);
-  const effMethod: PayMethod = !registered && method === "venue" ? "esewa" : method;
+  const effMethod: PayMethod = !registered && method === "venue" ? "fonepay" : method;
   const phoneOk = /^9\d{9}$/.test(phone);
   const canPay = Boolean(slot && selGame && (registered || (name.trim().length >= 2 && phoneOk)));
 

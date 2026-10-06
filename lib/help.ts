@@ -42,7 +42,7 @@ export const helpTopics: HelpTopic[] = [
       "Pick how many hours (up to 4). The price grows with the hours: rate × players × hours.",
       "Choose PS5 Station 1 or 2. Each console has its own free times, so the start times change when you switch.",
       "Choose your game: GTA 5, Forza Horizon, Red Dead Redemption or FIFA 26.",
-      "Choose a day and a start time, then pay the same way as a game booking (eSewa, Fonepay or at the venue).",
+      "Choose a day and a start time, then pay the same way as a game booking (Fonepay or at the venue).",
       "Guests pay online in full. Signed-in customers can also pay at the venue.",
     ],
     href: { label: "Book Gamezone", to: "/gamezone" },
@@ -50,10 +50,10 @@ export const helpTopics: HelpTopic[] = [
   {
     id: "payment",
     icon: "pay",
-    title: "Paying with eSewa, Fonepay or at the venue",
+    title: "Paying with Fonepay or at the venue",
     summary: "Scan the QR and we confirm the payment for you.",
     points: [
-      "eSewa and Fonepay show a QR for the exact amount. The note on the payment is filled in automatically.",
+      "Fonepay shows a QR for the exact amount. The note on the payment is filled in automatically.",
       "Scan and pay. The screen detects the payment by itself, so there is no \"I've paid\" button. Keep the screen open.",
       "The QR is held for 10 minutes. If it runs out, go back and start again.",
       "Pay at venue is for signed-in customers only. Guests pay in full online.",

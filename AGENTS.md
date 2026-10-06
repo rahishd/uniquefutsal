@@ -15,7 +15,7 @@ Mobile-first customer PWA (Next.js App Router, TypeScript, Tailwind 4). Spec: th
 - Commands: `npm run dev`, `npm run build`, `npm run lint`.
 - Data lives in a separate backend/database. Never point development at production data or commit secrets (`.env*` is git-ignored).
 - The app is CONNECTED to the backend; the demo/sample data libraries are gone. `lib/api.ts` is the fetch wrapper (Bearer token, auto refresh, `ApiError`), base URL from `NEXT_PUBLIC_API_URL` in `.env.local` (default `http://localhost:5000/api`). `lib/auth-token.ts` keeps tokens, `lib/session.ts` is the real login (phone + password at `/login`, no OTP), and `lib/remote-store.ts` is the polling store used by `lib/booking.ts`, `payment.ts`, `points.ts`/`loyalty.ts`, `promos.ts`, `notifications.ts`, `teams.ts`, `gamezone.ts`, `profile.ts`, `tournament.ts`. Older sections below that mention demo data or localStorage describe behaviour that now lives on the server.
-- Local run: start the backend local DB and API (see the backend README), then `npm run dev`. Payments use the backend's TEST gateway (a "simulate payment" button) until the real eSewa/Fonepay keys exist. Membership online sign-up is "coming soon" until the membership model is decided.
+- Local run: start the backend local DB and API (see the backend README), then `npm run dev`. Payments use the backend's TEST gateway (a "simulate payment" button) until the real Fonepay keys exist. Membership online sign-up is "coming soon" until the membership model is decided.
 - Keep price, promo, loyalty and payment-status logic on the server, never trust the browser.
 - Put new FRDs in `FRD/`.
 
@@ -31,12 +31,12 @@ The service worker (`public/sw.js`) already handles `push` and `notificationclic
 
 # Payments (QR) — needs the real gateway
 
-Bookings and membership share `lib/payment.ts`, `components/payment/PaymentMethodPicker.tsx` and `components/payment/PaymentQr.tsx`. Methods: eSewa, Fonepay, Pay at venue. For eSewa/Fonepay the app shows a QR for the final amount (after promo codes) with remarks "Regular game / Membership renew / Membership purchase - <order id>", valid for 10 minutes (`QR_HOLD_MS`).
+Bookings and membership share `lib/payment.ts`, `components/payment/PaymentMethodPicker.tsx` and `components/payment/PaymentQr.tsx`. Methods: Fonepay, Pay at venue. For Fonepay the app shows a QR for the final amount (after promo codes) with remarks "Regular game / Membership renew / Membership purchase - <order id>", valid for 10 minutes (`QR_HOLD_MS`).
 
 **Payments are detected automatically; the customer never confirms.** While the QR is open, `PaymentQr` calls `fetchPaymentStatus(orderId)` every 3 seconds (and when the tab becomes visible again). When it returns `"paid"` the booking is confirmed (or the membership activated or extended) and "Payment received" is shown. There is no "I've paid" button.
 
 What your server must provide (replace the demo code in `lib/payment.ts`, `lib/booking.ts`, `lib/membership.ts`):
-1. Create the order and return the REAL merchant QR from eSewa/Fonepay for the exact amount and remarks. The current QR is a placeholder (`demoQrPayload`).
+1. Create the order and return the REAL merchant QR from Fonepay for the exact amount and remarks. The current QR is a placeholder (`demoQrPayload`).
 2. `GET /api/payments/:orderId/status` returning `pending` or `paid`. Set `paid` only after the gateway confirms it (callback/webhook, or the gateway's payment status API). Never trust the browser. Make callbacks idempotent.
 3. Re-check availability inside a transaction, recompute price and promo server-side, and expire unpaid orders after the QR hold.
 4. Remove the demo-only pieces: `DEMO_PAYMENTS`, `demoSimulatePayment` and the "Demo: simulate payment received" button.
@@ -46,7 +46,7 @@ What your server must provide (replace the demo code in `lib/payment.ts`, `lib/b
 `lib/session.ts` says who is using the app. DEMO: it starts signed in as the sample customer and "Sign out" (Profile) makes the visitor a guest; "Sign in (demo)" and "Have an account? Sign in" reverse it. Replace it with the real session from your login (for example a cookie plus `GET /api/auth/me`).
 
 - **Registered:** booking and membership never ask for name or mobile number; they use the account ("Booking as ..."). All payment methods are available, including Pay at venue.
-- **Guest:** must enter name and a valid mobile number, and must pay the full amount online (eSewa or Fonepay). Pay at venue is hidden. Guests have no membership, booking history or Quick Rebook.
+- **Guest:** must enter name and a valid mobile number, and must pay the full amount online (Fonepay). Pay at venue is hidden. Guests have no membership, booking history or Quick Rebook.
 - The guest rule is also checked in `createBooking` and `purchaseMembership` (`guest` flag), but the real server must enforce it too and take identity from the session, never from the request body.
 
 # Captain mode, teams, challenges and ratings
@@ -108,7 +108,7 @@ Everything is sample data in browser storage. The server must own the ledger, ex
 
 # Gamezone (PS5)
 
-`/gamezone` (`components/gamezone/GamezoneFlow.tsx`, data layer `lib/gamezone.ts`), opened from the "Gamezone" tile in Popular. Price per hour per person: Solo Rs. 300, 2 players Rs. 200 each, 4 players Rs. 150 each; more hours multiply the same rate (total = rate x players x hours, 1 to 4 hours). Same rules as court bookings: up to 10 days ahead, only free start times are listed, registered customers can pay at the venue, guests pay in full online (eSewa/Fonepay QR with remarks "Gamezone PS5 - <id>", paid status detected automatically), 1-hour reminder. Gamezone notices use `type: "gamezone"` (own badge on the tile and bell icon).
+`/gamezone` (`components/gamezone/GamezoneFlow.tsx`, data layer `lib/gamezone.ts`), opened from the "Gamezone" tile in Popular. Price per hour per person: Solo Rs. 300, 2 players Rs. 200 each, 4 players Rs. 150 each; more hours multiply the same rate (total = rate x players x hours, 1 to 4 hours). Same rules as court bookings: up to 10 days ahead, only free start times are listed, registered customers can pay at the venue, guests pay in full online (Fonepay QR with remarks "Gamezone PS5 - <id>", paid status detected automatically), 1-hour reminder. Gamezone notices use `type: "gamezone"` (own badge on the tile and bell icon).
 
 ASSUMPTIONS to confirm with the owner and set in `lib/gamezone.ts`: two consoles (`CONSOLES`), sessions between 10 AM and 10 PM (`OPEN_HOUR`, `CLOSE_HOUR`), 4 hours maximum (`MAX_HOURS`), only 1, 2 or 4 players, no promo codes and no loyalty points for Gamezone, and the bookings do not appear in Profile > My bookings yet. Availability is pseudo-random demo data; the server must own availability, price and payment status.
 

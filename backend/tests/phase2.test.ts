@@ -47,7 +47,7 @@ describe("short booking code", () => {
 
 describe("free cancellation", () => {
   it("cancels for free, frees the slot and marks a paid online order refunded", async () => {
-    const r = await post("/api/bookings/checkout", { date: futureDate(4), startTime: "19:00", method: "esewa" }, tokenFor(A));
+    const r = await post("/api/bookings/checkout", { date: futureDate(4), startTime: "19:00", method: "fonepay" }, tokenFor(A));
     expect(r.status).toBe(201);
     const b = await prisma.booking.findFirst({ where: { userId: A, date: futureDate(4) } });
     await paymentService.markPaid(b!.id, { source: "test" });

@@ -11,7 +11,7 @@ Times use Nepal time. Dates are `YYYY-MM-DD`. Money is whole rupees.
 |---|---|
 | Login, signup (phone + password, OTP off), profile, preferences, Player/Captain mode, push subscriptions | Done |
 | Court slots and prices, booking checkout, quote, guest rules, 10-day window, held slot, expiry | Done (single pool of hours; see "Courts") |
-| Payments: QR order, status polling, staff mark-paid, expiry job, test gateway | Done. Real eSewa/Fonepay adapters need merchant keys |
+| Payments: QR order, status polling, staff mark-paid, expiry job, test gateway | Done. Real Fonepay adapters need merchant keys |
 | Promos list and validation | Done (reads the developer's promo codes in Settings) |
 | Loyalty points ledger, expiry, free-game vouchers, goods sales, awards | Done |
 | Gamezone catalog, per-console slots, booking, payments, cancel | Done |
@@ -54,7 +54,7 @@ Times use Nepal time. Dates are `YYYY-MM-DD`. Money is whole rupees.
 | GET | `/bookings/occupancy?date=` | Guest | taken hours only; staff with a token also see names/phones |
 | GET | `/bookings/slots?date=` | Guest | Free hours for a date (today..+10 days, Nepal time) -> `{date,slots:[{hour,startTime,endTime,price}]}` |
 | POST | `/bookings/quote` | Guest | `{date,startTime,duration?,promoCode?,voucherId?}` -> `{basePrice,discount,total,promo,usesVoucher,earnPoints}` |
-| POST | `/bookings/checkout` | Guest or User | `{date,startTime,duration?,method: esewa|fonepay|venue,promoCode?,voucherId?,guest?:{name,phone}}`. Guest: details required, `venue` refused (403), no voucher. User: no guest details. Window today..+10. Online -> `{booking, payment:{orderCode,amount,remarks,qrPayload,expiresAt}}` and the slot is held 10 minutes |
+| POST | `/bookings/checkout` | Guest or User | `{date,startTime,duration?,method: fonepay|venue,promoCode?,voucherId?,guest?:{name,phone}}`. Guest: details required, `venue` refused (403), no voucher. User: no guest details. Window today..+10. Online -> `{booking, payment:{orderCode,amount,remarks,qrPayload,expiresAt}}` and the slot is held 10 minutes |
 | GET | `/bookings/me` | User | my bookings (membership ledger rows hidden) |
 | GET | `/bookings/me/rebook` | User | usual weekday+hour and the next open date, or `null` |
 | GET | `/bookings/:id` | Owner/Staff | |
@@ -64,7 +64,7 @@ Times use Nepal time. Dates are `YYYY-MM-DD`. Money is whole rupees.
 | GET | `/payments/:orderCode/status` | Owner, or guest with `?phone=` | `pending|paid|expired`. Only the gateway/staff change it |
 | POST | `/payments/:orderCode/mark-paid` | Staff | |
 | POST | `/payments/:orderCode/test-pay` | local/test only | simulates the gateway |
-| POST | `/payments/webhooks/esewa|fonepay` | gateway | 501 until configured; must verify the gateway signature |
+| POST | `/payments/webhooks/fonepay` | gateway | 501 until configured; must verify the gateway signature |
 
 `startTime` is `HH:mm`. A booking made with a voucher costs Rs. 0, is confirmed at once, and uses up the voucher.
 

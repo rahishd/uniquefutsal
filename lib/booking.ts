@@ -92,7 +92,7 @@ export interface Booking {
 
 export interface CheckoutResult {
   booking: Booking;
-  payment: PaymentOrder | null; // present for eSewa / Fonepay: show the QR
+  payment: PaymentOrder | null; // present for Fonepay: show the QR
 }
 
 export function checkoutBooking(p: {

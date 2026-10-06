@@ -111,7 +111,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   const [quote, setQuote] = useState<{ key: string; q: Quote | null; error: string | null } | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [method, setMethod] = useState<PayMethod>("esewa");
+  const [method, setMethod] = useState<PayMethod>("fonepay");
   const [useFree, setUseFree] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,7 +160,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   const phoneOk = /^9\d{9}$/.test(phone);
   // Registered customers are recognised automatically. Only guests type their details,
   // and guests must pay in full online (no "pay at venue").
-  const effMethod: PayMethod = free ? "venue" : !registered && method === "venue" ? "esewa" : method;
+  const effMethod: PayMethod = free ? "venue" : !registered && method === "venue" ? "fonepay" : method;
   const canPay = Boolean(slot && q && (registered || (name.trim().length >= 2 && phoneOk)));
   const openSlots = slots ?? [];
 
@@ -212,7 +212,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
     }
   }
 
-  /* ---------- Step 2b: pay with the QR (eSewa / Fonepay) ---------- */
+  /* ---------- Step 2b: pay with the QR (Fonepay) ---------- */
   if (qr && qr.payment && !done) {
     const pay = qr.payment;
     return (
@@ -265,7 +265,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           {[
             ["Date", longDate(done.date)],
             ["Time", `${formatHour(hourOf(done.startTime))} – ${formatHour(hourOf(done.startTime) + done.duration)}`],
-            ["Payment", freeBooking ? "Free game voucher" : paid ? `Paid via ${METHOD_LABEL[(done.paymentMethod === "full" ? "esewa" : done.paymentMethod) as PayMethod] ?? "online"}` : venue ? "Pay at venue" : "Awaiting payment confirmation"],
+            ["Payment", freeBooking ? "Free game voucher" : paid ? `Paid via ${METHOD_LABEL[(done.paymentMethod === "full" ? "fonepay" : done.paymentMethod) as PayMethod] ?? "online"}` : venue ? "Pay at venue" : "Awaiting payment confirmation"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4">
               <dt className="text-slate-400">{k}</dt>

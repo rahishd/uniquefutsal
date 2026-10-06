@@ -51,7 +51,7 @@ router.post(
     body("players").isInt({ min: 1, max: 4 }).toInt(),
     body("consoleId").isString().notEmpty(),
     body("game").isString().notEmpty().withMessage("Choose a game"),
-    body("method").isIn(["esewa", "fonepay", "venue"]).withMessage("Choose eSewa, Fonepay or Pay at venue"),
+    body("method").isIn(["fonepay", "venue"]).withMessage("Choose Fonepay or Pay at venue"),
   ],
   validateRequest,
   asyncHandler(async (req: AuthRequest, res: Response) => {

@@ -425,7 +425,7 @@ model PaymentOrder {
   purpose    String // game | gamezone | purchase | renew
   userId     String?
   guestPhone String?
-  method     String // esewa | fonepay | venue
+  method     String // fonepay | venue (older rows may say esewa)
   amount     Int
   status     String    @default("pending") // pending | paid | expired | failed | refunded
   remarks    String

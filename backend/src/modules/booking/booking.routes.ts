@@ -105,7 +105,7 @@ router.post("/quote", optionalAuthMiddleware, slotBody, validateRequest, checkou
 router.post(
   "/checkout",
   optionalAuthMiddleware,
-  [...slotBody, body("method").isIn(["esewa", "fonepay", "venue"]).withMessage("Choose eSewa, Fonepay or Pay at venue")],
+  [...slotBody, body("method").isIn(["fonepay", "venue"]).withMessage("Choose Fonepay or Pay at venue")],
   validateRequest,
   checkoutController.checkout,
 );

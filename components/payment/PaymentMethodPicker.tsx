@@ -8,7 +8,7 @@ interface Props {
   allowVenue?: boolean; // false for guests, who must pay in full online
 }
 
-// eSewa, Fonepay or Pay at venue. Shared by booking and membership.
+// Fonepay or Pay at venue. Shared by booking and membership.
 export default function PaymentMethodPicker({ value, onChange, allowVenue = true }: Props) {
   const methods = PAY_METHODS.filter((m) => allowVenue || m.id !== "venue");
   return (

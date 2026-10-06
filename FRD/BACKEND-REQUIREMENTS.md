@@ -15,7 +15,7 @@ be re-implemented and enforced on the server, because the browser can never be t
 |---|---|---|
 | D1 | Reuse the developer's existing production backend and database, or build a new one? | The old API (`NEXT_PUBLIC_API_URL`, tag `legacy-original`) holds real customers, bookings and inventory. A new schema needs a migration plan; never point development at production data. |
 | D2 | How do customers log in: phone + OTP (SMS), phone + password, or both? | The frontend has **no login screen** (only a demo "Sign in" button). Needs a login/register UI plus endpoints. The mobile number is the natural identity (teams add players by mobile number). |
-| D3 | Payment gateway integration: eSewa and Fonepay merchant accounts, API type (dynamic QR vs redirect), callback URLs. | Real QR codes can only be created by the server. Payment status must come from the gateway, never the browser. |
+| D3 | Payment gateway integration: Fonepay merchant accounts, API type (dynamic QR vs redirect), callback URLs. | Real QR codes can only be created by the server. Payment status must come from the gateway, never the browser. |
 | D4 | SMS provider (OTP, reminders) and Web Push (VAPID) hosting. | OTP login, "Booking reminders (SMS)" switch, closed-app reminders. |
 | D5 | Real prices, court count, Gamezone console count, opening hours, cancellation/refund policy. | The frontend uses demo values (see section 5). |
 | D6 | Loyalty expiry model: per-earning rolling expiry (as built) or a cycle starting at the first game. | See section 6.8. |

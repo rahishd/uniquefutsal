@@ -73,10 +73,10 @@ Things the developer's code still does that you should know about:
 6. `npx tsx scripts/legacy-bridge.ts slots` (dry run), then `--apply`. Then
    `npx tsx scripts/legacy-bridge.ts loyalty --voucher-period=Day` (dry run) and review the numbers with the owner, then `--apply`.
 7. Set production env: `NODE_ENV=production`, real `DATABASE_URL`, strong secrets, `OTP_ENABLED=false` until chosen,
-   a real `PAYMENT_GATEWAY` once eSewa/Fonepay keys exist (the server will not start in production with the test gateway).
+   a real `PAYMENT_GATEWAY` once Fonepay keys exist (the server will not start in production with the test gateway).
 8. Repeat steps 5 and 6 on the live database with `--i-have-a-backup`, smoke-test, and keep the backup.
 
 ## Open decisions (see docs/API.md for details)
 
-Membership model, real eSewa/Fonepay merchant details, cancellation/refund policy, number of courts, legacy loyalty
+Membership model, real Fonepay merchant details, cancellation/refund policy, number of courts, legacy loyalty
 conversion, SMS/OTP provider, who may reset a forgotten password while OTP is off.

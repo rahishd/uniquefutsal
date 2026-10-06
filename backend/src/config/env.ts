@@ -54,7 +54,7 @@ export const env = {
   REFRESH_TOKEN_EXPIRE: process.env.REFRESH_TOKEN_EXPIRE || "30d",
   // OTP / SMS verification is switched OFF. Signup and login use phone + password only.
   OTP_ENABLED: process.env.OTP_ENABLED === "true",
-  // Which payment gateway adapter to use: "test" (local fake) until real eSewa/Fonepay keys exist.
+  // Which payment gateway adapter to use: "test" (local fake) until the real Fonepay keys exist.
   PAYMENT_GATEWAY: process.env.PAYMENT_GATEWAY || "test",
   // Web Push (closed-app alerts). Keys come from `npx web-push generate-vapid-keys`; empty = push is off.
   VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY || "",

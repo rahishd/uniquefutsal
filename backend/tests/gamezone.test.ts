@@ -90,9 +90,9 @@ describe("each console has its own free times", () => {
 describe("rules", () => {
   const base = () => ({ date: futureDate(5), hour: 11, hours: 1, players: 1, consoleId: consoles[1].id, game: "GTA 5" });
   it("guests give details and pay online in full", async () => {
-    expect((await book({ ...base(), method: "esewa" })).status).toBe(400);
+    expect((await book({ ...base(), method: "fonepay" })).status).toBe(400);
     expect((await book({ ...base(), method: "venue", guest: { name: "Guest G", phone: GUEST } })).status).toBe(403);
-    expect((await book({ ...base(), method: "esewa", guest: { name: "Guest G", phone: "123" } })).status).toBe(400);
+    expect((await book({ ...base(), method: "fonepay", guest: { name: "Guest G", phone: "123" } })).status).toBe(400);
   });
   it("the game must be on the list, hours 1 to 4, players 1/2/4, inside opening hours, within 10 days", async () => {
     expect((await book({ ...base(), game: "Not A Game", method: "venue" }, tokenFor(REG))).status).toBe(400);
@@ -122,7 +122,7 @@ describe("online payment, expiry and cancel", () => {
   });
 
   it("an unpaid QR expires and frees the console", async () => {
-    const slot = { date: futureDate(6), hour: 11, hours: 1, players: 1, consoleId: consoles[0].id, game: "GTA 5", method: "esewa", guest: { name: "Guest G", phone: GUEST } };
+    const slot = { date: futureDate(6), hour: 11, hours: 1, players: 1, consoleId: consoles[0].id, game: "GTA 5", method: "fonepay", guest: { name: "Guest G", phone: GUEST } };
     const res = await book(slot);
     const code = res.body.data.booking.code;
     expect((await book({ ...slot, guest: { name: "Guest G", phone: GUEST } })).status).toBe(409); // held

@@ -15,7 +15,7 @@ import { pointsForGame, periodOfHour } from "../../utils/loyaltyPoints";
 export const MAX_ADVANCE_DAYS = 10; // bookings open today .. today + 10
 const PHONE = /^9\d{9}$/;
 
-type Method = "esewa" | "fonepay" | "venue";
+type Method = "fonepay" | "venue";
 
 function assertWindow(date: string) {
   const today = todayKey();
@@ -71,7 +71,7 @@ export const checkoutController = {
       const phone = (guest?.phone ?? "").trim();
       if (name.length < 2) throw new AppError(400, "Enter your full name");
       if (!PHONE.test(phone)) throw new AppError(400, "Enter a 10-digit mobile number starting with 9");
-      if (method === "venue") throw new AppError(403, "Guests must pay in full online (eSewa or Fonepay).");
+      if (method === "venue") throw new AppError(403, "Guests must pay in full online with Fonepay.");
       if (voucherId) throw new AppError(403, "Sign in to use a free game voucher");
       customerName = name;
       customerPhone = phone;
@@ -114,7 +114,7 @@ export const checkoutController = {
         await prisma.booking.update({ where: { id: booking.id }, data: { status: "pending", paymentStatus: "pending" } });
       } else if (booking.totalPrice > 0) {
         await prisma.booking.update({ where: { id: booking.id }, data: { status: "pending", paymentStatus: "pending", holdExpiresAt: holdUntil, paymentOrderCode: booking.id } });
-        payment = await paymentService.createOrder({ orderCode: booking.id, purpose: "game", userId, guestPhone: customerPhone, method: method as "esewa" | "fonepay", amount: booking.totalPrice });
+        payment = await paymentService.createOrder({ orderCode: booking.id, purpose: "game", userId, guestPhone: customerPhone, method: method as "fonepay", amount: booking.totalPrice });
         booking.status = "pending";
       } else {
         // a promo took the price to zero: nothing to pay

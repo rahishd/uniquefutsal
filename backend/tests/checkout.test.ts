@@ -78,16 +78,16 @@ describe("registered customer", () => {
 describe("guest rules", () => {
   const base = { date: futureDate(3), startTime: "18:00" };
   it("must give a name and a valid mobile number", async () => {
-    expect((await post("/api/bookings/checkout", { ...base, method: "esewa" })).status).toBe(400);
-    expect((await post("/api/bookings/checkout", { ...base, method: "esewa", guest: { name: "A", phone: GUEST } })).status).toBe(400);
-    expect((await post("/api/bookings/checkout", { ...base, method: "esewa", guest: { name: "Guest One", phone: "12345" } })).status).toBe(400);
+    expect((await post("/api/bookings/checkout", { ...base, method: "fonepay" })).status).toBe(400);
+    expect((await post("/api/bookings/checkout", { ...base, method: "fonepay", guest: { name: "A", phone: GUEST } })).status).toBe(400);
+    expect((await post("/api/bookings/checkout", { ...base, method: "fonepay", guest: { name: "Guest One", phone: "12345" } })).status).toBe(400);
   });
   it("must pay online in full: pay at venue is refused", async () => {
     const res = await post("/api/bookings/checkout", { ...base, method: "venue", guest: { name: "Guest One", phone: GUEST } });
     expect(res.status).toBe(403);
   });
   it("cannot use a free-game voucher", async () => {
-    const res = await post("/api/bookings/checkout", { ...base, method: "esewa", voucherId: "x", guest: { name: "Guest One", phone: GUEST } });
+    const res = await post("/api/bookings/checkout", { ...base, method: "fonepay", voucherId: "x", guest: { name: "Guest One", phone: GUEST } });
     expect(res.status).toBe(403);
   });
 });
@@ -97,7 +97,7 @@ describe("online payment lifecycle", () => {
   const slot = { date: futureDate(4), startTime: "19:00" };
 
   it("creates a held booking and a QR for the exact amount", async () => {
-    const res = await post("/api/bookings/checkout", { ...slot, method: "esewa", guest: { name: "Guest One", phone: GUEST } });
+    const res = await post("/api/bookings/checkout", { ...slot, method: "fonepay", guest: { name: "Guest One", phone: GUEST } });
     expect(res.status).toBe(201);
     const { booking, payment } = res.body.data;
     code = booking.id;
@@ -110,7 +110,7 @@ describe("online payment lifecycle", () => {
   });
 
   it("holds the slot: nobody else can take it", async () => {
-    const res = await post("/api/bookings/checkout", { ...slot, method: "esewa", guest: { name: "Guest Two", phone: "9800000399" } });
+    const res = await post("/api/bookings/checkout", { ...slot, method: "fonepay", guest: { name: "Guest Two", phone: "9800000399" } });
     expect(res.status).toBe(400);
   });
 
@@ -148,7 +148,7 @@ describe("online payment lifecycle", () => {
   });
 
   it("gateway webhooks are off until the merchant keys exist", async () => {
-    expect((await api().post("/api/payments/webhooks/esewa").send({})).status).toBe(501);
+    expect((await api().post("/api/payments/webhooks/fonepay").send({})).status).toBe(501);
     expect((await api().post("/api/payments/webhooks/fonepay").send({})).status).toBe(501);
   });
 });
@@ -172,7 +172,7 @@ describe("unpaid orders expire and free the slot", () => {
 
   it("the job expires everything that ran out of time", async () => {
     const slot = { date: futureDate(5), startTime: "21:00" };
-    const res = await post("/api/bookings/checkout", { ...slot, method: "esewa", guest: { name: "Guest One", phone: GUEST } });
+    const res = await post("/api/bookings/checkout", { ...slot, method: "fonepay", guest: { name: "Guest One", phone: GUEST } });
     const code = res.body.data.booking.id;
     await prisma.paymentOrder.update({ where: { orderCode: code }, data: { expiresAt: new Date(Date.now() - 1000) } });
     expect(await paymentService.expireDue()).toBeGreaterThanOrEqual(1);

@@ -3,11 +3,11 @@ import env from "../config/env";
 
 // The payment gateway behind the QR codes.
 //
-// A REAL eSewa / Fonepay QR can only be created by this server with the venue's merchant account.
+// A REAL Fonepay dynamic QR can only be created by this server with the venue's merchant account.
 // Until those keys exist, the "test" gateway makes a clearly fake QR and a test endpoint can simulate
 // the payment. The test gateway is refused in production (see config/env.ts).
 
-export type OnlineMethod = "esewa" | "fonepay";
+export type OnlineMethod = "fonepay";
 
 export interface QrRequest {
   orderCode: string;
@@ -41,7 +41,7 @@ class NotConfiguredGateway implements PaymentGateway {
 }
 
 export function getGateway(): PaymentGateway {
-  // TODO(real gateways): return an EsewaGateway / FonepayGateway here once the merchant keys exist.
+  // TODO(real gateways): return a FonepayGateway here once the merchant keys exist.
   return env.PAYMENT_GATEWAY === "test" ? new TestGateway() : new NotConfiguredGateway();
 }
 

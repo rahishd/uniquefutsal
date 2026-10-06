@@ -7,16 +7,16 @@
 
 import { api } from "@/lib/api";
 
-export type PayMethod = "esewa" | "fonepay" | "venue";
+export type PayMethod = "fonepay" | "venue";
 export type OnlineMethod = Exclude<PayMethod, "venue">;
 
 export const PAY_METHODS: { id: PayMethod; label: string; note: string }[] = [
-  { id: "esewa", label: "eSewa", note: "Pay with QR" },
   { id: "fonepay", label: "Fonepay", note: "Pay with QR" },
   { id: "venue", label: "Pay at venue", note: "Cash or QR on arrival" },
 ];
 
-export const METHOD_LABEL: Record<PayMethod, string> = { esewa: "eSewa", fonepay: "Fonepay", venue: "Pay at venue" };
+// "esewa" is only for old records made before it was removed
+export const METHOD_LABEL: Record<string, string> = { fonepay: "Fonepay", venue: "Pay at venue", esewa: "eSewa (old)" };
 
 export const isOnline = (m: PayMethod): m is OnlineMethod => m !== "venue";
 

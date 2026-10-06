@@ -47,8 +47,8 @@ router.post(
 );
 
 // Gateway callbacks. They must verify the gateway's signature before calling markPaid.
-// Not available until the eSewa / Fonepay merchant keys are configured.
-for (const gw of ["esewa", "fonepay"]) {
+// Not available until the Fonepay merchant keys are configured.
+for (const gw of ["fonepay"]) {
   router.post(
     `/webhooks/${gw}`,
     asyncHandler(async () => {

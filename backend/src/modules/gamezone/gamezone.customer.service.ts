@@ -30,7 +30,7 @@ export interface GzCheckoutInput {
   players: number;
   consoleId: string;
   gameTitle: string;
-  method: "esewa" | "fonepay" | "venue";
+  method: "fonepay" | "venue";
   guest?: { name?: string; phone?: string };
 }
 
@@ -109,7 +109,7 @@ export class GamezoneCustomerService {
       const phone = (input.guest?.phone ?? "").trim();
       if (name.length < 2) throw new AppError(400, "Enter your full name");
       if (!PHONE.test(phone)) throw new AppError(400, "Enter a 10-digit mobile number starting with 9");
-      if (input.method === "venue") throw new AppError(403, "Guests must pay in full online (eSewa or Fonepay).");
+      if (input.method === "venue") throw new AppError(403, "Guests must pay in full online with Fonepay.");
       guestName = name;
       guestPhone = phone;
     } else if (input.guest) {
@@ -153,7 +153,7 @@ export class GamezoneCustomerService {
     let payment = null;
     if (online) {
       try {
-        payment = await paymentService.createOrder({ orderCode: code, purpose: "gamezone", userId: userId ?? null, guestPhone, method: input.method as "esewa" | "fonepay", amount: total });
+        payment = await paymentService.createOrder({ orderCode: code, purpose: "gamezone", userId: userId ?? null, guestPhone, method: input.method as "fonepay", amount: total });
       } catch (err) {
         await this.release(code, "cancelled");
         throw err;
