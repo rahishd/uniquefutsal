@@ -28,7 +28,7 @@ export const checkoutController = {
   quote: asyncHandler(async (req: AuthRequest, res: Response) => {
     const { date, startTime, duration = 1, promoCode, voucherId } = req.body;
     assertWindow(date);
-    const q = await BookingService.quote(date, startTime, duration, promoCode, req.user?.role === "user" ? req.user.id : undefined);
+    const q = await BookingService.quote(date, startTime, duration, promoCode);
 
     let usesVoucher = false;
     if (voucherId) {

@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import { assertPromoAllowed } from "../promo/promoRules";
 import { CreateMembershipPlanDTO, UpdateMembershipPlanDTO, CreateSubscriptionDTO, TimeSlotAvailability } from "./membership.dto";
 import { AppError } from "../../middlewares/error.middleware";
 import SettingsService from "../settings/settings.service";
@@ -498,7 +497,6 @@ class MembershipService {
         throw new AppError(400, "Invalid promo code. Please check and try again.");
       }
 
-      await assertPromoAllowed(userId, normalizedCode);
       this.assertPromoValidForMembership(promo, startDate, data.chosenDays, data.timeSlot);
       validatedPromoCode = promo.code;
     }

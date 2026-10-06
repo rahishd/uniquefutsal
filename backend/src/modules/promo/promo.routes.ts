@@ -3,8 +3,6 @@ import { body } from "express-validator";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { ApiResponseUtil } from "../../utils/apiResponse";
 import validateRequest from "../../middlewares/validate.middleware";
-import { AuthRequest, optionalAuthMiddleware } from "../../middlewares/auth.middleware";
-import { blockedPromoCodes } from "./promoRules";
 import SettingsService from "../settings/settings.service";
 import BookingService from "../booking/booking.service";
 import { daysBetweenKeys, todayKey } from "../../utils/dates";
@@ -28,14 +26,11 @@ function termsOf(p: PromoCode): string {
 // The Promos page: active, upcoming and expired offers (the status is worked out from today's date).
 router.get(
   "/",
-  optionalAuthMiddleware,
-  asyncHandler(async (req: AuthRequest, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const today = todayKey();
     const promos = await SettingsService.getPromoCodes();
-    // codes staff switched off for this signed-in customer are not shown to them
-    const blocked = await blockedPromoCodes(req.user?.role === "user" ? req.user.id : undefined);
     const items = promos
-      .filter((p) => p.isActive !== false && !blocked.all && !blocked.codes.has(p.code.trim().toUpperCase()))
+      .filter((p) => p.isActive !== false)
       .map((p) => {
         const until = p.expiryDate ? p.expiryDate.slice(0, 10) : null;
         const status = until && until < today ? "expired" : "active";
@@ -64,10 +59,9 @@ router.post(
     body("date").matches(/^\d{4}-\d{2}-\d{2}$/).withMessage("Date must be in YYYY-MM-DD format"),
     body("startTime").matches(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/).withMessage("Start time must be in HH:mm format"),
   ],
-  optionalAuthMiddleware,
   validateRequest,
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const q = await BookingService.quote(req.body.date, req.body.startTime, 1, req.body.code, req.user?.role === "user" ? req.user.id : undefined);
+  asyncHandler(async (req: Request, res: Response) => {
+    const q = await BookingService.quote(req.body.date, req.body.startTime, 1, req.body.code);
     res.json(ApiResponseUtil.success(200, "Promo checked", { basePrice: q.basePrice, discount: q.discount, total: q.total, promo: q.promo }));
   }),
 );

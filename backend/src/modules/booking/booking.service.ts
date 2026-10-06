@@ -17,7 +17,6 @@ import smsService from "../../services/sms.service";
 import { PromoCode as PromoCodeDTO } from "../settings/settings.dto";
 import { uploadFileToR2 } from "../../utils/r2storage";
 import { calculateLoyaltyProgress } from "../../utils/loyalty";
-import { PROMO_BLOCKED_MESSAGE, assertPromoAllowed, isPromoBlocked } from "../promo/promoRules";
 import fs from "fs";
 import path from "path";
 
@@ -320,7 +319,7 @@ export class BookingService {
 
   // Price of a booking and the effect of a promo code, with no side effects. Used by the quote and promo-check
   // endpoints; the same rules run again when the booking is created, so the browser's numbers are never trusted.
-  public async quote(date: string, startTime: string, duration: number, promoCode?: string, userId?: string) {
+  public async quote(date: string, startTime: string, duration: number, promoCode?: string) {
     const hourlyPricing = await SettingsService.getHourlyPricing();
     const defaultHourlyRate = await SettingsService.getHourlyRate();
     const startHour = parseInt(startTime.split(":")[0], 10);
@@ -337,8 +336,6 @@ export class BookingService {
       const found = promos.find((p) => p.code.trim().toUpperCase() === code);
       if (!found) {
         promo = { ok: false, message: "This promo code is invalid." };
-      } else if (await isPromoBlocked(userId, code)) {
-        promo = { ok: false, message: PROMO_BLOCKED_MESSAGE };
       } else {
         try {
           this.assertPromoValidForBooking(found, date, startTime);
@@ -667,7 +664,6 @@ export class BookingService {
         );
       }
 
-      await assertPromoAllowed(userId, normalizedCode);
       this.assertPromoValidForBooking(promo, dto.date, dto.startTime);
       discountAmount = this.calculatePromoDiscount(promo, subtotal);
       appliedPromoCode = promo.code;
