@@ -252,6 +252,18 @@ export const helpTopics: HelpTopic[] = [
     href: { label: "Refer & Earn", to: "/refer" },
   },
   {
+    id: "digitalid",
+    icon: "profile",
+    title: "Digital ID card",
+    summary: "Your own QR card. Show it at the venue.",
+    points: [
+      "Tap the QR button next to Hello on Home, or My Digital ID in Profile. Your card shows our name, your name, your number and a QR.",
+      "Download it as a picture or send it on WhatsApp. The venue scans it to open your account, and it also marks your membership attendance.",
+      "The QR has none of your details inside. Other apps cannot read it, only the Unique Futsal team can.",
+      "Lost it or sent it to the wrong person? Tap Make a new QR. The old card stops working at once.",
+    ],
+  },
+  {
     id: "urgent",
     icon: "bell",
     title: "Need urgent help?",

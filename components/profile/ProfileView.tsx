@@ -16,6 +16,7 @@ import { cancelGz, myGzStore, type GzBooking } from "@/lib/gamezone";
 import ProfileAvatar from "@/components/captain/ProfileAvatar";
 import { CaptainSummary, ModeToggle } from "@/components/captain/CaptainProfile";
 import AccountSecurity from "@/components/profile/AccountSecurity";
+import DigitalIdButton from "@/components/digitalid/DigitalIdButton";
 import { myMembershipStore } from "@/lib/membership";
 
 const rs = (n: number) => `Rs. ${n.toLocaleString("en-IN")}`;
@@ -367,6 +368,8 @@ function RegisteredProfile() {
           </div>
         ))}
       </div>
+
+      <DigitalIdButton variant="row" />
 
       {/* Membership */}
       <section className="rounded-3xl bg-gradient-to-br from-[#0c0b5d] via-[#16167f] to-[#2a2aa8] p-5 text-white shadow-[0_10px_30px_rgba(12,11,93,0.35)]">
