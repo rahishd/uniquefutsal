@@ -17,6 +17,7 @@ import smsService from "../../services/sms.service";
 import { PromoCode as PromoCodeDTO } from "../settings/settings.dto";
 import { uploadFileToR2 } from "../../utils/r2storage";
 import { calculateLoyaltyProgress } from "../../utils/loyalty";
+import { claimVip, vipDiscount, vipForBooking, vipLabel } from "../promo/vipCodes";
 import fs from "fs";
 import path from "path";
 
@@ -319,7 +320,7 @@ export class BookingService {
 
   // Price of a booking and the effect of a promo code, with no side effects. Used by the quote and promo-check
   // endpoints; the same rules run again when the booking is created, so the browser's numbers are never trusted.
-  public async quote(date: string, startTime: string, duration: number, promoCode?: string) {
+  public async quote(date: string, startTime: string, duration: number, promoCode?: string, userId?: string) {
     const hourlyPricing = await SettingsService.getHourlyPricing();
     const defaultHourlyRate = await SettingsService.getHourlyRate();
     const startHour = parseInt(startTime.split(":")[0], 10);
@@ -346,7 +347,20 @@ export class BookingService {
         }
       }
     }
-    return { basePrice, discount, total: Math.max(0, basePrice - discount), promo };
+
+    // VIP code: typed now, or claimed before. The bigger discount wins; the promo feedback names what was applied.
+    let vipApplied: { code: string; label: string } | null = null;
+    const { vip, entered } = await vipForBooking(userId, promoCode);
+    if (vip) {
+      const vd = vipDiscount(vip, basePrice);
+      if (entered || vd > discount) {
+        discount = vd;
+        vipApplied = { code: vip.code, label: vipLabel(vip) };
+        if (entered || promo?.ok) promo = { ok: true, code: vip.code, label: vipLabel(vip) };
+      }
+      if (entered) await claimVip(vip);
+    }
+    return { basePrice, discount, total: Math.max(0, basePrice - discount), promo, vip: vipApplied };
   }
 
   // Awards new-style loyalty points for bookings that are now both completed and fully paid. Idempotent.
@@ -650,7 +664,8 @@ export class BookingService {
     let appliedPromoCode: string | null = null;
 
     // Validate and compute promo discount server-side (never trust frontend discountAmount).
-    if (dto.promoCode) {
+    const { vip, entered: vipTyped } = await vipForBooking(userId, dto.promoCode);
+    if (dto.promoCode && !vipTyped) {
       const normalizedCode = dto.promoCode.trim().toUpperCase();
       const promoCodes = await SettingsService.getPromoCodes();
       const promo = promoCodes.find(
@@ -667,6 +682,16 @@ export class BookingService {
       this.assertPromoValidForBooking(promo, dto.date, dto.startTime);
       discountAmount = this.calculatePromoDiscount(promo, subtotal);
       appliedPromoCode = promo.code;
+    }
+
+    // The VIP code staff gave this customer applies to every booking once claimed; the bigger discount wins.
+    if (vip) {
+      const vd = vipDiscount(vip, subtotal);
+      if (vipTyped || vd > discountAmount) {
+        discountAmount = vd;
+        appliedPromoCode = vip.code;
+      }
+      if (appliedPromoCode === vip.code) await claimVip(vip);
     }
 
     let totalPrice = subtotal - discountAmount;

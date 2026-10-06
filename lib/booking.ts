@@ -58,6 +58,8 @@ export interface Quote {
   discount: number;
   total: number;
   promo: { ok: boolean; code?: string; label?: string; message?: string } | null;
+  // set when the customer's VIP code (given by the venue) is what lowered the price, typed or claimed before
+  vip?: { code: string; label: string } | null;
   usesVoucher: boolean;
   earnPoints: number; // points a signed-in customer will earn after the game
 }

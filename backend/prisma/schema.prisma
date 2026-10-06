@@ -686,3 +686,21 @@ model Complaint {
   @@index([userId])
   @@index([status, createdAt])
 }
+
+// A VIP discount code staff give to ONE customer (admin portal > Customers). type percent | flat. After the customer
+// types it once (claimedAt is set) it is applied to every booking they make, until staff pause or remove it.
+model VipCode {
+  id        String    @id @default(cuid())
+  userId    String    @unique // User.phoneNumber
+  code      String // upper case, e.g. ADMINVIP
+  type      String // percent | flat
+  value     Int // percent (1-100) or rupees off
+  active    Boolean   @default(true)
+  note      String?
+  claimedAt DateTime?
+  createdBy String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([code])
+}

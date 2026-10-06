@@ -304,7 +304,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
             <div className="flex justify-between"><dt className="text-slate-400">Time</dt><dd className="font-medium">{formatHour(slot.hour)} – {formatHour(slot.hour + 1)}</dd></div>
             <div className="flex justify-between"><dt className="text-slate-400">Base price</dt><dd>{formatRs(q ? q.basePrice : base)}</dd></div>
             {q && q.discount > 0 && (
-              <div className="flex justify-between text-emerald-600"><dt>{free ? "Free game voucher" : `Promo ${promo?.code ?? ""}`}</dt><dd>− {formatRs(q.discount)}</dd></div>
+              <div className="flex justify-between text-emerald-600"><dt>{free ? "Free game voucher" : q.vip ? q.vip.label : `Promo ${promo?.code ?? ""}`}</dt><dd>− {formatRs(q.discount)}</dd></div>
             )}
             <div className="flex justify-between border-t border-white/60 pt-3 text-base"><dt className="font-medium">Total</dt><dd className="font-semibold">{formatRs(total)}</dd></div>
           </dl>
@@ -341,6 +341,11 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
               />
               <button type="button" onClick={() => setAppliedCode(promoInput.trim())} className="rounded-2xl bg-brand px-5 text-sm font-medium text-white">Apply</button>
             </div>
+            {q?.vip && (!appliedCode || !promo?.ok) && (
+              <p role="status" className="mt-2 flex items-center gap-1 text-xs text-emerald-600">
+                <Check size={14} /> {q.vip.label} applied to every game (− {formatRs(q.discount)})
+              </p>
+            )}
             {appliedCode && promo && (
               <p role="status" className={`mt-2 flex items-center gap-1 text-xs ${promo.ok ? "text-emerald-600" : "text-rose-500"}`}>
                 {promo.ok ? <Check size={14} /> : <X size={14} />}

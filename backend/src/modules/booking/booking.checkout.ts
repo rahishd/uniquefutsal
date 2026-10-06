@@ -28,7 +28,7 @@ export const checkoutController = {
   quote: asyncHandler(async (req: AuthRequest, res: Response) => {
     const { date, startTime, duration = 1, promoCode, voucherId } = req.body;
     assertWindow(date);
-    const q = await BookingService.quote(date, startTime, duration, promoCode);
+    const q = await BookingService.quote(date, startTime, duration, promoCode, req.user?.role === "user" ? req.user.id : undefined);
 
     let usesVoucher = false;
     if (voucherId) {
@@ -43,6 +43,7 @@ export const checkoutController = {
         discount: usesVoucher ? q.basePrice : q.discount,
         total,
         promo: q.promo,
+        vip: q.vip,
         usesVoucher,
         // points a registered customer will earn after the game (free games earn none)
         earnPoints: req.user && !usesVoucher ? pointsForGame(total) : 0,

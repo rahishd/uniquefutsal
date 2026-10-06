@@ -156,3 +156,12 @@ can be booked once.
 | PATCH | `/complaints/admin/:id` | Staff | `{status?: open|in_review|resolved|closed, reply?}`; notifies the customer (`type: "complaint"`); audited |
 
 Table `Complaint` (migration `20261007000001_complaints`, additive). Notification type `complaint` added.
+
+## VIP discount code
+
+Staff (admin portal > Customers) give one customer a VIP code such as `ADMINVIP`: `VipCode` (migration `20261009000001_vip_codes`, additive, one per customer), `type` percent or flat, `value`, `active`, `claimedAt`.
+- The customer types the code in the booking promo box (`POST /bookings/quote`, `POST /promos/validate`, `POST /bookings/checkout`). Quoting with it marks it **claimed** (`claimedAt`). The response has `promo: {ok:true, code:"ADMINVIP", label:"VIP 10% off"}` and `vip: {code, label}`.
+- Once claimed, it applies to **every later booking with nothing typed** (`vip` is set, `promo` stays null). A paused (`active:false`) or removed code stops at once.
+- If a normal promo code is typed too, the bigger discount wins and `promo` names the one applied. A wrong code still reports "invalid" while the VIP discount keeps applying.
+- Only the customer it was given to can use it. Anyone else (another customer, a guest) typing the same text gets "This promo code is invalid."
+- The booking stores the code in `promoCode` and the amount in `discountAmount`, so staff can see how much it has saved.

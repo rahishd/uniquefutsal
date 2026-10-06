@@ -3,6 +3,7 @@ import { body } from "express-validator";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { ApiResponseUtil } from "../../utils/apiResponse";
 import validateRequest from "../../middlewares/validate.middleware";
+import { AuthRequest, optionalAuthMiddleware } from "../../middlewares/auth.middleware";
 import SettingsService from "../settings/settings.service";
 import BookingService from "../booking/booking.service";
 import { daysBetweenKeys, todayKey } from "../../utils/dates";
@@ -59,9 +60,10 @@ router.post(
     body("date").matches(/^\d{4}-\d{2}-\d{2}$/).withMessage("Date must be in YYYY-MM-DD format"),
     body("startTime").matches(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/).withMessage("Start time must be in HH:mm format"),
   ],
+  optionalAuthMiddleware,
   validateRequest,
-  asyncHandler(async (req: Request, res: Response) => {
-    const q = await BookingService.quote(req.body.date, req.body.startTime, 1, req.body.code);
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const q = await BookingService.quote(req.body.date, req.body.startTime, 1, req.body.code, req.user?.role === "user" ? req.user.id : undefined);
     res.json(ApiResponseUtil.success(200, "Promo checked", { basePrice: q.basePrice, discount: q.discount, total: q.total, promo: q.promo }));
   }),
 );
