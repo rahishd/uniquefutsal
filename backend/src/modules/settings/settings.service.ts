@@ -58,7 +58,7 @@ const DEFAULT_SETTINGS: SettingsData = {
 
 export class SettingsService {
   // Get a setting by key
-  private async getSetting(key: string): Promise<string | null> {
+  async getSetting(key: string): Promise<string | null> {
     const setting = await prisma.settings.findUnique({
       where: { key },
     });

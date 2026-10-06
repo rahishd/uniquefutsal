@@ -5,6 +5,7 @@ import ProfileAvatar from "@/components/captain/ProfileAvatar";
 import { useSession } from "@/lib/session";
 import { useTeams } from "@/lib/teams";
 import DigitalIdButton from "@/components/digitalid/DigitalIdButton";
+import WifiButton from "@/components/wifi/WifiButton";
 
 // Top-left of the home header: the signed-in customer (with the (C) badge in Captain mode), or "Guest".
 export default function UserBadge() {
@@ -25,6 +26,7 @@ export default function UserBadge() {
       </span>
     </Link>
     <DigitalIdButton />
+    <WifiButton />
     </div>
   );
 }

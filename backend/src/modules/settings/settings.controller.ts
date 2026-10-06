@@ -11,6 +11,9 @@ export const settingsController = {
   // Get all settings
   getSettings: asyncHandler(async (req: AuthRequest, res: Response) => {
     const result = await SettingsService.getSettings();
+    // This answer is public: the venue Wi-Fi goes only to signed-in customers through GET /wifi.
+    delete result.settings.wifiSSID;
+    delete result.settings.wifiPassword;
 
     res
       .status(CONSTANTS.HTTP_STATUS.OK)

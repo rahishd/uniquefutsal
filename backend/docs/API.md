@@ -193,6 +193,14 @@ Table `Referral` (migration `20261011000001_refer_earn`, additive; one referral 
 
 Table `DigitalId` (migration `20261015000001_digital_id`, additive). The admin portal has the same table (its `sql/015`) and the staff scan endpoints (see its `docs/API.md`).
 
+## Venue Wi-Fi
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| GET | `/wifi` | User | `{visible:false}` when staff switched it off or set no name; otherwise `{visible:true, ssid, password, open, qr}` where `qr` is the standard `WIFI:T:WPA;S:..;P:..;;` text (special characters escaped). Never cached. Guests get 401 |
+
+Staff set `wifiSSID`, `wifiPassword` and `wifiVisible` (Settings keys) in the admin portal. The public `GET /settings` no longer returns the Wi-Fi name or password.
+
 ## Site content (gallery and ads)
 
 Staff upload photos and ads in the admin portal (Site Content). The app reads them here; no sign-in needed. The server decides what is live (Nepal time), so a time-targeted ad appears and disappears by itself.

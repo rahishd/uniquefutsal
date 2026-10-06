@@ -7,7 +7,7 @@ import { EXPIRY_NOTICE_DAYS } from "@/lib/membership";
 import { MAX_ADVANCE_DAYS } from "@/lib/booking";
 import { GAME_POINTS_MONTHS, GAMES_PER_FREE, MEMBERSHIP_POINTS, POINTS_CAPTAIN_WIN, RS_PER_POINT } from "@/lib/points";
 
-export type HelpIcon = "book" | "pay" | "rebook" | "member" | "points" | "promo" | "bell" | "captain" | "profile" | "trophy" | "install" | "guest";
+export type HelpIcon = "book" | "pay" | "rebook" | "member" | "points" | "promo" | "bell" | "captain" | "profile" | "trophy" | "install" | "guest" | "wifi";
 
 export interface HelpTopic {
   id: string;
@@ -196,6 +196,18 @@ export const helpTopics: HelpTopic[] = [
       "Link your Google account in Settings so you can reset a forgotten password yourself.",
     ],
     href: { label: "Open profile", to: "/profile" },
+  },
+  {
+    id: "wifi",
+    icon: "wifi",
+    title: "Venue Wi-Fi",
+    summary: "Join the free Wi-Fi at the venue and save your mobile data.",
+    points: [
+      "Signed-in customers see a Wi-Fi icon next to \"Hello\" on Home. Tap it for the network name and password, with Copy buttons.",
+      "Scan the QR code with another phone's camera, or take a screenshot of it and open it in Photos (iPhone) or Google Lens (Android): your phone then offers to join the network.",
+      "An app or website cannot switch your Wi-Fi on for you, so you always confirm the join on your phone.",
+      "If the icon is missing, the venue has switched the Wi-Fi sharing off.",
+    ],
   },
   {
     id: "tournaments",

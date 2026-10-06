@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Bell, CalendarDays, ChevronDown, Crown, Download, Gift, Search, ShieldCheck, Swords, Tag, Trophy, UserRound, Users, WalletCards, Repeat, Phone, MessageCircle,
+  Bell, CalendarDays, ChevronDown, Crown, Download, Gift, Search, ShieldCheck, Swords, Tag, Trophy, UserRound, Users, WalletCards, Wifi, Repeat, Phone, MessageCircle,
 } from "lucide-react";
 import { helpTopics, type HelpIcon } from "@/lib/help";
 import { site } from "@/lib/site";
@@ -21,6 +21,7 @@ const ICONS: Record<HelpIcon, typeof Bell> = {
   trophy: Trophy,
   install: Download,
   guest: Users,
+  wifi: Wifi,
 };
 
 export default function HelpPage() {
