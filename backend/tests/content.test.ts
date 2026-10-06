@@ -93,3 +93,21 @@ describe("content: what the app receives", () => {
     expect([a!.impressions, a!.clicks, b!.impressions]).toEqual([1, 1, 0]);
   });
 });
+
+describe("website visits", () => {
+  const id = "visitortestid0001abcd";
+  beforeAll(() => prisma.siteVisit.deleteMany({ where: { visitor: { startsWith: "visitortestid" } } }));
+  afterAll(() => prisma.siteVisit.deleteMany({ where: { visitor: { startsWith: "visitortestid" } } }));
+
+  it("counts one visitor per day and their page views, ignores bad ids, keeps no personal data", async () => {
+    expect((await api().post("/api/content/visit").send({ visitor: id })).status).toBe(204);
+    expect((await api().post("/api/content/visit").send({ visitor: id })).status).toBe(204);
+    expect((await api().post("/api/content/visit").send({ visitor: "short" })).status).toBe(204);
+    expect((await api().post("/api/content/visit").send({})).status).toBe(204);
+    const rows = await prisma.siteVisit.findMany({ where: { visitor: { startsWith: "visitortestid" } } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].pages).toBe(2);
+    expect(rows[0].registered).toBe(false);
+    expect(Object.keys(rows[0]).sort()).toEqual(["day", "firstAt", "id", "lastAt", "pages", "registered", "visitor"]);
+  });
+});

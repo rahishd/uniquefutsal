@@ -203,7 +203,9 @@ Staff upload photos and ads in the admin portal (Site Content). The app reads th
 | GET | `/content/media/:id` | Guest | the picture (stored in the database as a 1600px JPEG), cached for a year |
 | POST | `/content/ads/:id/view`, `/click` | Guest | counters for the venue's reports; only counted while the ad is live; always 204 |
 
-Tables `ContentMedia`, `SiteGallery`, `SiteAd` (migration `20261012000001_site_content`, additive; the older `Ad` and `Gallery` tables and `/ads` routes are left as they were).
+| POST | `/content/visit` | Guest | body `{visitor}` (random id from the browser, 16-64 chars of A-Z a-z 0-9 _ -); counts one visitor per Nepal day and their page views for the admin Overview; no personal data kept; always 204 |
+
+Tables `SiteVisit` (migration `20261016000001_site_visits`), `ContentMedia`, `SiteGallery`, `SiteAd` (migration `20261012000001_site_content`, additive; the older `Ad` and `Gallery` tables and `/ads` routes are left as they were).
 
 ## VIP discount code
 

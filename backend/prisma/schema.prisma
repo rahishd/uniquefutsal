@@ -858,3 +858,18 @@ model DigitalId {
   createdAt DateTime  @default(now())
   rotatedAt DateTime?
 }
+
+// One row per visitor per Nepal day: a random id the browser made for itself (no name, phone, IP or device details).
+// The admin portal counts these for "Website visits" on its Overview page.
+model SiteVisit {
+  id         String   @id @default(cuid())
+  day        String
+  visitor    String
+  registered Boolean  @default(false)
+  pages      Int      @default(1)
+  firstAt    DateTime @default(now())
+  lastAt     DateTime @default(now())
+
+  @@unique([day, visitor])
+  @@index([day])
+}

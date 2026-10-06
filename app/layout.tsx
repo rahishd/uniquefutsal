@@ -9,6 +9,7 @@ import InstallPrompt from "@/components/InstallPrompt";
 import ArrivalPrompt from "@/components/ArrivalPrompt";
 import WinPrompt from "@/components/captain/WinPrompt";
 import AdPopup from "@/components/ads/AdPopup";
+import VisitTracker from "@/components/VisitTracker";
 
 const poppins = Poppins({ variable: "--font-poppins", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ArrivalPrompt />
         <WinPrompt />
         <AdPopup />
+        <VisitTracker />
       </body>
     </html>
   );
