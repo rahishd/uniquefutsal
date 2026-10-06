@@ -776,3 +776,55 @@ model Referral {
   @@index([friendId])
   @@index([status, createdAt])
 }
+
+// Site content: gallery photos and ads, uploaded in the admin portal (migration 20261012000001_site_content).
+model ContentMedia {
+  id        String   @id @default(cuid())
+  mime      String
+  data      Bytes
+  width     Int
+  height    Int
+  bytes     Int
+  createdBy String
+  createdAt DateTime @default(now())
+}
+
+model SiteGallery {
+  id          String   @id @default(cuid())
+  title       String
+  caption     String?
+  mediaId     String   @unique
+  orientation String // landscape | portrait | square
+  sortOrder   Int      @default(0)
+  visible     Boolean  @default(true)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([visible, sortOrder])
+}
+
+model SiteAd {
+  id                String   @id @default(cuid())
+  title             String
+  mediaId           String   @unique
+  linkUrl           String? // https://... or an in-app path such as /book
+  placement         String // header | footer | popup | inline
+  displaySeconds    Int      @default(6) // how long each ad shows before the next one in the loop
+  popupDelaySeconds Int      @default(3)
+  popupFrequency    String   @default("day") // session | day | always
+  startDate         String? // YYYY-MM-DD
+  endDate           String?
+  dailyStart        String? // HH:mm, with dailyEnd: only show in this window (Nepal time)
+  dailyEnd          String?
+  days              Int[]    @default([]) // 0 = Sunday ... 6 = Saturday; empty = every day
+  priority          Int      @default(0)
+  active            Boolean  @default(true)
+  impressions       Int      @default(0)
+  clicks            Int      @default(0)
+  createdBy         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([placement, active])
+}

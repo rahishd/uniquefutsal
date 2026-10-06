@@ -9,6 +9,8 @@ import PromoCodes from "@/components/PromoCodes";
 import TournamentSection from "@/components/TournamentSection";
 import KidSkills from "@/components/KidSkills";
 import WhatsAppChat from "@/components/WhatsAppChat";
+import AdStrip from "@/components/ads/AdStrip";
+import GallerySection from "@/components/ads/GallerySection";
 
 export default function HomeScreen() {
   return (
@@ -52,8 +54,11 @@ export default function HomeScreen() {
 
       <PopularGrid />
 
+      <div className="mt-5 empty:hidden"><AdStrip placement="inline" /></div>
+
       <PromoCodes />
       <TournamentSection />
+      <GallerySection />
       <WhatsAppChat />
     </div>
   );

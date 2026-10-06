@@ -8,6 +8,7 @@ import SwRegister from "@/components/SwRegister";
 import InstallPrompt from "@/components/InstallPrompt";
 import ArrivalPrompt from "@/components/ArrivalPrompt";
 import WinPrompt from "@/components/captain/WinPrompt";
+import AdPopup from "@/components/ads/AdPopup";
 
 const poppins = Poppins({ variable: "--font-poppins", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <InstallPrompt />
         <ArrivalPrompt />
         <WinPrompt />
+        <AdPopup />
       </body>
     </html>
   );

@@ -24,6 +24,7 @@ import { siteRouter } from "../modules/site";
 import { complaintRouter } from "../modules/complaint";
 import { academyRouter } from "../modules/academy";
 import { referRouter } from "../modules/refer";
+import { contentRouter } from "../modules/content";
 import pushService from "../modules/push/push.service";
 
 
@@ -58,6 +59,7 @@ router.use("/site", siteRouter);
 router.use("/complaints", complaintRouter);
 router.use("/academy", academyRouter);
 router.use("/refer", referRouter);
+router.use("/content", contentRouter);
 
 // Public key the app needs to subscribe this device to Web Push (empty/enabled:false when push is not configured)
 router.get("/push/public-key", (_req, res) => {

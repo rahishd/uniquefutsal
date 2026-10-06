@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { site } from "@/lib/site";
+import AdStrip from "@/components/ads/AdStrip";
 
 // Company bar at the very top of every page: a navy rectangle with the white logo and name. It stays
 // pinned while the page scrolls, so the customer always sees whose app this is. The greeting sits just
@@ -26,6 +27,7 @@ export default function CompanyHeader() {
           />
           <span className="text-lg font-bold uppercase tracking-wide text-white">{site.name}</span>
         </Link>
+        <div className="empty:hidden mt-2"><AdStrip placement="header" /></div>
       </div>
     </div>
   );

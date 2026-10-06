@@ -181,6 +181,18 @@ A customer books a game for ANOTHER team on their own account, then files it her
 
 Table `Referral` (migration `20261011000001_refer_earn`, additive; one referral per booking). Notification type `referral` added.
 
+## Site content (gallery and ads)
+
+Staff upload photos and ads in the admin portal (Site Content). The app reads them here; no sign-in needed. The server decides what is live (Nepal time), so a time-targeted ad appears and disappears by itself.
+
+| Method | Path | Who | Notes |
+|---|---|---|---|
+| GET | `/content/active` | Guest | `{gallery[{id,title,caption,orientation: landscape|portrait|square,imageUrl}], ads: {header[], footer[], popup[], inline[]}}`; each ad has `{id,title,imageUrl,linkUrl,displaySeconds}`, pop-ups also `popupDelaySeconds` and `popupFrequency` (session|day|always). Only visible photos and ads that are live right now: active, inside the date range, on a chosen weekday, inside the daily hours window (a window may pass midnight) |
+| GET | `/content/media/:id` | Guest | the picture (stored in the database as a 1600px JPEG), cached for a year |
+| POST | `/content/ads/:id/view`, `/click` | Guest | counters for the venue's reports; only counted while the ad is live; always 204 |
+
+Tables `ContentMedia`, `SiteGallery`, `SiteAd` (migration `20261012000001_site_content`, additive; the older `Ad` and `Gallery` tables and `/ads` routes are left as they were).
+
 ## VIP discount code
 
 Staff (admin portal > Customers) give one customer a VIP code such as `ADMINVIP`: `VipCode` (migration `20261009000001_vip_codes`, additive, one per customer), `type` percent or flat, `value`, `active`, `claimedAt`.
