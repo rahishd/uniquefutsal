@@ -7,6 +7,7 @@ import { uploadFileToR2 } from "../../utils/r2storage";
 import fs from "fs";
 import path from "path";
 import logger from "../../config/logger";
+import { assertPromoLimits } from "../promo/promoLimits";
 import loyaltyService from "../loyalty/loyalty.service";
 import smsService from "../../services/sms.service";
 import bookingService from "../booking/booking.service";
@@ -498,6 +499,7 @@ class MembershipService {
       }
 
       this.assertPromoValidForMembership(promo, startDate, data.chosenDays, data.timeSlot);
+      await assertPromoLimits(promo, userId);
       validatedPromoCode = promo.code;
     }
 

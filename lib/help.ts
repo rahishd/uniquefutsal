@@ -119,6 +119,7 @@ export const helpTopics: HelpTopic[] = [
       "Tap Copy, then paste the code in the promo box on the booking or membership page.",
       "Some codes have rules (weekends only, mornings only, renewals only). The card says which.",
       "One code per booking.",
+      "Some codes can be used only a few times, or once per customer. When a code has run out, it is taken off the list and the booking page says so.",
     ],
     href: { label: "See promos", to: "/promos" },
   },

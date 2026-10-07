@@ -20,6 +20,8 @@ export interface PromoCode {
   validDays?: string[];
   isActive?: boolean;
   appliedTo: "booking" | "membership" | "both";
+  maxUses?: number; // total uses allowed, everyone together (set by staff)
+  maxPerCustomer?: number; // uses allowed for one customer
 }
 
 export interface HourlyPricingSlot {

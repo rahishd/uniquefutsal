@@ -18,6 +18,7 @@ import { PromoCode as PromoCodeDTO } from "../settings/settings.dto";
 import { uploadFileToR2 } from "../../utils/r2storage";
 import { calculateLoyaltyProgress } from "../../utils/loyalty";
 import { claimVip, vipDiscount, vipForBooking, vipLabel } from "../promo/vipCodes";
+import { assertPromoLimits } from "../promo/promoLimits";
 import fs from "fs";
 import path from "path";
 
@@ -340,6 +341,7 @@ export class BookingService {
       } else {
         try {
           this.assertPromoValidForBooking(found, date, startTime);
+          await assertPromoLimits(found, userId);
           discount = this.calculatePromoDiscount(found, basePrice);
           promo = { ok: true, code: found.code, label: found.label };
         } catch (e) {
@@ -680,6 +682,7 @@ export class BookingService {
       }
 
       this.assertPromoValidForBooking(promo, dto.date, dto.startTime);
+      await assertPromoLimits(promo, userId);
       discountAmount = this.calculatePromoDiscount(promo, subtotal);
       appliedPromoCode = promo.code;
     }

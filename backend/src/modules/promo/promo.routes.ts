@@ -8,6 +8,7 @@ import SettingsService from "../settings/settings.service";
 import BookingService from "../booking/booking.service";
 import { daysBetweenKeys, todayKey } from "../../utils/dates";
 import { PromoCode } from "../settings/settings.dto";
+import { promoUsedUp } from "./promoLimits";
 
 const router = Router();
 
@@ -21,6 +22,7 @@ function termsOf(p: PromoCode): string {
   if (p.startTime && p.endTime) parts.push(`Valid for slots between ${p.startTime} and ${p.endTime}.`);
   if (p.appliedTo === "membership") parts.push("For memberships only.");
   if (p.appliedTo === "booking") parts.push("For court bookings only.");
+  if (p.maxPerCustomer) parts.push(p.maxPerCustomer === 1 ? "One use per customer." : `${p.maxPerCustomer} uses per customer.`);
   return parts.join(" ") || "One code per booking.";
 }
 
@@ -30,8 +32,10 @@ router.get(
   asyncHandler(async (_req: Request, res: Response) => {
     const today = todayKey();
     const promos = await SettingsService.getPromoCodes();
+    // a code that has no uses left is not offered any more
+    const usedUp = await Promise.all(promos.map((p) => promoUsedUp(p)));
     const items = promos
-      .filter((p) => p.isActive !== false)
+      .filter((p, i) => p.isActive !== false && !usedUp[i])
       .map((p) => {
         const until = p.expiryDate ? p.expiryDate.slice(0, 10) : null;
         const status = until && until < today ? "expired" : "active";

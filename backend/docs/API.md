@@ -78,6 +78,8 @@ Times use Nepal time. Dates are `YYYY-MM-DD`. Money is whole rupees.
 | POST | `/loyalty/claim` | User | `{period: Morning|Day|Evening}` -> voucher. 409 if not enough points. Locked so a double tap cannot spend twice |
 | POST | `/loyalty/goods-sale` | Staff | `{phone, amount, items?}`: 1 point per Rs. 100 |
 
+Promo use limits: staff can set `maxUses` (everyone together) and `maxPerCustomer` on a code in the admin portal. A use is a booking or membership carrying the code that is not cancelled, so cancelling gives it back. A code with no uses left is not listed by `GET /promos`. `POST /bookings/quote` answers `promo:{ok:false,message}`, and `/bookings/checkout` and the membership request answer 400 ("This promo code has been fully used." / "You have already used this promo code."). It is checked just before the booking is saved, not under a lock, so two people taking the last use at the same instant could both get it.
+
 Rules (single source: `src/utils/loyaltyPoints.ts`): a completed and paid regular game earns price/100 points (1 decimal);
 a free game costs price/10; goods Rs. 100 = 1 point; membership 3 months 30 / 6 months 70; challenge win 5 (winning captain only).
 Game and challenge points last 3 months, goods 1 year, membership never; claims spend the soonest-expiring points first.
