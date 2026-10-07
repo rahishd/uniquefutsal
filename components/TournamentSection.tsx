@@ -5,7 +5,7 @@ import { ChevronRight, MapPin, Radio, Trophy } from "lucide-react";
 import { fmtDay } from "@/lib/promos";
 import { formatRs } from "@/lib/booking";
 import { site } from "@/lib/site";
-import { tournamentStore } from "@/lib/tournament";
+import { hoursLabel, tournamentStore } from "@/lib/tournament";
 
 export default function TournamentSection() {
   const t = tournamentStore.use().data ?? null;
@@ -27,8 +27,13 @@ export default function TournamentSection() {
           <div>
             <p className="font-medium leading-snug">{t.name}</p>
             <p className="mt-1 text-xs text-slate-400">
-              {fmtDay(t.startDate)} – {fmtDay(t.endDate)} · {t.teams} teams
+              {fmtDay(t.startDate)} – {fmtDay(t.endDate)}{t.hosted ? (t.hosted.hostName ? ` · Hosted by ${t.hosted.hostName}` : " · Hosted event") : ` · ${t.teams} teams`}
             </p>
+            {t.hosted && (
+              <ul className="mt-1 space-y-0.5 text-xs text-slate-500">
+                {t.hosted.days.map((d) => <li key={d.date}>{fmtDay(d.date)}: {hoursLabel(d)}</li>)}
+              </ul>
+            )}
             <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
               <MapPin size={12} /> {site.name}, {site.address}
             </p>
@@ -63,7 +68,7 @@ export default function TournamentSection() {
           href="/tournaments"
           className="glass-btn mt-4 flex items-center justify-center gap-2 rounded-full py-3 text-sm font-medium text-white"
         >
-          View full tie-sheet
+          {t.hosted && t.rounds.length === 0 ? "See the schedule" : "View full tie-sheet"}
         </Link>
       </div>
     </section>

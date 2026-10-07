@@ -217,6 +217,7 @@ export const helpTopics: HelpTopic[] = [
     summary: "See live scores and the full tie-sheet.",
     points: [
       "Home shows the current tournament with its details.",
+      "Some tournaments are hosted at the venue for an organiser. They show who hosts them and the hours of each day, and the court is kept for them in those hours. They are listed under Also at the venue.",
       "Open it to see every round, the scores, who scored and when, and who plays next.",
       "Tap the bell on a match that has not finished to get live updates: a notification at kick-off, for every goal and at full time. Tap it again to stop. Sign in first. Turn on alerts in Profile > Settings to get them when the app is closed.",
     ],

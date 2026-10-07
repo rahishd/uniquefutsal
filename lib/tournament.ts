@@ -42,8 +42,16 @@ export interface Tournament {
   prizePool: number;
   prizes?: { first?: string; second?: string; third?: string };
   format?: string;
+  // an event the venue hosts for a manager: no team sign-up, just the host and the hours of each day
+  hosted?: { hostName: string | null; days: { date: string; startHour: number; endHour: number }[] };
   rounds: TieRound[];
 }
+
+const h12 = (h: number) => `${h % 24 % 12 || 12} ${h % 24 < 12 ? "AM" : "PM"}`;
+export const hoursLabel = (d: { startHour: number; endHour: number }) => `${h12(d.startHour)} to ${h12(d.endHour)}`;
+
+export interface HostedEvent { id: string; name: string; hostName: string | null; startDate: string; endDate: string; days: { date: string; startHour: number; endHour: number }[] }
+export const eventsStore = createRemoteStore<HostedEvent[]>(() => api<HostedEvent[]>("/tournaments/events", { auth: "none" }), { pollMs: 60000 });
 
 export const tournamentStore = createRemoteStore<Tournament | null>(() => api<Tournament | null>("/tournaments/current", { auth: "none" }), { pollMs: 30000 });
 

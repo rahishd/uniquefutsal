@@ -137,6 +137,7 @@ Bookings now carry a short display `code` ("UF-7K3QX9", `scripts/backfill-bookin
 | GET | `/tournaments/following` | User | ids of the unfinished matches I follow |
 | PUT, DELETE | `/tournaments/matches/:id/follow` | User | follow or stop following a match (404 unknown, 409 finished, max 20); table `MatchFollow` (migration `20261017000001_match_follow`, deleted with the match) |
 | GET | `/tournaments`, `/tournaments/:id` | Guest | safe summary; staff get everything |
+| GET | `/tournaments/events` | Guest | tournaments the venue hosts for a manager that are on or coming: `{id,name,hostName,startDate,endDate,days:[{date,startHour,endHour}]}`. The manager phone number, the rate and the bill are never returned. `/tournaments/current` also carries `hosted:{hostName,days}` for a hosted event. Columns `hostedEvent, hostName, hostPhone, minRate, billClosedAt, createdBy` and table `TournamentDay` come from migration `20261019000001_tournament_hosting` (the admin portal makes the events and holds the court hours) |
 | GET/PATCH | `/site` | Guest / Staff | contact details |
 
 ## Background jobs (`src/tasks/cron.ts`, `src/jobs/app.jobs.ts`)
