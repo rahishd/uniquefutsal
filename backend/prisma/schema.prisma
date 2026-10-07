@@ -626,8 +626,21 @@ model TournamentMatch {
   startsAt  DateTime?
   venue     String?
   round     TournamentRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  follows   MatchFollow[]
 
   @@index([roundId])
+}
+
+// A customer who asked for live updates of one tie-sheet match. Removed with the match.
+model MatchFollow {
+  id        String          @id @default(cuid())
+  userId    String
+  matchId   String
+  createdAt DateTime        @default(now())
+  match     TournamentMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+  @@index([matchId])
 }
 
 // One row per booked hour. The unique (date, hour) is the final guard against two bookings taking the same hour.

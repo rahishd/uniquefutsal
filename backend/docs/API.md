@@ -131,7 +131,9 @@ Bookings now carry a short display `code` ("UF-7K3QX9", `scripts/backfill-bookin
 |---|---|---|---|
 | GET/POST/DELETE | `/notifications`, `/notifications/read`, `/notifications/:id/read` | User | unread counts per type for the Popular tile badges |
 | GET | `/tournaments/current` | Guest | current tournament and tie-sheet |
-| PUT | `/tournaments/:id/tiesheet` | Staff | replace rounds and matches |
+| PUT | `/tournaments/:id/tiesheet` | Staff | save rounds and matches IN PLACE: a match keeps its row (and its followers) when its `id` is sent back, or, when a round sends no ids, by its order in the round; matches left out are removed. Followers get a notice (type `tournament`) at kick-off, on every goal of a live match and at full time |
+| GET | `/tournaments/following` | User | ids of the unfinished matches I follow |
+| PUT, DELETE | `/tournaments/matches/:id/follow` | User | follow or stop following a match (404 unknown, 409 finished, max 20); table `MatchFollow` (migration `20261017000001_match_follow`, deleted with the match) |
 | GET | `/tournaments`, `/tournaments/:id` | Guest | safe summary; staff get everything |
 | GET/PATCH | `/site` | Guest / Staff | contact details |
 
