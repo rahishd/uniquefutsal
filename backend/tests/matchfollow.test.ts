@@ -74,4 +74,19 @@ describe("following a tie-sheet match", () => {
     await put([{ name: "Semi-finals", matches: [{ id: ids[0], home: "Red", away: "Blue", status: "finished", homeScore: 2, awayScore: 1 }] }]);
     expect(await prisma.matchFollow.count({ where: { matchId: ids[1] } })).toBe(0);
   });
+
+  it("the public tie-sheet lists each match's goals in minute order, and drops them with the match", async () => {
+    expect((await put([{ name: "Final", matches: [{ home: "Red", away: "Blue", status: "live", homeScore: 2, awayScore: 1 }] }])).status).toBe(200);
+    const [m] = (await sheet())[0].matches;
+    await prisma.matchGoal.createMany({ data: [
+      { matchId: m.id, side: "away", minute: 40, scorer: "Sita" },
+      { matchId: m.id, side: "home", minute: 12, scorer: "Ram" },
+      { matchId: m.id, side: "home", minute: null, scorer: null },
+    ] });
+    const goals = (await api().get("/api/tournaments/current")).body.data.rounds[0].matches[0].goals;
+    expect(goals).toEqual([{ side: "home", minute: 12, scorer: "Ram" }, { side: "away", minute: 40, scorer: "Sita" }, { side: "home", minute: null, scorer: null }]);
+    expect(JSON.stringify(goals)).not.toContain("createdBy");
+    await put([{ name: "Final", matches: [] }]); // match removed: its goals go too
+    expect(await prisma.matchGoal.count({ where: { matchId: m.id } })).toBe(0);
+  });
 });

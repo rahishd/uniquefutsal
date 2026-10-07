@@ -6,7 +6,7 @@ import { Bell, BellRing, Radio } from "lucide-react";
 import { errorText } from "@/lib/api";
 import { enablePush, pushState } from "@/lib/push";
 import { useSession } from "@/lib/session";
-import { followStore, matchTime, setFollowing, type TieMatch, type TieRound } from "@/lib/tournament";
+import { followStore, matchTime, setFollowing, type TieGoal, type TieMatch, type TieRound } from "@/lib/tournament";
 
 function Row({ name, score, winner }: { name: string | null; score?: number | null; winner: boolean }) {
   return (
@@ -53,6 +53,20 @@ function Follow({ m, following, onNote }: { m: TieMatch; following: boolean; onN
   );
 }
 
+// Who scored: the home side's goals on the left, the away side's on the right, in minute order.
+function Scorers({ goals }: { goals: TieGoal[] }) {
+  if (goals.length === 0) return null;
+  const line = (g: TieGoal, i: number) => (
+    <li key={i} className="truncate">{g.scorer || "Goal"}{g.minute !== null && <span className="text-slate-400"> {g.minute}&prime;</span>}</li>
+  );
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-3 border-t border-white/60 pt-2 text-[11px] text-slate-500" aria-label="Goal scorers">
+      <ul className="space-y-0.5">{goals.filter((g) => g.side === "home").map(line)}</ul>
+      <ul className="space-y-0.5 text-right">{goals.filter((g) => g.side === "away").map(line)}</ul>
+    </div>
+  );
+}
+
 function MatchCard({ m, following, onNote }: { m: TieMatch; following: boolean; onNote: (text: string) => void }) {
   const done = m.status === "finished";
   const homeWins = done && (m.homeScore ?? 0) > (m.awayScore ?? 0);
@@ -64,6 +78,7 @@ function MatchCard({ m, following, onNote }: { m: TieMatch; following: boolean; 
         <Row name={m.home} score={m.homeScore} winner={homeWins} />
         <Row name={m.away} score={m.awayScore} winner={awayWins} />
       </div>
+      <Scorers goals={m.goals ?? []} />
       <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-slate-400">
         <span className="min-w-0 truncate">{m.note && m.status !== "live" ? m.note : matchTime(m) || m.venue || ""}</span>
         <span className="flex shrink-0 items-center gap-2">

@@ -14,7 +14,7 @@ import { todayKey } from "../../utils/dates";
 // The customer view of a tournament: scores and the tie-sheet. Registrations (team phone numbers and emails)
 // and the venue's costs are never part of this public view.
 export async function publicTournament(t: { id: string; name: string; prizePool: number; minTeams: number; maxTeams: number; startDate: string; endDate: string; isActive: boolean; status: string; description: string | null }) {
-  const rounds = await prisma.tournamentRound.findMany({ where: { tournamentId: t.id }, orderBy: { position: "asc" }, include: { matches: { orderBy: { startsAt: "asc" } } } });
+  const rounds = await prisma.tournamentRound.findMany({ where: { tournamentId: t.id }, orderBy: { position: "asc" }, include: { matches: { orderBy: { startsAt: "asc" }, include: { goals: { orderBy: [{ minute: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }] } } } } });
   const today = todayKey();
   const status = t.status === "completed" ? "completed" : t.startDate > today ? "upcoming" : "live";
   let prizes: { first?: string; second?: string; third?: string } | undefined;
@@ -30,7 +30,9 @@ export async function publicTournament(t: { id: string; name: string; prizePool:
     id: t.id, name: t.name, status, startDate: t.startDate, endDate: t.endDate, teams: t.maxTeams, prizePool: t.prizePool, prizes, format,
     rounds: rounds.map((r) => ({
       id: r.id, name: r.name,
-      matches: r.matches.map((m) => ({ id: m.id, status: m.status, home: m.home, away: m.away, homeScore: m.homeScore, awayScore: m.awayScore, note: m.note, startsAt: m.startsAt, venue: m.venue })),
+      matches: r.matches.map((m) => ({ id: m.id, status: m.status, home: m.home, away: m.away, homeScore: m.homeScore, awayScore: m.awayScore, note: m.note, startsAt: m.startsAt, venue: m.venue,
+        goals: m.goals.map((g) => ({ side: g.side, minute: g.minute, scorer: g.scorer })),
+      })),
     })),
   };
 }

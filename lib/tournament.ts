@@ -17,6 +17,13 @@ export interface TieMatch {
   note: string | null; // e.g. penalties
   startsAt: string | null;
   venue: string | null;
+  goals?: TieGoal[]; // in minute order, entered by the venue
+}
+
+export interface TieGoal {
+  side: "home" | "away";
+  minute: number | null;
+  scorer: string | null;
 }
 
 export interface TieRound {

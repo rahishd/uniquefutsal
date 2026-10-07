@@ -217,7 +217,7 @@ export const helpTopics: HelpTopic[] = [
     summary: "See live scores and the full tie-sheet.",
     points: [
       "Home shows the current tournament with its details.",
-      "Open it to see every round, the scores and who plays next.",
+      "Open it to see every round, the scores, who scored and when, and who plays next.",
       "Tap the bell on a match that has not finished to get live updates: a notification at kick-off, for every goal and at full time. Tap it again to stop. Sign in first. Turn on alerts in Profile > Settings to get them when the app is closed.",
     ],
     href: { label: "Tournaments", to: "/tournaments" },

@@ -627,8 +627,23 @@ model TournamentMatch {
   venue     String?
   round     TournamentRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
   follows   MatchFollow[]
+  goals     MatchGoal[]
 
   @@index([roundId])
+}
+
+// One goal of a match (side, minute and scorer are shown on the customer tie-sheet). Entered in the admin portal. Removed with the match.
+model MatchGoal {
+  id        String          @id @default(cuid())
+  matchId   String
+  side      String // home | away
+  minute    Int?
+  scorer    String?
+  createdBy String?
+  createdAt DateTime        @default(now())
+  match     TournamentMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
 }
 
 // A customer who asked for live updates of one tie-sheet match. Removed with the match.
