@@ -224,7 +224,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   if (qr && qr.payment && !done) {
     const pay = qr.payment;
     return (
-      <div className="space-y-5">
+      <div className="space-y-5 desk:mx-auto desk:max-w-2xl">
         <Steps step={1} />
         <PaymentQr
           method={pay.method}
@@ -255,7 +255,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
     const venue = done.paymentMethod === "venue" && done.paymentStatus !== "completed";
     const paid = done.paymentStatus === "completed";
     return (
-      <div className="space-y-5">
+      <div className="space-y-5 desk:mx-auto desk:max-w-2xl">
         <Steps step={2} />
         <div className="glass rounded-3xl p-6 text-center">
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
@@ -299,7 +299,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   /* ---------- Step 2: review & pay ---------- */
   if (step === 1 && slot) {
     return (
-      <div className="space-y-5">
+      <div className="space-y-5 desk:mx-auto desk:max-w-2xl">
         <Steps step={1} />
         <button type="button" onClick={() => setStep(0)} className="flex items-center gap-1 text-sm text-brand">
           <ChevronLeft size={18} /> Change slot
@@ -434,7 +434,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
       </header>
 
       <section aria-label="Select date">
-        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2">
+        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 desk:mx-0 desk:flex-wrap desk:overflow-visible desk:px-0">
           {days.map(({ key, d }, i) => {
             const active = key === activeDate;
             return (
@@ -443,7 +443,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
                 type="button"
                 onClick={() => pickDate(key)}
                 aria-pressed={active}
-                className={`flex w-16 shrink-0 flex-col items-center rounded-2xl py-3 transition ${active ? "glass-active text-white" : "glass"}`}
+                className={`flex w-16 shrink-0 flex-col items-center rounded-2xl py-3 transition desk:w-24 desk:py-4 ${active ? "glass-active text-white" : "glass"}`}
               >
                 <span className={`text-[11px] ${active ? "text-white/70" : "text-slate-400"}`}>{i === 0 ? "Today" : i === 1 ? "Tmrw" : weekday(d)}</span>
                 <span className="text-xl font-semibold">{d.getDate()}</span>
@@ -469,7 +469,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           PERIODS.filter((p) => openSlots.some((s) => s.period === p)).map((p) => (
             <div key={p}>
               <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">{p}</h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 desk:grid-cols-4 desk:gap-4 xl:desk:grid-cols-6">
                 {openSlots.filter((s) => s.period === p).map((s) => {
                   const active = s.hour === selHour;
                   return (
@@ -493,7 +493,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
                   ref={continueRef}
                   type="button"
                   onClick={() => setStep(1)}
-                  className="glass-btn mt-3 flex w-full scroll-mb-28 items-center justify-center rounded-full py-4 text-base font-semibold text-white"
+                  className="glass-btn mt-3 flex w-full scroll-mb-28 items-center justify-center rounded-full py-4 text-base font-semibold text-white desk:max-w-md"
                 >
                   {`Continue · ${formatHour(slot.hour)} · ${formatRs(slot.price)}`}
                 </button>
@@ -504,7 +504,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
       </section>
 
       {!slot && (
-        <button type="button" disabled className="glass-btn flex w-full items-center justify-center rounded-full py-4 text-base font-semibold text-white disabled:opacity-50">
+        <button type="button" disabled className="glass-btn flex w-full items-center justify-center rounded-full py-4 text-base font-semibold text-white disabled:opacity-50 desk:max-w-md">
           Select a slot to continue
         </button>
       )}

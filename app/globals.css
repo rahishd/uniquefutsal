@@ -81,3 +81,8 @@ button[class*="bg-white/"] {
 @media (prefers-reduced-motion: reduce) {
   [aria-label="Advertisement"] img { animation: none !important; }
 }
+
+/* Desktop mode: laptops and desktops, and tablets held in landscape. Phones and tablets held in portrait keep
+   the mobile layout. A desktop browser window that happens to be tall and narrow still counts as desktop
+   (it has a mouse), as long as it is at least 1024px wide. Use it as `desk:` in class names. */
+@custom-variant desk (@media (min-width: 1024px) and ((orientation: landscape) or ((hover: hover) and (pointer: fine))));

@@ -49,14 +49,14 @@ export default function PopularGrid() {
   }
 
   return (
-    <section className="mt-8">
+    <section className="mt-8 desk:mt-10">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium">Popular</h2>
+        <h2 className="text-lg font-medium desk:text-xl">Popular</h2>
         <Link href="/profile" className="flex items-center text-sm text-brand">
           See all <ChevronRight size={16} />
         </Link>
       </div>
-      <ul className="mt-4 grid grid-cols-4 gap-x-3 gap-y-5">
+      <ul className="mt-4 grid grid-cols-4 gap-x-3 gap-y-5 desk:grid-cols-6 desk:gap-x-4 desk:gap-y-6">
         {TILES.map((t) => {
           const count = countFor(t);
           const Icon = t.icon;
@@ -66,17 +66,17 @@ export default function PopularGrid() {
                 href={t.href}
                 onClick={() => t.types && markReadByTypes(t.types)}
                 aria-label={count > 0 ? `${t.label}, ${count} new` : t.label}
-                className="flex flex-col items-center gap-2"
+                className="group flex flex-col items-center gap-2"
               >
-                <span className="glass relative flex h-[70px] w-[70px] items-center justify-center rounded-3xl">
-                  <Icon size={30} className={t.tone} />
+                <span className="glass relative flex h-[70px] w-[70px] items-center justify-center rounded-3xl transition-transform desk:h-24 desk:w-24 desk:group-hover:-translate-y-1">
+                  <Icon className={`${t.tone} h-[30px] w-[30px] desk:h-10 desk:w-10`} />
                   {count > 0 && (
                     <span aria-hidden className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-rose-500 px-1.5 text-xs font-semibold text-white shadow ring-2 ring-white">
                       {count > 9 ? "9+" : count}
                     </span>
                   )}
                 </span>
-                <span className="text-center text-xs text-slate-600">{t.label}</span>
+                <span className="text-center text-xs text-slate-600 desk:text-sm">{t.label}</span>
               </Link>
             </li>
           );

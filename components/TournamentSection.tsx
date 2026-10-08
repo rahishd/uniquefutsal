@@ -14,7 +14,7 @@ export default function TournamentSection() {
   const live = t.rounds.flatMap((r) => r.matches).filter((m) => m.status === "live");
 
   return (
-    <section className="mt-8" aria-label="Tournament">
+    <section className="mt-8 desk:mt-10" aria-label="Tournament">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium">Tournament</h2>
         <Link href="/tournaments" className="flex items-center text-sm text-brand">

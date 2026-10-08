@@ -32,14 +32,14 @@ export default function GallerySection() {
   const current = open !== null ? photos[open] ?? null : null;
 
   return (
-    <section className="mt-6" aria-label="Gallery">
+    <section className="mt-6 desk:mt-10" aria-label="Gallery">
       <div className="flex items-end justify-between">
         <h2 className="text-lg font-medium">Gallery</h2>
         {photos.length > FIRST && (
           <button type="button" onClick={() => setAll((a) => !a)} className="text-sm font-medium text-brand">{all ? "Show less" : `See all ${photos.length}`}</button>
         )}
       </div>
-      <div className="mt-3 columns-2 gap-3">
+      <div className="mt-3 columns-2 gap-3 desk:columns-3">
         {shown.map((p) => {
           const i = photos.indexOf(p);
           return (

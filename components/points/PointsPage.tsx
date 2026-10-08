@@ -75,11 +75,11 @@ export default function PointsPage() {
   }
 
   return (
-    <div className="space-y-5 pb-4">
-      <h1 className="text-2xl font-semibold">Loyalty points</h1>
+    <div className="space-y-5 pb-4 desk:grid desk:grid-cols-2 desk:items-start desk:gap-6 desk:space-y-0">
+      <h1 className="text-2xl font-semibold desk:col-span-2 desk:text-3xl">Loyalty points</h1>
 
       {/* Balance */}
-      <section className="rounded-3xl bg-gradient-to-br from-[#0c0b5d] to-[#2a2aa8] p-5 text-white shadow-lg" aria-label="Your points balance">
+      <section className="rounded-3xl bg-gradient-to-br from-[#0c0b5d] to-[#2a2aa8] p-5 text-white shadow-lg desk:col-span-2" aria-label="Your points balance">
         <p className="text-xs uppercase tracking-wide text-white/60">Remaining points</p>
         <div className="mt-1 flex items-end justify-between">
           <p className="flex items-center gap-2 text-5xl font-semibold"><Star className="fill-amber-400 text-amber-400" size={34} /> {fmtPts(loy.remaining)}</p>
@@ -100,7 +100,7 @@ export default function PointsPage() {
       </section>
 
       {/* Claim a free game */}
-      <section className="glass rounded-3xl p-5" aria-label="Claim a free game">
+      <section className="glass rounded-3xl p-5 desk:col-span-2" aria-label="Claim a free game">
         {loy.vouchers.length > 0 && (
           <div className="mb-4 rounded-2xl bg-emerald-400/15 p-4">
             <p className="flex items-center gap-2 text-sm font-medium text-emerald-700">
@@ -141,7 +141,7 @@ export default function PointsPage() {
       </section>
 
       {/* Claimed vs remaining */}
-      <section className="grid grid-cols-2 gap-3" aria-label="Claimed and remaining">
+      <section className="grid grid-cols-2 gap-3 desk:col-span-2" aria-label="Claimed and remaining">
         <div className="glass rounded-3xl p-4">
           <p className="text-xs text-slate-500">Claimed</p>
           <p className="mt-1 text-2xl font-semibold">{fmtPts(loy.claimed)}</p>
@@ -234,7 +234,7 @@ export default function PointsPage() {
         </ul>
       </section>
 
-      <p className="px-2 text-center text-xs text-slate-400">
+      <p className="px-2 text-center text-xs text-slate-400 desk:col-span-2">
         Ready to use a free game? <Link href="/book" className="font-medium text-brand">Book now</Link>
       </p>
     </div>

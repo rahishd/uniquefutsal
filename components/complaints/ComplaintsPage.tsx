@@ -106,7 +106,7 @@ export default function ComplaintsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-4">
+    <div className="space-y-6 pb-4 desk:mx-auto desk:max-w-3xl">
       <header>
         <h1 className="text-2xl font-semibold">Complaints</h1>
         <p className="text-sm text-slate-500">Something went wrong? Tell us and we will look into it.</p>

@@ -143,8 +143,8 @@ export default function MembershipPage() {
   const registered = Boolean(session?.registered);
 
   return (
-    <div className="space-y-5 pb-4">
-      <header>
+    <div className="space-y-5 pb-4 desk:grid desk:grid-cols-2 desk:items-start desk:gap-6 desk:space-y-0">
+      <header className="desk:col-span-2">
         <h1 className="text-2xl font-semibold">Membership</h1>
         <p className="text-sm text-slate-500">Member pricing, priority booking and extra rewards.</p>
       </header>

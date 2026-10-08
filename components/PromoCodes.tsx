@@ -22,7 +22,7 @@ export default function PromoCodes() {
   if (live.length === 0) return null;
 
   return (
-    <section className="mt-8" aria-label="Live promo codes">
+    <section className="mt-8 desk:mt-10" aria-label="Live promo codes">
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-medium">
           <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" /> Live promo codes
@@ -32,9 +32,9 @@ export default function PromoCodes() {
         </Link>
       </div>
 
-      <ul className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-2">
+      <ul className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-2 desk:mx-0 desk:grid desk:grid-cols-1 desk:gap-3 desk:overflow-visible desk:px-0">
         {live.map((p) => (
-          <li key={p.code} className="glass w-64 shrink-0 snap-start rounded-3xl p-4">
+          <li key={p.code} className="glass w-64 shrink-0 snap-start rounded-3xl p-4 desk:w-auto">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium">{p.title}</p>

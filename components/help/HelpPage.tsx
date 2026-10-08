@@ -54,7 +54,7 @@ export default function HelpPage() {
       {topics.length === 0 ? (
         <p className="glass rounded-3xl px-4 py-8 text-center text-sm text-slate-500">Nothing found for &ldquo;{q}&rdquo;. Try another word or contact us below.</p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3 desk:grid desk:grid-cols-2 desk:items-start desk:gap-4 desk:space-y-0">
           {topics.map((t) => {
             const Icon = ICONS[t.icon] ?? ShieldCheck;
             const isOpen = open === t.id || Boolean(needle);

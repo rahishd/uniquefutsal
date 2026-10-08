@@ -86,7 +86,7 @@ export default function InstallPrompt() {
   if (!mode) return null;
 
   return (
-    <div role="dialog" aria-label="Install Unique Futsal" className="fixed inset-x-0 bottom-32 z-[60] px-5">
+    <div role="dialog" aria-label="Install Unique Futsal" className="fixed inset-x-0 bottom-32 z-[60] px-5 desk:inset-x-auto desk:bottom-6 desk:left-6 desk:w-[24rem] desk:px-0">
       <div className="glass relative mx-auto max-w-sm rounded-3xl p-5" style={{ background: "rgba(255,255,255,0.97)" }}>
         <button type="button" onClick={dismiss} aria-label="Close" className="absolute right-4 top-4 text-slate-400">
           <X size={18} />

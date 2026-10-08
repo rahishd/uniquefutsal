@@ -32,7 +32,7 @@ function Roster({ team }: { team: MyTeam }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 desk:mx-auto desk:max-w-3xl">
       <header>
         <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">Captain profile</p>
         <h1 className="mt-1 text-2xl font-semibold">{team.name}</h1>

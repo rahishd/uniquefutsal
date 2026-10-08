@@ -311,11 +311,11 @@ function RegisteredProfile() {
   }
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-2xl font-semibold">Profile</h1>
+    <div className="space-y-5 desk:grid desk:grid-cols-2 desk:items-start desk:gap-6 desk:space-y-0">
+      <h1 className="text-2xl font-semibold desk:col-span-2 desk:text-3xl">Profile</h1>
 
       {/* Identity */}
-      <section className="glass rounded-3xl p-5">
+      <section className="glass rounded-3xl p-5 desk:col-span-2">
         <div className="flex items-center gap-4">
           <ProfileAvatar name={profile.name} captain={captainMode} size={64} />
           <div className="min-w-0 flex-1">
@@ -355,12 +355,12 @@ function RegisteredProfile() {
         )}
       </section>
 
-      <ModeToggle />
-      {captainMode && <CaptainSummary />}
+      <div className="desk:col-span-2"><ModeToggle /></div>
+      {captainMode && <div className="desk:col-span-2"><CaptainSummary /></div>}
 
       {!captainMode && (<>
       {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-3 text-center">
+      <div className="grid grid-cols-3 gap-3 text-center desk:col-span-2">
         {[["Games", played.length], ["Upcoming", upcomingList.length], ["Points", loy ? fmtPts(loy.remaining) : "–"]].map(([k, v]) => (
           <div key={k} className="glass rounded-2xl py-4">
             <p className="text-xl font-semibold">{v}</p>
@@ -369,7 +369,7 @@ function RegisteredProfile() {
         ))}
       </div>
 
-      <DigitalIdButton variant="row" />
+      <div className="desk:col-span-2"><DigitalIdButton variant="row" /></div>
 
       {/* Membership */}
       <section className="rounded-3xl bg-gradient-to-br from-[#0c0b5d] via-[#16167f] to-[#2a2aa8] p-5 text-white shadow-[0_10px_30px_rgba(12,11,93,0.35)]">

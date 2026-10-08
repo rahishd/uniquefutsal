@@ -31,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${poppins.variable} h-full antialiased`}>
       <body className="min-h-full">
         <CompanyHeader />
-        <main className="mx-auto w-full max-w-md px-5 pb-40 pt-5 min-h-[60vh]">{children}</main>
+        <main className="mx-auto w-full max-w-md px-5 pb-40 pt-5 min-h-[60vh] desk:max-w-[1360px] desk:px-10 desk:pb-16 desk:pt-8">{children}</main>
         <FooterGate />
         <BottomNav />
         <SwRegister />

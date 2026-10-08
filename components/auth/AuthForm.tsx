@@ -78,7 +78,7 @@ export default function AuthForm() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 desk:mx-auto desk:max-w-md">
       <header className="text-center">
         <h1 className="text-2xl font-semibold">{mode === "in" ? "Welcome back" : mode === "up" ? "Create your account" : "Reset your password"}</h1>
         <p className="mt-1 text-sm text-slate-500">

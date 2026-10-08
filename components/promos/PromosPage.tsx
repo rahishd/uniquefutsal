@@ -59,7 +59,7 @@ export default function PromosPage() {
       {list.length === 0 ? (
         <p className="glass rounded-3xl px-4 py-10 text-center text-sm text-slate-500">{tab === "active" ? "No active offers right now. Check back soon." : "No expired offers."}</p>
       ) : (
-        <ul className="space-y-4" role="tabpanel">
+        <ul className="space-y-4 desk:grid desk:grid-cols-2 desk:items-start desk:gap-5 desk:space-y-0 xl:desk:grid-cols-3" role="tabpanel">
           {list.map((p) => {
             const w = when(p);
             const live = p.status === "active";

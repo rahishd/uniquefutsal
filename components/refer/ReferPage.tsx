@@ -98,7 +98,7 @@ export default function ReferPage() {
   }
 
   return (
-    <div className="space-y-6 pb-4">
+    <div className="space-y-6 pb-4 desk:mx-auto desk:max-w-3xl">
       <header>
         <h1 className="text-2xl font-semibold">Refer &amp; Earn</h1>
         <p className="text-sm text-slate-500">Book a game on behalf of another team and you both earn loyalty points. {offer}</p>

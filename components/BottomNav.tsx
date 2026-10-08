@@ -41,7 +41,7 @@ export default function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-50 px-5"
+      className="fixed inset-x-0 bottom-0 z-50 px-5 desk:hidden"
       style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}
     >
       <div className="glass relative mx-auto flex max-w-md items-center justify-between rounded-full px-4 py-2.5">

@@ -124,7 +124,7 @@ function Flow({ catalog }: { catalog: Catalog }) {
   if (qr && qr.payment && !done) {
     const pay = qr.payment;
     return (
-      <div className="space-y-5">
+      <div className="space-y-5 desk:mx-auto desk:max-w-2xl">
         <Steps step={1} />
         <PaymentQr
           method={pay.method}
@@ -233,9 +233,9 @@ function Flow({ catalog }: { catalog: Catalog }) {
 
   /* ---------- choose ---------- */
   return (
-    <div className="space-y-6">
-      <Steps step={0} />
-      <header>
+    <div className="space-y-6 desk:grid desk:grid-cols-2 desk:items-start desk:gap-x-8 desk:gap-y-6 desk:space-y-0">
+      <div className="desk:col-span-2"><Steps step={0} /></div>
+      <header className="desk:col-span-2">
         <h1 className="flex items-center gap-2 text-2xl font-semibold"><Gamepad2 size={26} className="text-brand" /> Gamezone</h1>
         <p className="text-sm text-slate-500">Book a PS5 console by the hour. Bookings open up to {MAX_ADVANCE_DAYS} days ahead.</p>
       </header>
@@ -297,8 +297,8 @@ function Flow({ catalog }: { catalog: Catalog }) {
         </div>
       </section>
 
-      <section aria-label="Select date">
-        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2">
+      <section aria-label="Select date" className="desk:col-span-2">
+        <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 desk:mx-0 desk:flex-wrap desk:overflow-visible desk:px-0">
           {days.map(({ key, d }, i) => {
             const active = key === activeDate;
             return (
@@ -312,7 +312,7 @@ function Flow({ catalog }: { catalog: Catalog }) {
         </div>
       </section>
 
-      <section aria-label="Select start time">
+      <section aria-label="Select start time" className="desk:col-span-2">
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Start time</h2>
         {slots === null ? (
           <div className="grid grid-cols-3 gap-3" aria-label="Loading times">{[0, 1, 2].map((i) => <div key={i} className="h-14 animate-pulse rounded-2xl bg-white/40" />)}</div>
@@ -321,7 +321,7 @@ function Flow({ catalog }: { catalog: Catalog }) {
         ) : slots.length === 0 ? (
           <p className="glass rounded-2xl px-4 py-6 text-center text-sm text-slate-500">No {hours}-hour sessions free on this date. Try fewer hours or another day.</p>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3 desk:grid-cols-6">
             {slots.map((hr) => {
               const on = hr === selHour;
               return (
@@ -335,7 +335,7 @@ function Flow({ catalog }: { catalog: Catalog }) {
         )}
       </section>
 
-      <button type="button" disabled={!slot || !selGame} onClick={() => setStep(1)} className="glass-btn flex w-full items-center justify-center rounded-full py-4 text-base font-semibold text-white disabled:opacity-50">
+      <button type="button" disabled={!slot || !selGame} onClick={() => setStep(1)} className="glass-btn flex w-full items-center justify-center rounded-full py-4 text-base font-semibold text-white disabled:opacity-50 desk:col-span-2 desk:max-w-md">
         {!selGame ? "Choose a game to continue" : slot ? `Continue · ${hours} hr · ${formatRs(total)}` : "Select a start time to continue"}
       </button>
     </div>

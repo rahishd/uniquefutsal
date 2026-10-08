@@ -91,7 +91,7 @@ export default function AcademyPage() {
 
   const open = info?.sessions ?? [];
   return (
-    <div className="space-y-6 pb-4">
+    <div className="space-y-6 pb-4 desk:mx-auto desk:max-w-3xl">
       <header>
         <h1 className="text-2xl font-semibold">Children&apos;s Academy</h1>
         <p className="text-sm text-slate-500">Football classes for children aged {info?.minAge ?? 10} to {info?.maxAge ?? 14}. Guardians confirm the class here.</p>
