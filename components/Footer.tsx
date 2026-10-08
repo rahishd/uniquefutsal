@@ -21,6 +21,25 @@ const heading = "text-xs font-bold uppercase tracking-[0.2em] text-[#0c0b5d]";
 export default function Footer() {
   return (
     <footer className="mx-auto w-full max-w-md px-5 pb-40 pt-12 desk:max-w-none desk:px-10 desk:pb-14 desk:pt-6">
+      <section aria-label="Message from the founder" className="glass mb-10 space-y-3 rounded-3xl p-5 desk:p-8">
+        <h2 className={heading}>Message from the founder</h2>
+        <div className="space-y-3 text-sm leading-relaxed text-slate-600">
+          <p>
+            My valued customers are at the heart of this journey. I want to build genuine relationships by listening to their needs, welcoming their ideas, and creating experiences they’re proud to be part of. Their trust and support help Unique Futsal grow, while every game gives us another chance to connect and make the community stronger.
+          </p>
+          <p>
+            Unique Futsal brings people together through shared games and inclusive experiences, turning a common interest into friendships, encouragement, and a stronger sense of belonging. I also see technology as a way to make sports more accessible and organized, helping people discover sessions, coordinate participation, and stay connected beyond the game.
+          </p>
+          <p>
+            For me, success is found in new friendships, shared progress, and opportunities to grow together. Unique Futsal is my effort to unite sport, technology, and community in one meaningful experience—one game, one connection, and one opportunity at a time.
+          </p>
+        </div>
+        <p className="pt-1 text-sm">
+          <span className="block font-bold text-[#0c0b5d]">Rahish Dumre</span>
+          <span className="block text-slate-500">Unique Futsal</span>
+        </p>
+      </section>
+
       <div className="space-y-10 desk:grid desk:grid-cols-3 desk:gap-10 desk:space-y-0">
         <div>
           <h2 className={heading}>Contact us</h2>
