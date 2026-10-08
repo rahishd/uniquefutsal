@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { CalendarPlus, Check, ChevronLeft, Gift, Loader2, Tag, X } from "lucide-react";
+import { CalendarPlus, Check, ChevronDown, ChevronLeft, Gift, Loader2, Tag, X } from "lucide-react";
 import PaymentMethodPicker from "@/components/payment/PaymentMethodPicker";
 import PaymentQr from "@/components/payment/PaymentQr";
 import { errorText } from "@/lib/api";
 import { fmtPts } from "@/lib/points";
 import { loyaltyStore } from "@/lib/loyalty";
+import { promosStore } from "@/lib/promos";
 import { METHOD_LABEL, isOnline, type PayMethod } from "@/lib/payment";
 import { openSignIn, useSession } from "@/lib/session";
 import {
@@ -108,6 +109,8 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   const [version, setVersion] = useState(0);
   const [promoInput, setPromoInput] = useState("");
   const [appliedCode, setAppliedCode] = useState("");
+  const [showCodes, setShowCodes] = useState(false);
+  const offers = (promosStore.use().data ?? []).filter((p) => p.kind === "booking" && p.status === "active");
   const [quote, setQuote] = useState<{ key: string; q: Quote | null; error: string | null } | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -341,6 +344,23 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
               />
               <button type="button" onClick={() => setAppliedCode(promoInput.trim())} className="rounded-2xl bg-brand px-5 text-sm font-medium text-white">Apply</button>
             </div>
+            <button type="button" onClick={() => setShowCodes((v) => !v)} aria-expanded={showCodes} className="mt-3 flex items-center gap-1 text-sm font-medium text-brand">
+              {showCodes ? "Hide promo codes" : "View promo codes"} <ChevronDown size={16} className={showCodes ? "rotate-180" : ""} />
+            </button>
+            {showCodes && (
+              <ul className="mt-2 space-y-2" aria-label="Available promo codes">
+                {offers.length === 0 && <li className="rounded-2xl bg-white/60 px-4 py-3 text-sm text-slate-500">No promo codes are running right now.</li>}
+                {offers.map((p) => (
+                  <li key={p.code} className="flex items-center gap-3 rounded-2xl bg-white/70 px-4 py-3 ring-1 ring-white/80">
+                    <div className="min-w-0 flex-1">
+                      <p className="flex flex-wrap items-center gap-2 text-sm font-semibold"><span className="font-mono tracking-wide">{p.code}</span><span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand">{p.discount}</span></p>
+                      <p className="truncate text-xs text-slate-500">{p.title}{p.daysLeft !== null && p.daysLeft <= 5 ? ` · ends in ${p.daysLeft} ${p.daysLeft === 1 ? "day" : "days"}` : ""}</p>
+                    </div>
+                    <button type="button" onClick={() => { setPromoInput(p.code); setAppliedCode(p.code); setShowCodes(false); }} className="shrink-0 rounded-full bg-brand px-4 py-2 text-xs font-medium text-white">Use</button>
+                  </li>
+                ))}
+              </ul>
+            )}
             {q?.vip && (!appliedCode || !promo?.ok) && (
               <p role="status" className="mt-2 flex items-center gap-1 text-xs text-emerald-600">
                 <Check size={14} /> {q.vip.label} applied to every game (− {formatRs(q.discount)})

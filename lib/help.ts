@@ -117,6 +117,7 @@ export const helpTopics: HelpTopic[] = [
     points: [
       "Promos shows what is active now, what is coming and what has ended.",
       "Tap Copy, then paste the code in the promo box on the booking or membership page.",
+      "While booking, tap View promo codes under the promo box to see the codes running now, and tap Use to apply one. You do not have to remember or type it.",
       "Some codes have rules (weekends only, mornings only, renewals only). The card says which.",
       "One code per booking.",
       "Some codes can be used only a few times, or once per customer. When a code has run out, it is taken off the list and the booking page says so.",
