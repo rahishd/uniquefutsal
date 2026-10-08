@@ -20,8 +20,8 @@ const heading = "text-xs font-bold uppercase tracking-[0.2em] text-[#0c0b5d]";
 
 export default function Footer() {
   return (
-    <footer className="mx-auto w-full max-w-md px-5 pb-40 pt-12">
-      <div className="space-y-10">
+    <footer className="mx-auto w-full max-w-md px-5 pb-40 pt-12 desk:max-w-none desk:px-10 desk:pb-14 desk:pt-6">
+      <div className="space-y-10 desk:grid desk:grid-cols-3 desk:gap-10 desk:space-y-0">
         <div>
           <h2 className={heading}>Contact us</h2>
           <ul className="mt-4 space-y-3 text-sm font-medium text-slate-600">

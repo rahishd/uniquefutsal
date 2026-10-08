@@ -10,7 +10,7 @@ import DeskNav from "@/components/DeskNav";
 export default function CompanyHeader() {
   return (
     <div className="sticky top-0 z-30 bg-[#eceaf8]/80 backdrop-blur-xl" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <div className="mx-auto w-full max-w-md px-3 pb-2 pt-2 desk:max-w-[1360px] desk:px-10 desk:pb-3 desk:pt-3">
+      <div className="mx-auto w-full max-w-md px-3 pb-2 pt-2 desk:max-w-none desk:px-10 desk:pb-3 desk:pt-3">
         <div className="flex min-h-16 items-center gap-3 rounded-2xl bg-[#0c0b5d] px-4 py-2 shadow-[0_8px_20px_rgba(12,11,93,0.3)] desk:gap-6 desk:px-6">
           <Link href="/" aria-label={`${site.name} home`} className="flex items-center gap-3 desk:shrink-0 desk:max-xl:gap-2">
             {/* The logo picture is white on navy; blending with "lighten" keeps only the white player on the bar. */}
