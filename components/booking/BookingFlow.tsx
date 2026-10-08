@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { CalendarPlus, Check, ChevronDown, ChevronLeft, Gift, Loader2, Tag, X } from "lucide-react";
+import { CalendarPlus, Check, ChevronDown, ChevronLeft, Droplets, Gift, Loader2, Tag, X } from "lucide-react";
 import PaymentMethodPicker from "@/components/payment/PaymentMethodPicker";
 import PaymentQr from "@/components/payment/PaymentQr";
 import { errorText } from "@/lib/api";
@@ -153,6 +153,11 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quoteKey]);
+  // Bring the Continue button into view right after a slot is picked.
+  const continueRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (selHour !== null) continueRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [selHour]);
   const q = quote?.key === quoteKey ? quote.q : null;
   const promo = q?.promo ?? null;
 
@@ -314,6 +319,12 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           <p className="mt-2 text-[11px] text-slate-400">The final price is set by the server.</p>
           {registered && !free && q && q.earnPoints > 0 && (
             <p className="mt-3 rounded-2xl bg-amber-400/15 px-3 py-2 text-xs text-amber-700">You&apos;ll earn {fmtPts(q.earnPoints)} loyalty points after this game.</p>
+          )}
+          {q?.water && (
+            <p role="status" className={`mt-3 flex items-start gap-2 rounded-2xl px-3 py-2 text-xs ${q.water.bottles > 0 ? "bg-sky-500/10 text-sky-700" : "bg-slate-500/10 text-slate-600"}`}>
+              <Droplets size={14} className="mt-0.5 shrink-0" />
+              {q.water.bottles > 0 ? `Includes ${q.water.bottles} complimentary mineral water bottles.` : q.water.excluded === "vip" ? "Mineral water is not included with your VIP discount." : "Mineral water is not included with this promo code."}
+            </p>
           )}
           {quote?.key === quoteKey && quote.error && <p role="alert" className="mt-3 rounded-2xl bg-rose-500/10 px-3 py-2 text-xs text-rose-600">{quote.error}</p>}
         </section>
@@ -477,19 +488,26 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
                   );
                 })}
               </div>
+              {slot && slot.period === p && (
+                <button
+                  ref={continueRef}
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="glass-btn mt-3 flex w-full scroll-mb-28 items-center justify-center rounded-full py-4 text-base font-semibold text-white"
+                >
+                  {`Continue · ${formatHour(slot.hour)} · ${formatRs(slot.price)}`}
+                </button>
+              )}
             </div>
           ))
         )}
       </section>
 
-      <button
-        type="button"
-        disabled={!slot}
-        onClick={() => setStep(1)}
-        className="glass-btn flex w-full items-center justify-center rounded-full py-4 text-base font-semibold text-white disabled:opacity-50"
-      >
-        {slot ? `Continue · ${formatHour(slot.hour)} · ${formatRs(slot.price)}` : "Select a slot to continue"}
-      </button>
+      {!slot && (
+        <button type="button" disabled className="glass-btn flex w-full items-center justify-center rounded-full py-4 text-base font-semibold text-white disabled:opacity-50">
+          Select a slot to continue
+        </button>
+      )}
     </div>
   );
 }

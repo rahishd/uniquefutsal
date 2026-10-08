@@ -22,6 +22,7 @@ export interface PromoCode {
   appliedTo: "booking" | "membership" | "both";
   maxUses?: number; // total uses allowed, everyone together (set by staff)
   maxPerCustomer?: number; // uses allowed for one customer
+  includesWater?: boolean; // staff switch: a game booked with this code still includes the 2 complimentary mineral water bottles (default off)
 }
 
 export interface HourlyPricingSlot {

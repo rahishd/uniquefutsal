@@ -60,6 +60,8 @@ export interface Quote {
   promo: { ok: boolean; code?: string; label?: string; message?: string } | null;
   // set when the customer's VIP code (given by the venue) is what lowered the price, typed or claimed before
   vip?: { code: string; label: string } | null;
+  // complimentary mineral water: 2 bottles with a game, none when a VIP discount or a promo code (without the water switch) is applied
+  water?: { bottles: number; excluded: "vip" | "promo" | null };
   usesVoucher: boolean;
   earnPoints: number; // points a signed-in customer will earn after the game
 }

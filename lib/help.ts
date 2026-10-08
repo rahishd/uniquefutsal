@@ -28,6 +28,7 @@ export const helpTopics: HelpTopic[] = [
       `Tap Book Now. You can book from today up to ${MAX_ADVANCE_DAYS} days ahead.`,
       "Only free slots are listed. If a time is missing, it is already taken or has passed.",
       "Choose a court, add a promo code if you have one, then pay.",
+      "Every game includes 2 complimentary mineral water bottles. A game booked with a promo code or a VIP discount does not include them, and the booking screen tells you as soon as you apply one.",
       "Your booking ID appears at the end. Find it later in Profile > My bookings.",
     ],
     href: { label: "Book now", to: "/book" },

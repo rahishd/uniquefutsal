@@ -53,7 +53,7 @@ Times use Nepal time. Dates are `YYYY-MM-DD`. Money is whole rupees.
 | GET | `/bookings/available?date=` | Guest | free slots (existing endpoint) |
 | GET | `/bookings/occupancy?date=` | Guest | taken hours only; staff with a token also see names/phones |
 | GET | `/bookings/slots?date=` | Guest | Free hours for a date (today..+10 days, Nepal time) -> `{date,slots:[{hour,startTime,endTime,price}]}` |
-| POST | `/bookings/quote` | Guest | `{date,startTime,duration?,promoCode?,voucherId?}` -> `{basePrice,discount,total,promo,usesVoucher,earnPoints}` |
+| POST | `/bookings/quote` | Guest | `{date,startTime,duration?,promoCode?,voucherId?}` -> `{basePrice,discount,total,promo,vip,water,usesVoucher,earnPoints}`; `water` is `{bottles, excluded}`: the 2 complimentary mineral water bottles, or 0 with `excluded: "vip"` (a VIP discount applies) or `"promo"` (a promo code applies and staff did not switch `includesWater` on for it). The booking stores the same number in `waterBottles` |
 | POST | `/bookings/checkout` | Guest or User | `{date,startTime,duration?,method: fonepay|venue,promoCode?,voucherId?,guest?:{name,phone}}`. Guest: details required, `venue` refused (403), no voucher. User: no guest details. Window today..+10. Online -> `{booking, payment:{orderCode,amount,remarks,qrPayload,expiresAt}}` and the slot is held 10 minutes |
 | GET | `/bookings/me` | User | my bookings (membership ledger rows hidden) |
 | GET | `/bookings/me/rebook` | User | usual weekday+hour and the next open date, or `null` |

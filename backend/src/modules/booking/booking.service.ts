@@ -19,6 +19,7 @@ import { uploadFileToR2 } from "../../utils/r2storage";
 import { calculateLoyaltyProgress } from "../../utils/loyalty";
 import { claimVip, vipDiscount, vipForBooking, vipLabel } from "../promo/vipCodes";
 import { assertPromoLimits } from "../promo/promoLimits";
+import { waterFor } from "../../utils/water";
 import fs from "fs";
 import path from "path";
 
@@ -332,6 +333,7 @@ export class BookingService {
     }
     let discount = 0;
     let promo: { ok: boolean; code?: string; label?: string; message?: string } | null = null;
+    let promoUsed: PromoCodeDTO | null = null;
     if (promoCode && promoCode.trim()) {
       const code = promoCode.trim().toUpperCase();
       const promos = await SettingsService.getPromoCodes();
@@ -344,6 +346,7 @@ export class BookingService {
           await assertPromoLimits(found, userId);
           discount = this.calculatePromoDiscount(found, basePrice);
           promo = { ok: true, code: found.code, label: found.label };
+          promoUsed = found;
         } catch (e) {
           promo = { ok: false, message: e instanceof AppError ? e.message : "This promo code cannot be used." };
         }
@@ -362,7 +365,9 @@ export class BookingService {
       }
       if (entered) await claimVip(vip);
     }
-    return { basePrice, discount, total: Math.max(0, basePrice - discount), promo, vip: vipApplied };
+    // Mineral water: included unless a VIP discount or a promo code (without the water switch) lowered the price.
+    const water = waterFor({ vip: !!vipApplied, promo: promoUsed });
+    return { basePrice, discount, total: Math.max(0, basePrice - discount), promo, vip: vipApplied, water };
   }
 
   // Awards new-style loyalty points for bookings that are now both completed and fully paid. Idempotent.
@@ -664,6 +669,7 @@ export class BookingService {
     const subtotal = basePrice + addOnsPrice;
     let discountAmount = 0;
     let appliedPromoCode: string | null = null;
+    let appliedPromo: PromoCodeDTO | null = null;
 
     // Validate and compute promo discount server-side (never trust frontend discountAmount).
     const { vip, entered: vipTyped } = await vipForBooking(userId, dto.promoCode);
@@ -685,6 +691,7 @@ export class BookingService {
       await assertPromoLimits(promo, userId);
       discountAmount = this.calculatePromoDiscount(promo, subtotal);
       appliedPromoCode = promo.code;
+      appliedPromo = promo;
     }
 
     // The VIP code staff gave this customer applies to every booking once claimed; the bigger discount wins.
@@ -693,9 +700,14 @@ export class BookingService {
       if (vipTyped || vd > discountAmount) {
         discountAmount = vd;
         appliedPromoCode = vip.code;
+        appliedPromo = null;
       }
       if (appliedPromoCode === vip.code) await claimVip(vip);
     }
+
+    // Complimentary mineral water follows the discount rule (no water with a VIP discount or a promo code unless staff allowed it).
+    const vipApplied = !!vip && appliedPromoCode === vip.code;
+    const waterBottles = waterFor({ vip: vipApplied, promo: appliedPromo }).bottles;
 
     let totalPrice = subtotal - discountAmount;
 
@@ -814,7 +826,7 @@ export class BookingService {
         paymentStatus,
         status: bookingStatus,
         notes: finalNotes,
-        waterBottles: 2,
+        waterBottles,
       } as any,
       include: {
         user: {

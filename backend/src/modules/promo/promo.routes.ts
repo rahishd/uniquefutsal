@@ -23,6 +23,7 @@ function termsOf(p: PromoCode): string {
   if (p.appliedTo === "membership") parts.push("For memberships only.");
   if (p.appliedTo === "booking") parts.push("For court bookings only.");
   if (p.maxPerCustomer) parts.push(p.maxPerCustomer === 1 ? "One use per customer." : `${p.maxPerCustomer} uses per customer.`);
+  if (p.appliedTo !== "membership" && !p.includesWater) parts.push("Mineral water is not included with this code.");
   return parts.join(" ") || "One code per booking.";
 }
 

@@ -44,6 +44,8 @@ export const checkoutController = {
         total,
         promo: q.promo,
         vip: q.vip,
+        // complimentary mineral water: { bottles, excluded: "vip" | "promo" | null }
+        water: q.water,
         usesVoucher,
         // points a registered customer will earn after the game (free games earn none)
         earnPoints: req.user && !usesVoucher ? pointsForGame(total) : 0,
