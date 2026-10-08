@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { errorText } from "@/lib/api";
 import { disablePush, enablePush, pushState, type PushState } from "@/lib/push";
-import { googleStatus, linkGoogle, unlinkGoogle, type GoogleStatus } from "@/lib/google";
+import { changeMyPassword, googleStatus, linkGoogle, unlinkGoogle, type GoogleStatus } from "@/lib/google";
 import GoogleButton from "@/components/auth/GoogleButton";
 
 function Switch({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
@@ -30,6 +30,8 @@ export default function AccountSecurity() {
   const [google, setGoogle] = useState<GoogleStatus | null>(null);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [linking, setLinking] = useState(false);
+  const [pw, setPw] = useState<{ cur: string; next: string } | null>(null);
+  const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -79,8 +81,37 @@ export default function AccountSecurity() {
     }
   }
 
+  async function savePw() {
+    if (!pw) return;
+    setPwMsg(null);
+    try {
+      await changeMyPassword(pw.cur, pw.next);
+      setPw(null);
+      setPwMsg({ ok: true, text: "Your password was changed." });
+    } catch (e) {
+      setPwMsg({ ok: false, text: errorText(e) });
+    }
+  }
+
   return (
     <>
+      <li>
+        <div className="flex items-center justify-between gap-4">
+          <span>
+            Password
+            <span className="block text-xs text-slate-400">Forgot your current password? Contact the admin and they will set a new one for you.</span>
+          </span>
+          <button type="button" onClick={() => setPw(pw ? null : { cur: "", next: "" })} className="shrink-0 text-xs font-medium text-brand">{pw ? "Close" : "Change"}</button>
+        </div>
+        {pw && (
+          <div className="mt-3 space-y-2">
+            <input type="password" value={pw.cur} onChange={(e) => setPw({ ...pw, cur: e.target.value })} placeholder="Current password" autoComplete="current-password" aria-label="Current password" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+            <input type="password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} placeholder="New password (6+ characters)" autoComplete="new-password" aria-label="New password" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+            <button type="button" disabled={!pw.cur || pw.next.length < 6} onClick={savePw} className="rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Save password</button>
+          </div>
+        )}
+        {pwMsg && <p role="alert" className={`mt-1 text-xs ${pwMsg.ok ? "text-brand" : "text-rose-600"}`}>{pwMsg.text}</p>}
+      </li>
       <li>
         <div className="flex items-center justify-between gap-4">
           <span>

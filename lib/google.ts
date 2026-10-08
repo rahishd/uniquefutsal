@@ -17,6 +17,7 @@ export interface GoogleStatus extends GoogleConfig {
 }
 export const googleStatus = () => api<GoogleStatus>("/auth/google/status");
 export const linkGoogle = (idToken: string) => api<{ email: string }>("/auth/google/link", { method: "POST", body: { idToken } });
+export const changeMyPassword = (currentPassword: string, newPassword: string) => api("/auth/change-password", { method: "PATCH", body: { currentPassword, newPassword } });
 export const unlinkGoogle = () => api("/auth/google/unlink", { method: "POST" });
 export const resetPasswordWithGoogle = (p: { phoneNumber: string; idToken: string; newPassword: string }) =>
   api("/auth/reset-password/google", { method: "POST", body: p, auth: "none" });

@@ -106,6 +106,7 @@ router.patch(
   "/change-password",
   authMiddleware,
   [
+    body("currentPassword").isString().notEmpty().withMessage("Enter your current password"),
     body("newPassword").isLength({ min: 6 }),
   ],
   validateRequest,

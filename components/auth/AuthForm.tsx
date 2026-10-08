@@ -155,7 +155,7 @@ export default function AuthForm() {
         {mode === "reset" ? (
           <button type="button" onClick={() => { setMode("in"); setError(null); }} className="font-medium text-brand">Back to sign in</button>
         ) : (
-          <>Forgot your password? <button type="button" onClick={() => { setMode("reset"); setError(null); setDone(null); setPassword(""); }} className="font-medium text-brand">Reset it with Google</button>. No Google account linked? Call <a href={`tel:${site.phone}`} className="font-medium text-brand">{site.phone}</a>.</>
+          <>Forgot your password? <button type="button" onClick={() => { setMode("reset"); setError(null); setDone(null); setPassword(""); }} className="font-medium text-brand">Reset it with Google</button>. No Google account linked? Contact the admin on <a href={`tel:${site.phone}`} className="font-medium text-brand">{site.phone}</a> and they will set a new password for you.</>
         )}
       </p>
       <Link href="/book" className="block text-center text-sm font-medium text-brand">Continue as a guest</Link>

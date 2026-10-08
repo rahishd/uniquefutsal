@@ -628,9 +628,9 @@ export class AuthService {
       throw new AppError(404, "User not found");
     }
 
-    // Only verify current password if it's provided (security for user-side change)
-    if (dto.currentPassword) {
-      const isValid = await HashUtil.compare(dto.currentPassword, user.password);
+    // A customer changing it themselves must prove the old one; staff set new ones from the admin portal.
+    {
+      const isValid = await HashUtil.compare(dto.currentPassword ?? "", user.password);
       if (!isValid) {
         throw new AppError(401, "Current password is incorrect");
       }
