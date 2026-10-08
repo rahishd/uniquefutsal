@@ -1,6 +1,6 @@
 // Minimal service worker: caches the app shell and serves an offline fallback.
 // Only GET requests for same-origin pages/assets are cached. API calls are never cached.
-const CACHE = "uf-shell-v1";
+const CACHE = "uf-shell-v2";
 const SHELL = ["/", "/offline"];
 
 self.addEventListener("install", (event) => {
@@ -22,6 +22,8 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api")) return;
+  // The admin portal lives at /adminofuniquefutsal on the same domain: never cache or intercept it.
+  if (url.pathname.startsWith("/adminofuniquefutsal")) return;
 
   // Pages: network first, fall back to cache, then the offline page.
   if (request.mode === "navigate") {

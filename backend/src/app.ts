@@ -11,6 +11,9 @@ import routes from "./routes";
 
 const app: Express = express();
 
+// Behind Nginx (see deploy/): trust ONE proxy hop so req.ip and the rate limits are per visitor, not one shared bucket for everyone.
+app.set("trust proxy", 1);
+
 // Middlewares
 app.use(helmet({
   crossOriginResourcePolicy: false, // Allow cross-origin images/PDFs
