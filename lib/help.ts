@@ -5,7 +5,7 @@
 
 import { EXPIRY_NOTICE_DAYS } from "@/lib/membership";
 import { MAX_ADVANCE_DAYS } from "@/lib/booking";
-import { GAME_POINTS_MONTHS, GAMES_PER_FREE, MEMBERSHIP_POINTS, POINTS_CAPTAIN_WIN, RS_PER_POINT } from "@/lib/points";
+import { GAME_POINTS_MONTHS, GZ_POINTS_PER_HOUR, MEMBERSHIP_POINTS, POINTS_CAPTAIN_WIN, RS_PER_POINT } from "@/lib/points";
 
 export type HelpIcon = "book" | "pay" | "rebook" | "member" | "points" | "promo" | "bell" | "captain" | "profile" | "trophy" | "install" | "guest" | "wifi";
 
@@ -101,7 +101,7 @@ export const helpTopics: HelpTopic[] = [
     title: "Loyalty points and free games",
     summary: "Play, earn points, turn them into a free game.",
     points: [
-      `Each game earns its price ÷ ${RS_PER_POINT} points. ${GAMES_PER_FREE} games' worth of points buys a free game in that shift.`,
+      `Each game earns its price ÷ ${RS_PER_POINT} points, and every Gamezone hour earns ${GZ_POINTS_PER_HOUR} points. A free game costs the shift price ÷ 10 in points (a Rs. 1,250 game costs 125 points).`,
       `Extra goods earn 1 point for every Rs. ${RS_PER_POINT} you spend.`,
       `Winning captains earn ${POINTS_CAPTAIN_WIN} points for a challenge game.`,
       `Game points last ${GAME_POINTS_MONTHS} months, goods points 1 year, membership points never expire. We warn you before points expire.`,

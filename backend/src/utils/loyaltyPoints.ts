@@ -1,7 +1,9 @@
 // Loyalty points rules for the new customer app (pure functions, no database).
 //
 // - A regular game earns price / 100 points, kept to one decimal (Rs. 1,250 = 12.5).
-// - 10 games = 1 free game of that shift, so a free game costs price / 10.
+// - A free game costs the shift's price / 10 in points (Rs. 1,250 = 125 points). There is no "10 games played" rule:
+//   a customer can claim as soon as they hold that many valid points.
+// - Gamezone: every hour played earns 5 points (awarded by the admin server when the session is completed and paid).
 // - Extra goods: every full Rs. 100 = 1 point.
 // - Membership purchase or renewal: 3 months = 30 points, 6 months = 70, monthly = 0.
 // - Challenge game: only the winning captain earns 5 points.
@@ -11,7 +13,8 @@
 import { addDaysKey, addMonthsKey } from "./dates";
 
 export const RS_PER_POINT = 100;
-export const GAMES_PER_FREE = 10;
+export const FREE_GAME_DIVISOR = 10;
+export const GZ_POINTS_PER_HOUR = 5;
 export const POINTS_CAPTAIN_WIN = 5;
 export const GAME_POINTS_MONTHS = 3;
 export const GOODS_POINTS_MONTHS = 12;
@@ -37,7 +40,7 @@ export function pointsForGame(priceRs: number): number {
 }
 
 export function freeGameCost(priceRs: number): number {
-  return r1(Math.max(0, priceRs) / 10); // 10 games' worth
+  return r1(Math.max(0, priceRs) / FREE_GAME_DIVISOR);
 }
 
 export function pointsForGoods(amountRs: number): number {

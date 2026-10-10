@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Gift, Star, Trophy, ShoppingBag, Gamepad2, UserRound, ChevronDown, Crown, HeartHandshake, Check, Clock, TriangleAlert, Loader2 } from "lucide-react";
 import { useSession, openSignIn } from "@/lib/session";
 import { errorText } from "@/lib/api";
-import { GAMES_PER_FREE, GAME_POINTS_MONTHS, MEMBERSHIP_POINTS, POINTS_CAPTAIN_WIN, RS_PER_POINT, SHIFT_HOURS, fmtPts } from "@/lib/points";
+import { GZ_POINTS_PER_HOUR, GAME_POINTS_MONTHS, MEMBERSHIP_POINTS, POINTS_CAPTAIN_WIN, RS_PER_POINT, SHIFT_HOURS, fmtPts } from "@/lib/points";
 import { claimFreeGame, loyaltyStore, progressPct, type LoyaltyRow, type Period } from "@/lib/loyalty";
 import { formatRs } from "@/lib/booking";
 import { fmtDay } from "@/lib/promos";
@@ -43,7 +43,7 @@ export default function PointsPage() {
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
         <span className="glass flex h-20 w-20 items-center justify-center rounded-3xl text-brand"><UserRound size={34} /></span>
         <h1 className="mt-6 text-2xl font-semibold">Loyalty points</h1>
-        <p className="mt-2 max-w-xs text-sm text-slate-500">Sign in to collect points on every game and turn {GAMES_PER_FREE} games into a free one.</p>
+        <p className="mt-2 max-w-xs text-sm text-slate-500">Sign in to collect points on every game and turn your points into free games.</p>
         <button type="button" onClick={openSignIn} className="glass-btn mt-6 rounded-full px-8 py-3.5 text-sm font-semibold text-white">Sign in</button>
       </div>
     );
@@ -159,7 +159,8 @@ export default function PointsPage() {
         <h2 className="text-base font-semibold">How it works</h2>
         <ul className="mt-3 space-y-3 text-sm">
           <li className="flex gap-3"><Gamepad2 size={20} className="mt-0.5 shrink-0 text-emerald-600" /><span>Every game earns <b>price ÷ {RS_PER_POINT}</b> points. A Rs. 1,250 game earns 12.5.</span></li>
-          <li className="flex gap-3"><Gift size={20} className="mt-0.5 shrink-0 text-orange-500" /><span><b>{GAMES_PER_FREE} games = 1 free game</b> in any shift you have the points for: {loy.shifts.map((s) => `${s.period} ${fmtPts(s.cost)}`).join(" · ")}.</span></li>
+          <li className="flex gap-3"><Gift size={20} className="mt-0.5 shrink-0 text-orange-500" /><span><b>A free game costs its price ÷ 10 in points</b>. You can claim any shift you have the points for: {loy.shifts.map((s) => `${s.period} Rs. ${s.price.toLocaleString("en-IN")} = ${fmtPts(s.cost)} points`).join(" · ")}.</span></li>
+          <li className="flex gap-3"><Gamepad2 size={20} className="mt-0.5 shrink-0 text-violet-500" /><span><b>Gamezone:</b> every hour you play earns {GZ_POINTS_PER_HOUR} points (1 hour = {GZ_POINTS_PER_HOUR} points).</span></li>
           <li className="flex gap-3"><ShoppingBag size={20} className="mt-0.5 shrink-0 text-sky-600" /><span>Extra goods: every <b>Rs. {RS_PER_POINT}</b> spent = <b>1 point</b>. Rs. 10,000 = 100 points.</span></li>
           <li className="flex gap-3"><Crown size={20} className="mt-0.5 shrink-0 text-violet-600" /><span>Membership purchase or renewal: <b>3 months = {MEMBERSHIP_POINTS.quarterly} points</b>, <b>6 months = {MEMBERSHIP_POINTS.half} points</b>.</span></li>
           <li className="flex gap-3"><Trophy size={20} className="mt-0.5 shrink-0 text-amber-600" /><span>Challenge games: only the <b>winning captain</b> earns <b>{POINTS_CAPTAIN_WIN} points</b>.</span></li>
@@ -188,7 +189,7 @@ export default function PointsPage() {
           ))}
         </ul>
         <p className="mt-3 rounded-2xl bg-white/60 px-3 py-2 text-xs text-slate-500">
-          Play {GAMES_PER_FREE} games within {GAME_POINTS_MONTHS} months to claim a free game. Game points not used in time vanish automatically, and the points that expire soonest are spent first.
+          Game points last {GAME_POINTS_MONTHS} months. Points not used in time vanish automatically, and the points that expire soonest are spent first.
         </p>
       </section>
 
@@ -227,7 +228,7 @@ export default function PointsPage() {
         <h2 className="text-sm font-semibold text-slate-700">Terms</h2>
         <ul className="mt-2 list-disc space-y-1.5 pl-4">
           <li>Points are earned only by the registered account holder (the main person). Guests don&apos;t earn points.</li>
-          <li>Game points last {GAME_POINTS_MONTHS} months. Play {GAMES_PER_FREE} games within {GAME_POINTS_MONTHS} months to claim a free game, or the game points are cancelled.</li>
+          <li>Game points last {GAME_POINTS_MONTHS} months. Points not used in time expire.</li>
           <li>Extra goods points last 1 year. Membership points never expire.</li>
           <li>A free game is for one regular booking in the shift you chose. It can&apos;t be used to host a challenge and has no cash value.</li>
           <li>The final points are confirmed by Unique Futsal after the game or payment.</li>

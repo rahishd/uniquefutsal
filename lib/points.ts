@@ -3,7 +3,8 @@
 // and must match src/utils/loyaltyPoints.ts in the backend.
 
 export const RS_PER_POINT = 100; // Rs. 100 of game price = 1 point
-export const GAMES_PER_FREE = 10; // 10 games = 1 free game of that shift
+export const FREE_GAME_DIVISOR = 10; // a free game costs (shift price ÷ 10) points: Rs. 1,250 = 125 points
+export const GZ_POINTS_PER_HOUR = 5; // every Gamezone hour played earns 5 points
 export const POINTS_CAPTAIN_WIN = 5; // only the winning captain of a challenge game
 export const GAME_POINTS_MONTHS = 3; // game points last 3 months
 export const GOODS_POINTS_MONTHS = 12; // extra-goods points last 1 year
