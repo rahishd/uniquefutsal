@@ -543,9 +543,10 @@ export class BookingService {
     });
 
     for (const tournament of tournaments) {
+      // A tournament that has no schedule saved holds no hours: it does not close the court. Staff close hours for an
+      // event with "Blocked hours" (or give the tournament a daily schedule).
       if (!tournament.description) {
-        // Fallback: if no description/schedule, block the entire day
-        return false;
+        continue;
       }
 
       try {
@@ -586,8 +587,8 @@ export class BookingService {
           continue; 
         }
       } catch (e) {
-        // If JSON parse fails, block the day as safety fallback
-        return false;
+        // An unreadable schedule holds no hours either
+        continue;
       }
     }
 
@@ -1556,7 +1557,7 @@ export class BookingService {
 
       // Check for overlap with tournaments
       for (const t of tournaments) {
-        if (!t.description) return false;
+        if (!t.description) continue; // no schedule saved: it holds no hours
         try {
           const parsed = JSON.parse(t.description);
           const dailySchedules = parsed.agreement?.dailySchedules || [];
@@ -1577,7 +1578,7 @@ export class BookingService {
             }
           }
         } catch (e) {
-          return false;
+          continue; // an unreadable schedule holds no hours
         }
       }
 
