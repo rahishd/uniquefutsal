@@ -46,9 +46,21 @@ export interface Slot {
   period: Period;
 }
 
+// An hour the venue has closed (repairs, an event), with the reason staff wrote. It is shown instead of being offered.
+export interface ClosedHour {
+  hour: number;
+  startTime: string;
+  endTime: string;
+  reason: string;
+}
+
+export async function fetchSlotsAndClosed(date: string): Promise<{ slots: Slot[]; closed: ClosedHour[] }> {
+  const r = await api<{ slots: Omit<Slot, "period">[]; blocked?: ClosedHour[] }>("/bookings/slots", { query: { date }, auth: "none" });
+  return { slots: r.slots.map((s) => ({ ...s, period: periodOf(s.hour) })), closed: r.blocked ?? [] };
+}
+
 export async function fetchSlots(date: string): Promise<Slot[]> {
-  const r = await api<{ slots: Omit<Slot, "period">[] }>("/bookings/slots", { query: { date }, auth: "none" });
-  return r.slots.map((s) => ({ ...s, period: periodOf(s.hour) }));
+  return (await fetchSlotsAndClosed(date)).slots;
 }
 
 /* ---------- price and promo check ---------- */

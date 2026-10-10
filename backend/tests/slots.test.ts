@@ -42,3 +42,21 @@ describe("GET /api/bookings/slots (the booking page)", () => {
     expect(after).not.toContain("14:00");
   });
 });
+
+describe("hours the venue has closed", () => {
+  const date = futureDate(6);
+  afterEach(async () => {
+    await prisma.slotBlock.deleteMany({ where: { date } });
+  });
+
+  it("are not offered, are listed with the reason, and a booking attempt says why", async () => {
+    await prisma.slotBlock.create({ data: { date, hour: 11, reason: "Repair & Renovation", createdBy: "test" } });
+    const res = await api().get(`/api/bookings/slots?date=${date}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.slots.map((x: any) => x.startTime)).not.toContain("11:00");
+    expect(res.body.data.blocked).toEqual([expect.objectContaining({ hour: 11, startTime: "11:00", reason: "Repair & Renovation" })]);
+    const book = await api().post("/api/bookings/checkout").set(bearer(tokenFor(U))).send({ date, startTime: "11:00", method: "venue" });
+    expect(book.status).toBe(400);
+    expect(JSON.stringify(book.body)).toContain("Repair & Renovation");
+  });
+});

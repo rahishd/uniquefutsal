@@ -160,6 +160,23 @@ export class BookingService {
 
   // Get membership-blocked time slots for a specific date
   // Returns a Set of start times (e.g., "06:00", "07:00") that are reserved by active memberships
+  // Hours the venue has closed (staff "Blocked hours": repairs, events...), with the reason staff wrote. Key is "HH:00".
+  async getStaffBlocks(date: string): Promise<Map<string, string>> {
+    const rows = await prisma.slotBlock.findMany({ where: { date }, select: { hour: true, reason: true } });
+    return new Map(rows.map((r) => [`${String(r.hour).padStart(2, "0")}:00`, r.reason]));
+  }
+
+  // The reason, when any hour of the game is closed by staff; otherwise null.
+  async blockedReason(date: string, startTime: string, duration: number): Promise<string | null> {
+    const blocks = await this.getStaffBlocks(date);
+    const startHour = parseInt(startTime.split(":")[0], 10);
+    for (let i = 0; i < duration; i++) {
+      const r = blocks.get(`${String(startHour + i).padStart(2, "0")}:00`);
+      if (r) return r;
+    }
+    return null;
+  }
+
   private async getMembershipBlockedSlots(date: string): Promise<Set<string>> {
     // date is "YYYY-MM-DD"
     // Create UTC midnight and end-of-day for the requested date to ensure day-inclusive comparison
@@ -464,6 +481,7 @@ export class BookingService {
     // Check if any hour in the requested duration is blocked by membership
     // OR if it's outside operating hours
     const membershipBlocked = await this.getMembershipBlockedSlots(date);
+    const staffBlocked = await this.getStaffBlocks(date);
     const allSlots = await SettingsService.getTimeSlots();
     const startHour = parseInt(startTime.split(":")[0]);
     
@@ -478,6 +496,9 @@ export class BookingService {
 
       if (membershipBlocked.has(checkTime)) {
         return false; // Slot blocked by membership
+      }
+      if (staffBlocked.has(checkTime)) {
+        return false; // closed by staff
       }
     }
 
@@ -592,6 +613,10 @@ export class BookingService {
     }
 
     // Validate slot availability
+    const closedFor = await this.blockedReason(dto.date, dto.startTime, dto.duration);
+    if (closedFor) {
+      throw new AppError(400, `This hour is closed: ${closedFor}`);
+    }
     const isAvailable = await this.isSlotAvailable(
       dto.date,
       dto.startTime,
@@ -1481,6 +1506,7 @@ export class BookingService {
 
     // Get membership-blocked slots for this date
     const membershipBlocked = await this.getMembershipBlockedSlots(date);
+    const staffBlocked = await this.getStaffBlocks(date);
 
     // Get tournament-blocked slots for this date
     const tournaments = await prisma.tournament.findMany({
@@ -1519,6 +1545,9 @@ export class BookingService {
 
         if (membershipBlocked.has(checkTime)) {
           return false; // Slot blocked by membership
+        }
+        if (staffBlocked.has(checkTime)) {
+          return false; // closed by staff (repairs, events)
         }
       }
 

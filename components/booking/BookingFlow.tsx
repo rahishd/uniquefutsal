@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { CalendarPlus, Check, ChevronDown, ChevronLeft, Droplets, Gift, Loader2, Tag, X } from "lucide-react";
+import { CalendarPlus, Check, ChevronDown, ChevronLeft, Droplets, Gift, Loader2, Lock, Tag, X } from "lucide-react";
 import PaymentMethodPicker from "@/components/payment/PaymentMethodPicker";
 import PaymentQr from "@/components/payment/PaymentQr";
 import { errorText } from "@/lib/api";
@@ -16,7 +16,8 @@ import {
   checkoutBooking,
   dateKey,
   fetchQuote,
-  fetchSlots,
+  fetchSlotsAndClosed,
+  type ClosedHour,
   formatHour,
   formatRs,
   myBookingsStore,
@@ -82,19 +83,19 @@ function Steps({ step }: { step: number }) {
 
 // Free slots for a date, from the server. `version` re-asks (for example after a slot was just taken).
 function useSlots(date: string, version: number) {
-  const [state, setState] = useState<{ key: string; slots: Slot[]; error: string | null } | null>(null);
+  const [state, setState] = useState<{ key: string; slots: Slot[]; closed: ClosedHour[]; error: string | null } | null>(null);
   const key = `${date}|${version}`;
   useEffect(() => {
     let off = false;
-    fetchSlots(date)
-      .then((slots) => !off && setState({ key, slots, error: null }))
-      .catch((e) => !off && setState({ key, slots: [], error: errorText(e) }));
+    fetchSlotsAndClosed(date)
+      .then(({ slots, closed }) => !off && setState({ key, slots, closed, error: null }))
+      .catch((e) => !off && setState({ key, slots: [], closed: [], error: errorText(e) }));
     return () => {
       off = true;
     };
   }, [date, key]);
   const ready = state?.key === key;
-  return { slots: ready ? state!.slots : null, error: ready ? state!.error : null };
+  return { slots: ready ? state!.slots : null, closed: ready ? state!.closed : [], error: ready ? state!.error : null };
 }
 
 export default function BookingFlow({ initialDate, initialHour }: { initialDate?: string; initialHour?: number }) {
@@ -132,7 +133,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
   // A pre-selected date (e.g. from Quick Rebook) is only honoured inside the booking window.
   const wanted = selDate ?? today;
   const activeDate = days.some((d) => d.key === wanted) ? wanted : today;
-  const { slots, error: slotsError } = useSlots(activeDate || "1970-01-01", version);
+  const { slots, closed, error: slotsError } = useSlots(activeDate || "1970-01-01", version);
   const slot = slots?.find((s) => s.hour === selHour);
 
   const registered = Boolean(session?.registered);
@@ -463,7 +464,7 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           <p role="alert" className="glass rounded-2xl px-4 py-6 text-center text-sm text-rose-600">{slotsError}</p>
         ) : openSlots.length === 0 ? (
           <p className="glass rounded-2xl px-4 py-6 text-center text-sm text-slate-500">
-            No slots available on this date. Please pick another day.
+            {closed.length > 0 ? "No slots are open on this date (see the closed hours below). Please pick another day." : "No slots available on this date. Please pick another day."}
           </p>
         ) : (
           PERIODS.filter((p) => openSlots.some((s) => s.period === p)).map((p) => (
@@ -502,6 +503,20 @@ export default function BookingFlow({ initialDate, initialHour }: { initialDate?
           ))
         )}
       </section>
+
+      {slots !== null && !slotsError && closed.length > 0 && (
+        <section aria-label="Closed hours" className="rounded-2xl bg-amber-400/15 p-4">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-amber-800"><Lock size={15} /> Closed by the venue</h2>
+          <ul className="mt-2 space-y-1.5">
+            {closed.map((c) => (
+              <li key={c.hour} className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
+                <span className="font-medium">{formatHour(c.hour)} – {formatHour(c.hour + 1)}</span>
+                <span className="text-amber-900">{c.reason}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {!slot && (
         <button type="button" disabled className="glass-btn flex w-full items-center justify-center rounded-full py-4 text-base font-semibold text-white disabled:opacity-50 desk:max-w-md">

@@ -922,3 +922,15 @@ model SiteVisit {
   @@unique([day, visitor])
   @@index([day])
 }
+
+// Hours the venue has closed (repairs, events). Written by the admin portal, read here so the hour is not offered.
+model SlotBlock {
+  id        String   @id @default(cuid())
+  date      String
+  hour      Int
+  reason    String
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@unique([date, hour])
+}

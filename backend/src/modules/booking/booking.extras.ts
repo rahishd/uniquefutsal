@@ -6,7 +6,7 @@ import adminOnly from "../../middlewares/admin.middleware";
 import { AppError } from "../../middlewares/error.middleware";
 import { prisma } from "../../config/db";
 import BookingService from "./booking.service";
-import { addDaysKey, isValidKey, startsAtMs, todayKey, weekdayOfKey } from "../../utils/dates";
+import { addDaysKey, currentTime as nowTime, isValidKey, startsAtMs, todayKey, weekdayOfKey } from "../../utils/dates";
 import SettingsService from "../settings/settings.service";
 import { detectUsualSlot } from "../../utils/rebook";
 import { MAX_ADVANCE_DAYS } from "./booking.checkout";
@@ -32,7 +32,17 @@ router.get(
       const price = pricing.find((p) => parseInt(p.id.replace("ts-", ""), 10) === hour)?.price ?? fallback;
       return { hour, startTime, endTime: `${String((hour + 1) % 24).padStart(2, "0")}:00`, price };
     });
-    res.json(ApiResponseUtil.success(200, "Free slots", { date, slots }));
+    // Hours the venue closed, with the reason staff wrote, so the customer sees why a time is missing (past hours are left out).
+    const operating = new Set(await SettingsService.getTimeSlots());
+    const nowHhmm = date === today ? nowTime(new Date()) : "";
+    const blocked = [...(await BookingService.getStaffBlocks(date))]
+      .filter(([t]) => operating.has(t) && t > nowHhmm)
+      .map(([startTime, reason]) => {
+        const hour = parseInt(startTime.split(":")[0], 10);
+        return { hour, startTime, endTime: `${String((hour + 1) % 24).padStart(2, "0")}:00`, reason };
+      })
+      .sort((a, b) => a.hour - b.hour);
+    res.json(ApiResponseUtil.success(200, "Free slots", { date, slots, blocked }));
   }),
 );
 
