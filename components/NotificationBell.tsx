@@ -30,6 +30,10 @@ const META: Record<NoticeType, { icon: typeof Bell; tone: string; label: string 
   referral: { icon: HeartHandshake, tone: "bg-pink-500/10 text-pink-600", label: "Refer & Earn" },
 };
 
+// Any type without its own icon (a staff "general" notice, or a type added later) shows as a plain notice, never an error.
+const FALLBACK_META = { icon: Bell, tone: "bg-slate-500/10 text-slate-600", label: "Notice" };
+const metaFor = (type: string) => (META as Record<string, typeof FALLBACK_META>)[type] ?? FALLBACK_META;
+
 function ago(ms: number) {
   const diff = Math.round((ms - Date.now()) / 1000);
   const abs = Math.abs(diff);
@@ -156,7 +160,7 @@ export default function NotificationBell() {
               <>
                 <ul className="mt-3 max-h-[55vh] space-y-2 overflow-y-auto pr-1">
                   {notices.map((n) => {
-                    const { icon: Icon, tone, label } = META[n.type];
+                    const { icon: Icon, tone, label } = metaFor(n.type);
                     const inner = (
                       <>
                         <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone}`}>
