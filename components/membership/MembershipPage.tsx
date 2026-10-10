@@ -9,7 +9,7 @@ import { errorText } from "@/lib/api";
 import { dateKey, formatRs } from "@/lib/booking";
 import { openSignIn, useSession } from "@/lib/session";
 import {
-  DURATION_LABEL, PEAK_SLOTS, fetchSlots, myMembershipStore, plansStore, requestMembership, timeOfDay,
+  DURATION_LABEL, PEAK_SLOTS, advanceOf, fetchSlots, myMembershipStore, plansStore, requestMembership, timeOfDay,
   type Duration, type MembershipPlan, type MySubscription, type SlotInfo,
 } from "@/lib/membership";
 
@@ -23,19 +23,32 @@ const hourLabel = (slot: string) => {
 
 function Current({ s }: { s: MySubscription }) {
   const active = s.status === "active";
+  const owing = active && s.paymentStatus === "partial" && s.balance > 0; // started with an advance, balance still due
   return (
     <section className="rounded-3xl bg-gradient-to-br from-[#0c0b5d] via-[#16167f] to-[#2a2aa8] p-6 text-white shadow-[0_10px_30px_rgba(12,11,93,0.35)]">
       <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-amber-300"><Crown size={24} /></span>
       <h2 className="mt-4 text-xl font-semibold">{s.plan} membership</h2>
       <p className={`mt-1 inline-block rounded-full px-3 py-1 text-xs font-medium ${active ? "bg-emerald-400/20 text-emerald-200" : "bg-amber-400/20 text-amber-200"}`}>
-        {active ? "Active" : "Waiting for your payment at the venue"}
+        {active ? "Active" : s.advance ? `Waiting for your ${formatRs(s.advance)} advance at the venue` : "Waiting for your payment at the venue"}
       </p>
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div><dt className="text-white/60">Your hour</dt><dd className="font-medium">{s.timeSlot ? hourLabel(s.timeSlot) : "-"}</dd></div>
         <div><dt className="text-white/60">Period</dt><dd className="font-medium">{day(s.startDate)} – {day(s.endDate)}</dd></div>
         {s.total != null && <div><dt className="text-white/60">Price</dt><dd className="font-medium">{formatRs(s.total)}</dd></div>}
+        {owing && <div><dt className="text-white/60">Paid so far</dt><dd className="font-medium">{formatRs(s.paid ?? 0)}</dd></div>}
       </dl>
-      {!active && <p className="mt-4 text-sm text-white/75">Pay the amount at the venue. The staff will activate your membership and you will get a notice here.</p>}
+      {owing && (
+        <p className="mt-4 rounded-2xl bg-amber-400/15 px-4 py-3 text-sm text-amber-100">
+          <b>Balance {formatRs(s.balance)} is still due.</b> Pay it at the venue. Your membership can&apos;t be renewed until the balance is paid.
+        </p>
+      )}
+      {!active && (
+        <p className="mt-4 text-sm text-white/75">
+          {s.advance && s.total != null
+            ? `Pay the ${formatRs(s.advance)} advance at the venue to start. The remaining ${formatRs(s.total - s.advance)} is paid later. The staff will activate your membership and you will get a notice here.`
+            : "Pay the amount at the venue. The staff will activate your membership and you will get a notice here."}
+        </p>
+      )}
     </section>
   );
 }
@@ -49,7 +62,8 @@ function RequestForm({ plans }: { plans: MembershipPlan[] }) {
   const [slot, setSlot] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState<number | null>(null);
+  const [sent, setSent] = useState<{ total: number; advance: number | null } | null>(null);
+  const [payment, setPayment] = useState<"full" | "advance">("full");
 
   useEffect(() => {
     let alive = true;
@@ -69,8 +83,8 @@ function RequestForm({ plans }: { plans: MembershipPlan[] }) {
     setBusy(true);
     setError(null);
     try {
-      const r = await requestMembership({ planId: plan.id, timeSlot: slot, duration, startDate });
-      setSent(r.total);
+      const r = await requestMembership({ planId: plan.id, timeSlot: slot, duration, startDate, payment: total > 1 ? payment : "full" });
+      setSent({ total: r.total, advance: r.advance });
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -83,7 +97,12 @@ function RequestForm({ plans }: { plans: MembershipPlan[] }) {
       <section className="glass rounded-3xl p-6 text-center" role="status">
         <CheckCircle2 className="mx-auto text-emerald-500" size={40} />
         <h2 className="mt-3 text-lg font-semibold">Request received</h2>
-        <p className="mt-1 text-sm text-slate-600">Pay {formatRs(sent)} at the venue. The staff will activate your membership.</p>
+        <p className="mt-1 text-sm text-slate-600">
+          {sent.advance
+            ? `Pay the ${formatRs(sent.advance)} advance at the venue to start. The remaining ${formatRs(sent.total - sent.advance)} is paid later.`
+            : `Pay ${formatRs(sent.total)} at the venue.`}{" "}
+          The staff will activate your membership.
+        </p>
       </section>
     );
   }
@@ -126,7 +145,26 @@ function RequestForm({ plans }: { plans: MembershipPlan[] }) {
         </select>
       </label>
 
-      {total !== null && <p className="rounded-2xl bg-white/60 px-4 py-3 text-sm">Total <b>{formatRs(total)}</b> for {DURATION_LABEL[duration]}, paid at the venue.</p>}
+      {total !== null && total > 1 && (
+        <div className="space-y-2">
+          <p className="text-sm text-slate-500">How would you like to pay?</p>
+          <div role="radiogroup" aria-label="Payment" className="grid grid-cols-2 gap-2">
+            {([["full", "Full payment", total], ["advance", "50% advance", advanceOf(total)]] as const).map(([id, label, amount]) => (
+              <button key={id} type="button" role="radio" aria-checked={payment === id} onClick={() => setPayment(id)}
+                className={`rounded-2xl px-3 py-3 text-center text-sm ${payment === id ? "glass-active text-white" : "bg-white/60"}`}>
+                <span className="block font-medium">{label}</span>
+                <span className="block text-base font-semibold">{formatRs(amount)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {total !== null && (
+        <p className="rounded-2xl bg-white/60 px-4 py-3 text-sm">
+          Total <b>{formatRs(total)}</b> for {DURATION_LABEL[duration]}, paid at the venue.
+          {payment === "advance" && total > 1 && <> Pay <b>{formatRs(advanceOf(total))}</b> to start and the remaining <b>{formatRs(total - advanceOf(total))}</b> later. You can&apos;t renew until the balance is paid.</>}
+        </p>
+      )}
       {error && <p role="alert" className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-600">{error}</p>}
 
       <button type="submit" disabled={!slot || total === null || busy} className="glass-btn flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-semibold text-white disabled:opacity-50">

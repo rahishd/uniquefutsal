@@ -88,7 +88,7 @@ export const helpTopics: HelpTopic[] = [
     summary: "Member pricing and extra rewards, paid monthly, 3 or 6 months.",
     points: [
       "You do not need a new sign-up: sign in with the number you already play with, open Membership and choose a plan, your fixed hour and a start date.",
-      "The price is shown before you send the request. Pay it at the venue and the staff switch your membership on.",
+      "The price is shown before you send the request. You can pay in full or a 50% advance at the venue, and the staff switch your membership on. With an advance, the balance must be paid before the membership can be renewed.",
       "4 PM to 8 PM is kept for regular bookings, so those hours are not offered for memberships.",
       `On 3 and 6 month plans we remind you ${EXPIRY_NOTICE_DAYS} days before the end so you can renew in one tap.`,
       `Buying or renewing earns bonus loyalty points: ${MEMBERSHIP_POINTS.quarterly} for 3 months, ${MEMBERSHIP_POINTS.half} for 6 months.`,

@@ -535,6 +535,7 @@ class MembershipService {
         excludeDays: data.excludeDays || [],
         totalPrice: data.totalPrice,
         promoCode: validatedPromoCode,
+        notes: (data as { notes?: string }).notes ?? null,
         discountAmount: data.totalPrice !== undefined ? 0 : 0, // Placeholder if calculated by frontend
       } as any,
       include: {
@@ -945,6 +946,11 @@ class MembershipService {
 
     if (!subscription) {
       throw new Error("Subscription not found");
+    }
+
+    // A membership started with a 50% advance cannot be renewed until the balance is paid.
+    if (subscription.paymentStatus === "partial") {
+      throw new AppError(409, "The balance of this membership is still due. Collect it before renewing.");
     }
 
     // Determine extension duration (default 1 month if not specified)

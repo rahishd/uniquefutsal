@@ -31,6 +31,9 @@ export interface MySubscription {
   startDate: string;
   endDate: string;
   total: number | null;
+  advance: number | null; // the 50% advance the customer asked to pay first (null = they chose to pay in full)
+  paid: number | null; // received so far, only while a balance is open
+  balance: number; // still to pay at the venue after an advance (0 when paid in full)
 }
 
 export interface MyMembership {
@@ -54,8 +57,11 @@ export const timeOfDay = (slot: string): TimeOfDay => {
   return h < 12 ? "morning" : h < 20 ? "day" : "evening";
 };
 
-export async function requestMembership(p: { planId: string; timeSlot: string; duration: Duration; startDate: string }) {
-  const r = await api<{ id: string; total: number }>("/membership/request", { method: "POST", body: p });
+// "advance" = pay half at the venue now and the rest later. Renewal is not possible while a balance is open.
+export const advanceOf = (total: number) => Math.ceil(total / 2);
+
+export async function requestMembership(p: { planId: string; timeSlot: string; duration: Duration; startDate: string; payment: "full" | "advance" }) {
+  const r = await api<{ id: string; total: number; advance: number | null }>("/membership/request", { method: "POST", body: p });
   await myMembershipStore.refresh();
   return r;
 }

@@ -67,3 +67,19 @@ it("shows my membership and activates when staff verify the payment", async () =
   expect(after.body.data.current.status).toBe("active");
   expect(await prisma.notification.count({ where: { userId: M, type: "membership" } })).toBe(3);
 });
+
+it("a 50% advance request keeps the choice, shows the advance, and cannot be renewed while it is partly paid", async () => {
+  await prisma.membershipSubscription.deleteMany({ where: { userId: M } });
+  const r = await post("/api/membership/request", { planId, timeSlot: "09:00-10:00", duration: "1_month", startDate: futureDate(1), payment: "advance" }, tokenFor(M));
+  expect(r.status).toBe(201);
+  expect(r.body.data.advance).toBe(Math.ceil(r.body.data.total / 2));
+  const mine = await api().get("/api/membership/mine").set(bearer(tokenFor(M)));
+  expect(mine.body.data.current.advance).toBe(r.body.data.advance); // the server works out the half, never the browser
+  expect(mine.body.data.current.balance).toBe(0); // nothing is owed until the advance has been taken
+  // staff took the advance: the membership is active and part paid, so renewing is refused
+  await prisma.membershipSubscription.update({ where: { id: r.body.data.id }, data: { status: "active", paymentStatus: "partial" } });
+  const renew = await post(`/api/membership/subscriptions/${r.body.data.id}/renew`, {}, adminToken());
+  expect(renew.status).toBe(409);
+  const after = await prisma.membershipSubscription.findUnique({ where: { id: r.body.data.id } });
+  expect(after?.paymentStatus).toBe("partial");
+});
